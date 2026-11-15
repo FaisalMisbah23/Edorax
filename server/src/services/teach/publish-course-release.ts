@@ -109,7 +109,7 @@ export async function onNewCourseReleasePublished(tx: Prisma.TransactionClient, 
   }
 }
 
-/** Publish a patch against the current release. Nothing absent from the package is removed. */
+/** Publish a patch against the current release. Nothing absent from the package is removed; a removal is named under `remove`. */
 export async function publishCourseRelease(tx: Prisma.TransactionClient, courseId: string, plan: ImportPlan, mapping: UpdateMapping) {
   const course = await tx.course.findUniqueOrThrow({ where: { id: courseId }, select: { familySlug: true, variantFamily: true } });
   if (plan.manifest.family && plan.manifest.family !== course.familySlug) throw new BadRequestError("Changing a published course's variant family requires a separate migration.");
@@ -126,6 +126,7 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
   const maxOrder = await tx.module.aggregate({ where: { courseId }, _max: { order: true } });
   let storageOrder = maxOrder._max.order ?? 0;
   const matchedIds = new Set(mapping.flatMap(module => module.chapters.flatMap(chapter => chapter.chapterId ? [chapter.chapterId] : [])));
+  const suppliedSlugs = new Set<string>();
 
   for (const [mi, incomingModule] of plan.modules.entries()) {
     if (!incomingModule.key && shared.some(module => module.key)) throw new BadRequestError("Module keys are required for a keyed course.");
@@ -152,6 +153,7 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
       const prior = locate(shared, lesson.key ?? null, mapping[mi]?.chapters[li]?.chapterId ?? null)
         ?? locateSlug(shared, ownSlug, matchedIds);
       const logicalSlug = prior?.chapter.slug ?? ownSlug;
+      suppliedSlugs.add(logicalSlug);
       const changed = !(await equivalent(tx, prior?.chapter, lesson));
       const replacement = changed ? await createReleaseChapter(tx, courseId, moduleId, logicalSlug, lesson) : prior!.chapter;
       replacement.key = lesson.key ?? replacement.key;
@@ -183,6 +185,25 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
   for (const key of plan.remove?.moduleKeys ?? []) {
     if (!shared.some(module => module.key === key)) throw new BadRequestError(`Cannot remove unknown module key ${key}.`);
     for (const slug of variantSlugs) next.variants[slug] = next.variants[slug].filter(module => module.key !== key);
+  }
+  // Removal by public address, for a course without lesson keys. The entry stays in course.yaml,
+  // so a lesson an earlier release already removed is not an error.
+  for (const removal of plan.remove?.lessons ?? []) {
+    if (suppliedSlugs.has(removal.slug)) throw new BadRequestError(`Cannot remove and update lesson ${removal.slug}.`);
+    for (const slug of variantSlugs) for (const module of next.variants[slug]) {
+      module.chapters = module.chapters.filter(chapter => chapter.slug !== removal.slug);
+    }
+    if (!removal.redirectTo) continue;
+    if (!shared.some(module => module.chapters.some(chapter => chapter.slug === removal.redirectTo))) {
+      throw new BadRequestError(`Removed lesson ${removal.slug} redirects to ${removal.redirectTo}, which is not in the course.`);
+    }
+    next.redirects = { ...next.redirects, [removal.slug]: removal.redirectTo };
+  }
+  // An address that holds a lesson again is no longer a redirect.
+  if (next.redirects) {
+    const live = new Set(Object.values(next.variants).flatMap(modules => modules.flatMap(module => module.chapters.map(chapter => chapter.slug))));
+    next.redirects = Object.fromEntries(Object.entries(next.redirects).filter(([slug]) => !live.has(slug)));
+    if (!Object.keys(next.redirects).length) delete next.redirects;
   }
 
   for (const variant of plan.variants ?? []) {
