@@ -81,7 +81,8 @@ export type ImportPlan = {
   }[] }[];
   variants?: { slug: string; overrides: { lessonKey: string; lesson: ImportPlan["modules"][number]["lessons"][number] }[];
     modules?: ImportPlan["modules"]; omitLessonKeys?: string[]; moduleOrder?: string[] }[];
-  remove?: { moduleKeys: string[]; lessonKeys: string[] };
+  /** `lessons` removes by public address, for a course without stable lesson keys. */
+  remove?: { moduleKeys: string[]; lessonKeys: string[]; lessons?: { slug: string; redirectTo?: string }[] };
 };
 
 let importing = false;

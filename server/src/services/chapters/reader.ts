@@ -22,6 +22,7 @@ import {
   upgradeEnrollmentToRelease,
   variantForRelease,
   readReleaseContent,
+  redirectedChapterSlug,
 } from "../courses/releases.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
 import { findChapterIndex } from "./chapter-slug.js";
@@ -128,6 +129,13 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
       index = findChapterIndex(flatChapters, chapterSlug);
       break;
     }
+  }
+
+  // A release that removed a lesson can name the lesson that replaced it, so an old link opens that
+  // one. The page then moves to the returned address, the same as it does for a long-form link.
+  if (index === -1 && selectedRelease) {
+    const target = redirectedChapterSlug(readReleaseContent(selectedRelease.release.content), chapterSlug);
+    if (target) index = findChapterIndex(flatChapters, target);
   }
 
   if (index === -1) throw new NotFoundError("Chapter not found");

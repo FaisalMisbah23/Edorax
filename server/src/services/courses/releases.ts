@@ -15,7 +15,21 @@ export type ReleaseChapter = {
   quizPassingScore: number;
 };
 export type ReleaseModule = { id: string; key: string | null; title: string; order: number; chapters: ReleaseChapter[] };
-export type ReleaseContent = { variants: Record<string, ReleaseModule[]> };
+/** `redirects` maps the address of a lesson a release removed to the address that replaced it. */
+export type ReleaseContent = { variants: Record<string, ReleaseModule[]>; redirects?: Record<string, string> };
+
+/** Where a removed lesson's address leads now, or null. Follows a chain of removals, never a loop. */
+export function redirectedChapterSlug(content: ReleaseContent | null | undefined, chapterSlug: string): string | null {
+  const redirects = content?.redirects;
+  if (!redirects) return null;
+  const seen = new Set<string>();
+  let slug = cleanChapterSlug(chapterSlug);
+  while (Object.hasOwn(redirects, slug) && !seen.has(slug)) {
+    seen.add(slug);
+    slug = redirects[slug]!;
+  }
+  return seen.size ? slug : null;
+}
 
 /**
  * A release names each lesson by its public slug, so two chapters at one slug cannot both be read:
