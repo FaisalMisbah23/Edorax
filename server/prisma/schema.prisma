@@ -240,6 +240,11 @@ enum LeagueTier {
   SILVER
   GOLD
   PLATINUM
+  COBALT
+  JADE
+  QUARTZ
+  AURORA
+  ZENITH
   DIAMOND
 }
 

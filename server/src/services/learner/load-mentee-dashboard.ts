@@ -2,6 +2,7 @@
 import { prisma } from "../../db/prisma.js";
 import { dateToDayKey, localDayKey, shiftDayKey, dayKeyToDate } from "../../shared/lib/local-date.js";
 import { loadGamificationSummary } from "../gamification/summary.js";
+import { loadLeaderboardHub } from "../gamification/leaderboard-categories.js";
 import { loadLearnerHabit } from "../progress/learner-habit.js";
 import { buildMenteeDashboardViewModel } from "./dashboard-model.js";
 import { learnerTimeZone } from "./time-zone.js";
@@ -158,7 +159,10 @@ export async function loadMenteeDashboard(args: {
 
   // The weekly-goal reward is paid by the engagement events (services/engagement/events.ts), not
   // here, so it always arrives with the mascot's reaction instead of silently during a page render.
-  const gamification = await loadGamificationSummary(args.learnerId);
+  const [gamification, leaderboard] = await Promise.all([
+    loadGamificationSummary(args.learnerId),
+    loadLeaderboardHub(args.learnerId, { category: "weekly_xp", scope: "global" }).catch(() => null),
+  ]);
 
   const byDay = new Map<string, number>();
   for (const row of dailyRows) {
@@ -183,5 +187,6 @@ export async function loadMenteeDashboard(args: {
     bypassLocking: args.bypassLocking,
     habit,
     gamification,
+    leaderboard,
   });
 }

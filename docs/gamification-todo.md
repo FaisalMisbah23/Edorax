@@ -4,19 +4,18 @@ Source: `Buildment_Gamification_Design_Concepts.pdf` concept book + researched m
 (Duolingo leagues/personal-records, PUBG seasonal tiers, Pluralsight mastery-gating) + Devmaxx
 competitor signal.
 
-## Status vs upstream (2026-10-31)
+## Status vs upstream (2026-11-15)
 - **Phase 1 (league) largely landed upstream** in PR #161 `feat(leaderboard): multi-category hub with
-  weekly leagues`: cross-course weekly league, Bronze→Diamond tiers, top 10% promote / bottom 20%
-  demote at Monday 00:00 UTC, per-course board kept, hub UI + categories, privacy, "beat your best".
+  weekly leagues`: cross-course weekly league, ten tiers from Bronze to Diamond, top-10-percent or fixed-goal promotion /
+  bottom 20% demotion at Monday 00:00 UTC, per-course board kept, hub UI + categories, privacy,
+  "beat your best".
   Files: `services/gamification/league.ts`, `leaderboard-categories.ts`, `shared/gamification/leagues.ts`,
   migration `leaderboard_leagues`.
-- **Two divergences from this plan's choices were shipped:**
+- **One divergence from this plan's choices remains:**
   - Grouping is **tier-based (percentile)**, not the planned ~30-person random same-pace cohorts
     (they explicitly chose tiers over cohorts).
-  - **Achievement promotion was not built** — only competitive percentile (top 10% / bottom 20%);
-    no escalating XP-target promotion path.
-- **Still open:** Phase 2 career ladder, Phase 3 Build Credits/marketplace, Phase 4 daily/monthly/
-  recovery/mascot-loading + a dedicated **My Records** surface, Phase 5 share/experiments.
+- **Still open:** Phase 4 daily/monthly/recap/notifications and the loading companion, plus Phase 5
+  experiments.
 
 ## Core decisions (locked)
 - **Two layers**: a short-horizon **league** + a permanent **career ladder**, plus a **rewards** loop.
@@ -50,22 +49,23 @@ competitor signal.
 - **My Records**: read-only, in scope.
 
 ## Phase 0 — Foundation
-- [ ] Confirm the two-layer model as source of truth (decisions above are the locked scope)
-- [ ] Feature-flag inventory: `GAMIFICATION_LEAGUE_TIERS`, `GAMIFICATION_CAREER_LEVELS`,
-      `GAMIFICATION_CREDITS`, `GAMIFICATION_RECOVERY` (each `null` when off)
+- [x] Confirm the two-layer model as source of truth (decisions above are the locked scope)
+- [x] Feature-flag inventory: `GAMIFICATION_LEAGUE_TIERS`, `GAMIFICATION_CAREER_LEVELS`,
+      `GAMIFICATION_CREDITS`, `GAMIFICATION_RECOVERY` (each `false` when off)
 
 ## Phase 1 — League (cross-course, Duolingo-style) — ✅ MAJORITY LANDED UPSTREAM (PR #161)
 - [x] **Landed:** cross-course weekly league (global XP across all courses), weekly reset Monday 00:00
-      UTC, tiers (Bronze→Diamond), top 10% / bottom 20% promotion & demotion, per-course board
+      UTC, ten tiers from Bronze through Diamond, top-10-percent or fixed-goal / bottom 20% promotion & demotion, per-course board
       retained, hub UI + categories (`weekly_xp/global`, `all_time_xp/global`, `speed/global`,
       `streak/global`), privacy + "beat your best" bar.
 - [ ] **Gap vs plan:** grouping is **tier-based**, not the planned ~30-person random same-pace cohorts
       (decide whether to adopt the shipped tiers or add real cohorts).
-- [ ] **Gap vs plan:** **achievement promotion** (published escalating weekly-XP target) not built —
-      only competitive percentile.
+- [x] **Achievement promotion:** fixed weekly XP goals are an alternate path to promotion. Current
+      goals are 100, 200, 400, 700, 1,000, 1,400, 1,900, 2,500, 3,200 and 4,000 XP in tier order.
 - [ ] Decouple from career: league demotion touches the league tier only; a permanent career ladder
       (Phase 2) does not exist yet, so nothing to decouple from today.
-- [ ] Dashboard/league UI + tests: hub UI and `leaderboard-hub.test.ts` landed; confirm the rest.
+- [x] Dashboard/league UI + tests: hub UI now shows the top-10-percent zone, target progress, recovery progress and
+      settlement reasons; shared, pure and API coverage added.
 
 ## Phase 2 — Career ladder (permanent)
 - [ ] **Define "mastery" in code** (verified signals advancing each tier) — do first; avoids inflation
@@ -84,10 +84,10 @@ competitor signal.
 ## Phase 4 — Supporting loops & polish
 - [ ] Daily quests → chests → XP-boost (mini dose loop)
 - [ ] Monthly badge (quest-points + themed badge)
-- [ ] **Recovery**: League Shield / recovery quest — **included** (ships with the league work)
-- [ ] **My Records (personal bests)**: longest streak + best weekly XP/chapters are computed in the hub
-      (PR #161); still missing a dedicated profile "My Records" surface + most-XP-in-a-day / best league
-      finish lines; "New record!" celebration; read-only recognition
+- [x] **Recovery:** League Shield plus a recovery quest requiring one completed chapter and 50 XP;
+      recovery protection is used before a shield at settlement.
+- [x] **My Records (personal bests)**: longest streak, best weekly/day XP, best league finish and
+      related records are available on the Career Identity profile; read-only recognition remains.
 - [ ] Mascot loading/companion (Dot with a mood during skeleton loads)
 - [ ] Weekly recap / Monday ritual surface
 - [ ] Notifications: "last chance to promote", streak/recovery nudges
@@ -138,20 +138,19 @@ Reviewed all 20 pages of `Buildment_Gamification_Design_Concepts_images/`. Statu
 | 17 | XP microinteraction | 🟡 Partial | XP awarding exists; subtle "+20 XP, 1.5s, return focus" UI not verified |
 | 19 | Mobile fast screens | 🟡 Partial | Responsive exists; not the dedicated League/Rewards mobile layouts |
 | 4/5 | Dashboard A/B (calm / arcade) | 🟡 Partial | Functional dashboard, not the exact layouts |
-| 7 | **Achievement promotion (published weekly XP goal)** | ❌ Missing | Only percentile promotion (known Phase 1 gap) |
+| 7 | **Achievement promotion (published weekly XP goal)** | ✅ Done | Fixed tier goals: 100 / 200 / 400 / 700 / 1,000 XP; one-tier maximum |
 | 10 | **Monday ritual / weekly recap** | ❌ Missing | No promotion celebration + next-goal screen |
-| 18 | **Weekly missions (quest board)** | ❌ Missing | No effort-based mission → credit loop |
-| 9 | Recovery quest / pause week | ❌ Missing | Shield only |
+| 18 | **Weekly missions (quest board)** | ✅ Done | Weekly quest board and idempotent credit claims shipped in PR #172 |
+| 9 | Recovery quest / pause week | 🟡 Partial | Recovery quest is implemented; pause week remains out of scope |
 | 20 | Experiments / measurement | ❌ Missing | Not built |
 
 ### Prioritized next work
-- **P0:** (1) achievement promotion — published weekly XP target as an alternate promotion path; (2)
-  Monday ritual / weekly recap (promotion result + credits + next goal); (3) weekly missions (quest →
-  credits).
+- **P0:** (1) Monday ritual / weekly recap (promotion result + credits + next goal); (2) daily quests,
+  chests and monthly badge; (3) notifications for promotion and recovery.
 - **P1:** category weekly track (pick one, route XP, no double-count); league journey view with XP
   thresholds + separate identity; leaderboard "fair / promotion secured" state.
 - **P2:** 3 branded share cards; mascot family reactions + motion/reduced-motion; XP microinteraction;
-  recovery quest / pause week; dedicated mobile League/Rewards; experiments vs non-gamified control.
+  pause week; dedicated mobile League/Rewards; experiments vs non-gamified control.
 
 ### Already solid
 Leagues + tiers, career ladder, Build Credits economy, marketplace (incl. League Shield), the Career
