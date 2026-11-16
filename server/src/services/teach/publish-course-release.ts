@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { ulid } from "ulid";
 import { Prisma } from "../../generated/prisma/index.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
-import { ensureBaselineRelease, type ReleaseChapter, type ReleaseContent, type ReleaseModule } from "../courses/releases.js";
+import { ensureBaselineRelease, readReleaseContent, type ReleaseChapter, type ReleaseContent, type ReleaseModule } from "../courses/releases.js";
 import { BadRequestError } from "../../utils/errors.js";
 import { notify } from "../notifications/service.js";
 import type { ImportPlan } from "./course-import.js";
@@ -54,6 +54,15 @@ function locate(modules: ReleaseModule[], key: string | null, id: string | null)
   return null;
 }
 
+/** The chapter that already holds this public slug, unless another incoming lesson was matched to it. */
+function locateSlug(modules: ReleaseModule[], slug: string, matchedIds: Set<string>) {
+  for (const module of modules) {
+    const index = module.chapters.findIndex(chapter => chapter.slug === slug && !matchedIds.has(chapter.id));
+    if (index >= 0) return { module, index, chapter: module.chapters[index] };
+  }
+  return null;
+}
+
 /**
  * When a new release is approved and published:
  * 1. Active/in-progress learners are automatically upgraded on course overview or reader open
@@ -100,7 +109,7 @@ export async function onNewCourseReleasePublished(tx: Prisma.TransactionClient, 
   }
 }
 
-/** Publish a patch against the current release. Nothing absent from the package is removed. */
+/** Publish a patch against the current release. Nothing absent from the package is removed; a removal is named under `remove`. */
 export async function publishCourseRelease(tx: Prisma.TransactionClient, courseId: string, plan: ImportPlan, mapping: UpdateMapping) {
   const course = await tx.course.findUniqueOrThrow({ where: { id: courseId }, select: { familySlug: true, variantFamily: true } });
   if (plan.manifest.family && plan.manifest.family !== course.familySlug) throw new BadRequestError("Changing a published course's variant family requires a separate migration.");
@@ -108,7 +117,7 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
     throw new BadRequestError("Changing variant definitions requires a separate migration.");
   }
   const baseline = await ensureBaselineRelease(tx, courseId);
-  const previous = baseline.content as unknown as ReleaseContent;
+  const previous = readReleaseContent(baseline.content);
   const next: ReleaseContent = structuredClone(previous);
   const defaultSlug = resolveCourseFamily(course.familySlug, course.variantFamily)?.defaultVariantSlug ?? "default";
   const shared = next.variants[defaultSlug];
@@ -116,6 +125,8 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
   const variantSlugs = Object.keys(next.variants);
   const maxOrder = await tx.module.aggregate({ where: { courseId }, _max: { order: true } });
   let storageOrder = maxOrder._max.order ?? 0;
+  const matchedIds = new Set(mapping.flatMap(module => module.chapters.flatMap(chapter => chapter.chapterId ? [chapter.chapterId] : [])));
+  const suppliedSlugs = new Set<string>();
 
   for (const [mi, incomingModule] of plan.modules.entries()) {
     if (!incomingModule.key && shared.some(module => module.key)) throw new BadRequestError("Module keys are required for a keyed course.");
@@ -135,8 +146,14 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
     }
     for (const [li, lesson] of incomingModule.lessons.entries()) {
       if (!lesson.key && shared.some(module => module.chapters.some(chapter => chapter.key))) throw new BadRequestError("Lesson keys are required for a keyed course.");
-      const prior = locate(shared, lesson.key ?? null, mapping[mi]?.chapters[li]?.chapterId ?? null);
-      const logicalSlug = prior?.chapter.slug ?? `${mi + 1}-${lesson.lessonNum}-${lesson.slugPart}`;
+      const ownSlug = `${mi + 1}-${lesson.lessonNum}-${lesson.slugPart}`;
+      // A lesson that changed too much to be matched by content still replaces the chapter at its
+      // own address. Left as "new", the release would hold two chapters at one slug: the reader
+      // would open the old one and list both. A chapter another lesson was matched to stays its own.
+      const prior = locate(shared, lesson.key ?? null, mapping[mi]?.chapters[li]?.chapterId ?? null)
+        ?? locateSlug(shared, ownSlug, matchedIds);
+      const logicalSlug = prior?.chapter.slug ?? ownSlug;
+      suppliedSlugs.add(logicalSlug);
       const changed = !(await equivalent(tx, prior?.chapter, lesson));
       const replacement = changed ? await createReleaseChapter(tx, courseId, moduleId, logicalSlug, lesson) : prior!.chapter;
       replacement.key = lesson.key ?? replacement.key;
@@ -168,6 +185,25 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
   for (const key of plan.remove?.moduleKeys ?? []) {
     if (!shared.some(module => module.key === key)) throw new BadRequestError(`Cannot remove unknown module key ${key}.`);
     for (const slug of variantSlugs) next.variants[slug] = next.variants[slug].filter(module => module.key !== key);
+  }
+  // Removal by public address, for a course without lesson keys. The entry stays in course.yaml,
+  // so a lesson an earlier release already removed is not an error.
+  for (const removal of plan.remove?.lessons ?? []) {
+    if (suppliedSlugs.has(removal.slug)) throw new BadRequestError(`Cannot remove and update lesson ${removal.slug}.`);
+    for (const slug of variantSlugs) for (const module of next.variants[slug]) {
+      module.chapters = module.chapters.filter(chapter => chapter.slug !== removal.slug);
+    }
+    if (!removal.redirectTo) continue;
+    if (!shared.some(module => module.chapters.some(chapter => chapter.slug === removal.redirectTo))) {
+      throw new BadRequestError(`Removed lesson ${removal.slug} redirects to ${removal.redirectTo}, which is not in the course.`);
+    }
+    next.redirects = { ...next.redirects, [removal.slug]: removal.redirectTo };
+  }
+  // An address that holds a lesson again is no longer a redirect.
+  if (next.redirects) {
+    const live = new Set(Object.values(next.variants).flatMap(modules => modules.flatMap(module => module.chapters.map(chapter => chapter.slug))));
+    next.redirects = Object.fromEntries(Object.entries(next.redirects).filter(([slug]) => !live.has(slug)));
+    if (!Object.keys(next.redirects).length) delete next.redirects;
   }
 
   for (const variant of plan.variants ?? []) {
@@ -245,7 +281,7 @@ export async function publishDashboardChapterRelease(tx: Prisma.TransactionClien
   const course = await tx.course.findUniqueOrThrow({ where: { id: courseId }, select: { activeReleaseId: true, familySlug: true, variantFamily: true } });
   if (course.activeReleaseId !== baseReleaseId) throw new BadRequestError("Course changed since this draft was created. Review the latest course before publishing.");
   const previous = await tx.courseRelease.findUniqueOrThrow({ where: { id: baseReleaseId } });
-  const next = structuredClone(previous.content as unknown as ReleaseContent);
+  const next = structuredClone(readReleaseContent(previous.content));
   const defaultSlug = variantForDefault(course.familySlug, course.variantFamily);
   const original = next.variants[defaultSlug]?.flatMap(module => module.chapters).find(chapter => chapter.id === chapterId);
   if (!original) throw new BadRequestError("Chapter is not in the current shared course release.");
@@ -271,7 +307,7 @@ export async function publishDashboardNewChapterRelease(tx: Prisma.TransactionCl
   const previous = await tx.courseRelease.findUniqueOrThrow({ where: { id: course.activeReleaseId } });
   const chapter = await tx.chapter.findUniqueOrThrow({ where: { id: chapterId } });
   if (!chapter.moduleId || !chapter.publishedAt) throw new BadRequestError("Publish a chapter inside a module.");
-  const next = structuredClone(previous.content as unknown as ReleaseContent);
+  const next = structuredClone(readReleaseContent(previous.content));
   for (const modules of Object.values(next.variants)) {
     let module = modules.find(item => item.id === chapter.moduleId);
     if (!module) {
@@ -297,7 +333,7 @@ export async function removeChapterFromRelease(tx: Prisma.TransactionClient, cou
   const course = await tx.course.findUniqueOrThrow({ where: { id: courseId }, select: { activeReleaseId: true } });
   if (!course.activeReleaseId) return false;
   const previous = await tx.courseRelease.findUniqueOrThrow({ where: { id: course.activeReleaseId } });
-  const next = structuredClone(previous.content as unknown as ReleaseContent);
+  const next = structuredClone(readReleaseContent(previous.content));
   const target = Object.values(next.variants).flatMap(modules => modules.flatMap(module => module.chapters)).find(chapter => chapter.id === chapterId);
   const logicalKey = target?.key;
   let found = false;
@@ -320,7 +356,7 @@ export async function publishDashboardStructureRelease(tx: Prisma.TransactionCli
   const course = await tx.course.findUniqueOrThrow({ where: { id: courseId }, select: { activeReleaseId: true, familySlug: true, variantFamily: true } });
   if (!course.activeReleaseId) return;
   const previous = await tx.courseRelease.findUniqueOrThrow({ where: { id: course.activeReleaseId } });
-  const next = structuredClone(previous.content as unknown as ReleaseContent);
+  const next = structuredClone(readReleaseContent(previous.content));
   const moduleRows = await tx.module.findMany({ where: { courseId, archivedAt: null } });
   const byModule = new Map(moduleRows.map(module => [module.id, module]));
   const shared = next.variants[variantForDefault(course.familySlug, course.variantFamily)] ?? [];

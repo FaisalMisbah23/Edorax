@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+import { isValidSemver } from "../utils/semver.js";
 
 // Every environment variable the API reads is declared here and validated once at
 // boot. Modules import `env`, never `process.env`, so a missing or malformed value
@@ -19,6 +20,12 @@ const optionalString = z
   .string()
   .optional()
   .transform((value) => (value && value.trim() ? value.trim() : undefined));
+
+const optionalSemver = (name: string) =>
+  optionalString.refine(
+    (value) => value === undefined || isValidSemver(value),
+    `${name} must be a plain semver version such as 0.1.0 or 0.2.0-beta.1`
+  );
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -155,14 +162,41 @@ const schema = z.object({
     .optional()
     .transform((value) => value !== "false"),
 
+  /**
+   * DEFAULT policy for forced desktop updates. Admins override it per platform (darwin, win32, linux)
+   * in the admin dashboard; a platform without a saved policy uses these values. The app sends its
+   * version in X-Edorax-Desktop-Version and gets 426 DESKTOP_UPDATE_REQUIRED while it is lower than
+   * the minimum. The default 0.0.0 blocks nothing. Changing them needs an environment change and a restart.
+   */
+  DESKTOP_MIN_VERSION: optionalSemver("DESKTOP_MIN_VERSION"),
+  /** Newest released desktop version, for a soft "update available" prompt. Defaults to DESKTOP_MIN_VERSION. */
+  DESKTOP_LATEST_VERSION: optionalSemver("DESKTOP_LATEST_VERSION"),
+  DESKTOP_DOWNLOAD_URL: z.string().trim().url().default("https://github.com/devweekends/Edorax/releases/latest"),
+  /** Optional short text shown in the update screen; replaces the default 426 message. */
+  DESKTOP_UPDATE_MESSAGE: optionalString,
+
   /** Local testing only: e2e suites sign up repeatedly from one IP. Never set in production. */
   DISABLE_RATE_LIMITS: z
     .string()
     .optional()
     .transform((value) => value === "true"),
+
+  /**
+   * Polar checkout for paid course enrollment. The token and the webhook secret must both be set
+   * before learners can start a Polar session; the API still boots without them so local/dev stays
+   * usable. Each course gets its own Polar product on its first checkout, so no product id is set.
+   */
+  POLAR_ACCESS_TOKEN: optionalString,
+  POLAR_WEBHOOK_SECRET: optionalString,
+  POLAR_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
 });
 
-export type Env = z.infer<typeof schema>;
+type Parsed = z.infer<typeof schema>;
+/** The parsed environment with the desktop version defaults filled in. */
+export type Env = Omit<Parsed, "DESKTOP_MIN_VERSION" | "DESKTOP_LATEST_VERSION"> & {
+  DESKTOP_MIN_VERSION: string;
+  DESKTOP_LATEST_VERSION: string;
+};
 
 function loadEnv(): Env {
   const parsed = schema.safeParse(process.env);
@@ -172,9 +206,12 @@ function loadEnv(): Env {
       .join("\n");
     throw new Error(`Invalid environment configuration:\n${problems}`);
   }
+  const desktopMinVersion = parsed.data.DESKTOP_MIN_VERSION ?? "0.0.0";
   return {
     ...parsed.data,
     APP_URL: parsed.data.APP_URL.replace(/\/$/, ""),
+    DESKTOP_MIN_VERSION: desktopMinVersion,
+    DESKTOP_LATEST_VERSION: parsed.data.DESKTOP_LATEST_VERSION ?? desktopMinVersion,
   };
 }
 
@@ -190,3 +227,5 @@ export const isTest = env.NODE_ENV === "test";
 export const learnerQaAvailable = env.LEARNER_QA_ENABLED && Boolean(env.ANTHROPIC_API_KEY);
 /** Capstone AI checks need both the switch and the key; automated checks never run without them either. */
 export const capstoneCheckAvailable = env.CAPSTONE_CHECK_ENABLED && Boolean(env.ANTHROPIC_API_KEY);
+/** Paid course Polar checkout needs the org token and the webhook secret. */
+export const polarPaymentsConfigured = Boolean(env.POLAR_ACCESS_TOKEN && env.POLAR_WEBHOOK_SECRET);

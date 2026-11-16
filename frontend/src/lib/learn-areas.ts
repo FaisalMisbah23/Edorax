@@ -54,7 +54,7 @@ export const LEARN_AREAS: readonly LearnArea[] = [
     status: "partly-live",
     tagline: "Build it, break it, and see the result.",
     summary:
-      "Hands-on practice in three kinds. Visual labs are open today: move parts, press Run and watch every check pass or fail. Guided labs and shell labs come next.",
+      "Hands-on practice in three kinds. Visual labs and guided labs are open today: move parts and watch every check pass or fail, or build a real project step by step and have it checked. Shell labs come next.",
     matches: ["/labs"],
   },
   {
@@ -134,19 +134,19 @@ export const LAB_KINDS: readonly LabKind[] = [
     id: "guided",
     name: "Guided labs",
     href: "/labs/guided",
-    status: "coming-soon",
+    status: "live",
     tagline: "Step by step, and every step is checked.",
     summary:
-      "A lab split into small steps with guidance beside each one. Everything you run in the shell is checked by tests, so you know each step worked before you move on.",
+      "A real project split into small labs. Tests check each lab, a quiz follows it, and the capstone in your own GitHub repository is checked automatically. Finish a level and you get a certificate.",
   },
   {
     id: "shell",
     name: "Shell labs",
     href: "/labs/shell",
-    status: "coming-soon",
+    status: "live",
     tagline: "Real machines and a real terminal.",
     summary:
-      "Real shell work on real Linux machines, containers and networks. Shell labs run in the Edorax desktop app, which is being built now.",
+      "46 hands-on labs on real Linux machines, containers and networks. Each lab gives you a task and checks the machine itself. Shell labs run in the free Edorax desktop app.",
   },
 ];
 

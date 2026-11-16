@@ -1,5 +1,10 @@
+import { execFile } from 'node:child_process';
+import { screen as electronScreen } from 'electron';
+import { isAllowedRemoteRequest, isAllowedWebPath } from './domain/remote';
 import { installIDE } from './ide/controller';
+import { CourseFolders, validateCourse } from './ide/course-folders';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { mkdir, realpath } from 'node:fs/promises';
 
 // Prevent npm lifecycle environment variables from leaking to child processes and breaking tools like nvm
@@ -23,21 +28,72 @@ import {
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { backendBase } from './api';
+import { loadAudiobookLibrary } from './audiobooks/library';
+import { downloadBook, registerAudioProtocol, registerAudioScheme, removeBook } from './audiobooks/offline';
+
+registerAudioScheme();
 import { createPreviewClient } from './api';
+import { setDesktopPlatform, setDesktopVersion } from './api/client-info';
+import { createUpdateService } from './update/update-service';
 import { createBrowserAuth } from './auth/browser-auth';
-import { OfflineStore, type DownloadedCourse } from './offline/store';
+import { OfflineStore, type DownloadedCourse, prepareEncryption } from './offline/store';
 
 import { LabRuntime, localDocker } from './labs/runtime';
+import { ShellLabRuntime } from './shell-labs/runtime';
+import { defaultDownloadsDir, dockerReadiness, setUpDocker, startDockerDesktop } from './shell-labs/docker-setup';
+import { configureShellLabs, getShellLab, getShellLabs, refreshShellLabs } from './shell-labs/catalog';
+import { devShellLabsDir } from './shell-labs/loader';
+import { shellLabSummary, shellLabView, type ShellLabsRefresh } from './domain/shell-labs';
 
 let ideController: ReturnType<typeof installIDE> | undefined;
 const locals = new Map<string, LocalRuntime>();
 const labs = new Map<string, LabRuntime>();
+const shellLabs = new Map<string, ShellLabRuntime>();
 const runtimeRequire = createRequire(__filename);
 function disposeLabs() {
   for (const lab of labs.values()) lab.dispose();
   labs.clear();
   for (const local of locals.values()) local.dispose();
   locals.clear();
+  for (const shell of shellLabs.values()) shell.dispose();
+  shellLabs.clear();
+}
+/**
+ * Downloads newer shell labs when the server has them. Never throws. A running lab keeps the lab
+ * object it started with; new definitions apply to labs opened afterwards. Runtimes with no terminal
+ * attached are dropped for labs whose definition changed, so the next open uses the new one.
+ */
+async function refreshLabsFromServer(): Promise<ShellLabsRefresh> {
+  const { changed, ...answer } = await refreshShellLabs(async (apiPath) =>
+    previewClient.sessionSnapshot()
+      ? previewClient.request(apiPath, 'GET')
+      : { ok: false, code: 'AUTH_REQUIRED', message: 'Sign in to download labs.' },
+  );
+  for (const [scope, runtime] of shellLabs)
+    if (changed.some((slug) => scope.endsWith(`:shell:${slug}`)) && runtime.idle()) {
+      runtime.dispose();
+      shellLabs.delete(scope);
+    }
+  return answer;
+}
+async function shellLabRuntime(slug: unknown) {
+  const lab = getShellLab(slug);
+  if (!lab) throw new Error('Unknown shell lab.');
+  const user = await previewClient.resolveLocalLabUser();
+  if (!user) throw new Error('Sign in to open a shell lab.');
+  const scope = `${user}:shell:${lab.slug}`;
+  if (!shellLabs.has(scope))
+    shellLabs.set(
+      scope,
+      new ShellLabRuntime(localDocker(), lab, scope, (data) => {
+        if (mainWindow && !mainWindow.isDestroyed())
+          mainWindow.webContents.send('shell-labs:terminal-data', data);
+      }, (progress) => {
+        if (mainWindow && !mainWindow.isDestroyed())
+          mainWindow.webContents.send('shell-labs:start-progress', { slug: lab.slug, ...progress });
+      }),
+    );
+  return shellLabs.get(scope)!;
 }
 async function labRuntime(blockId: string) {
   if (
@@ -97,11 +153,88 @@ const appIcon = app.isPackaged
   : path.join(app.getAppPath(), 'assets', iconFile);
 
 let mainWindow: BrowserWindow | null = null;
+
+// Quiz lockdown: while a quiz is open the window stays on top, is excluded from screenshots and
+// screen recording (Windows), and copy, paste, print, save, reload and devtools shortcuts are blocked.
+// The web integrity rules still apply: leaving full screen is noted and the quiz is covered.
+let quizLockdownActive = false;
+const LOCKED_SHORTCUT_KEYS = new Set(['c', 'x', 'v', 'p', 's', 'u', 'r', 'i', 'insert']);
+function applyQuizLockdown(active: boolean) {
+  quizLockdownActive = active;
+  setQuizDisplayMode(active);
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  // Kiosk hides the window frame and taskbar. It is used only while a quiz is open; the
+  // Exit quiz button restores the normal window. Alt+F4 still closes the app.
+  if (active) {
+    mainWindow.setMenuBarVisibility(false);
+    mainWindow.setKiosk(true);
+    mainWindow.setFullScreen(true);
+  } else {
+    mainWindow.setKiosk(false);
+    mainWindow.setFullScreen(false);
+    mainWindow.setMenuBarVisibility(true);
+  }
+  mainWindow.setAlwaysOnTop(active, 'screen-saver');
+  mainWindow.setContentProtection(active);
+}
+// Windows only: DisplaySwitch.exe switches between PC-screen-only, duplicate and extended modes.
+// Quiz mode uses /internal (PC screen only) and restores /extend when the quiz ends.
+let displayModeChangedForQuiz = false;
+function setQuizDisplayMode(active: boolean) {
+  if (process.platform !== 'win32') return;
+  if (active) {
+    if (screenCount() <= 1) return;
+    displayModeChangedForQuiz = true;
+    execFile('DisplaySwitch.exe', ['/internal'], () => undefined);
+  } else if (displayModeChangedForQuiz) {
+    displayModeChangedForQuiz = false;
+    execFile('DisplaySwitch.exe', ['/extend'], () => undefined);
+  }
+}
+function screenCount() {
+  return electronScreen.getAllDisplays().length;
+}
+function notifyQuizScreens() {
+  if (quizLockdownActive && mainWindow && !mainWindow.isDestroyed())
+    mainWindow.webContents.send('quiz:screens', { screens: screenCount() });
+}
+function guardQuizShortcuts(webContents: Electron.WebContents) {
+  webContents.on('before-input-event', (event, input) => {
+    if (!quizLockdownActive || input.type !== 'keyDown') return;
+    const key = input.key.toLowerCase();
+    const shortcut = input.control || input.meta;
+    const blocked =
+      (shortcut && LOCKED_SHORTCUT_KEYS.has(key)) ||
+      (input.shift && key === 'insert') ||
+      key === 'f12' ||
+      key === 'f5' ||
+      key === 'printscreen';
+    if (blocked) event.preventDefault();
+  });
+}
 const apiBase =
   process.env.BUILDMENT_API_URL ||
   'https://buildment-eca06ffd3e8f.herokuapp.com';
-const previewClient = createPreviewClient(apiBase);
+// Every backend request carries this version and platform; a server that wants a newer app answers 426.
+setDesktopVersion(app.getVersion());
+setDesktopPlatform(process.platform);
+const appUpdates = createUpdateService({
+  currentVersion: app.getVersion(),
+  base: apiBase,
+  file: path.join(app.getPath('userData'), 'update-policy.json'),
+  openExternal: (url) => shell.openExternal(url),
+  onChange: (state) => {
+    if (mainWindow && !mainWindow.isDestroyed())
+      mainWindow.webContents.send('app:update-status-changed', state);
+  },
+});
+const previewClient = createPreviewClient(apiBase, fetch, {
+  onUpdateRequired: (info) => appUpdates.noteUpdateRequired(info),
+});
 const offline = new OfflineStore();
+const courseFolders = new CourseFolders(
+  path.join(app.getPath('userData'), 'course-folders.json'),
+);
 const connectionFailure = (result: { ok: boolean; code?: string }) =>
   !result.ok && result.code === 'CONNECTION_ERROR';
 async function courseOverview(slug: string) {
@@ -133,36 +266,62 @@ async function blockState(id: string) {
     .find(Boolean);
   return saved ? { ok: true as const, data: saved } : result;
 }
-let syncTask: Promise<{
+export type SyncStatus = {
   pending: number;
   message: string | null;
   code: string | null;
-}> | null = null;
-function syncPending() {
+  /** Changes that reached the server during this run. */
+  synced: number;
+  /** Messages for changes the server rejected; those changes are removed from the queue. */
+  dropped: string[];
+};
+let syncTask: Promise<SyncStatus> | null = null;
+function broadcastSync(status: SyncStatus) {
+  if (mainWindow && !mainWindow.isDestroyed())
+    mainWindow.webContents.send('offline:sync-status', status);
+}
+function pushChange(change: ReturnType<typeof offline.pending>[number]) {
+  if (change.kind === 'log')
+    return previewClient.learning.saveLog(change.chapterId, change.answers);
+  if (change.kind === 'checklist')
+    return previewClient.learning.checklist(change.chapterId, change.item, change.checked);
+  return previewClient.learning.complete(change.chapterId);
+}
+function syncPending(): Promise<SyncStatus> {
   if (syncTask) return syncTask;
-  syncTask = (async () => {
+  syncTask = (async (): Promise<SyncStatus> => {
+    let synced = 0;
+    const dropped: string[] = [];
     for (const change of offline.pending()) {
-      const result =
-        change.kind === 'log'
-          ? await previewClient.learning.saveLog(
-              change.chapterId,
-              change.answers,
-            )
-          : await previewClient.learning.checklist(
-              change.chapterId,
-              change.item,
-              change.checked,
-            );
-      if (!result.ok)
-        return {
+      const result = await pushChange(change);
+      if (connectionFailure(result)) {
+        // Still offline: keep everything queued, in order, and try again later.
+        const status: SyncStatus = {
           pending: offline.pending().length,
-          message: result.message,
-          code: result.code,
+          message: 'Waiting for a connection to sync your changes.',
+          code: 'CONNECTION_ERROR',
+          synced,
+          dropped,
         };
+        broadcastSync(status);
+        return status;
+      }
+      // The server rejected this change (for example, the chapter is now locked). Retrying will not
+      // help, so remove it and let the learner know, instead of blocking every change behind it.
+      if (result.ok) synced += 1;
+      else dropped.push(result.message);
       await offline.shiftPending();
     }
     const pending = offline.pending().length;
-    return { pending, message: pending ? 'New changes are still waiting to sync.' : null, code: null };
+    const status: SyncStatus = {
+      pending,
+      message: pending ? 'New changes are still waiting to sync.' : null,
+      code: null,
+      synced,
+      dropped,
+    };
+    broadcastSync(status);
+    return status;
   })().finally(() => {
     syncTask = null;
   });
@@ -277,6 +436,7 @@ function cancelBrowserAuth() {
   browserAuth.cancel();
 }
 app.on('before-quit', () => {
+  appUpdates.stop();
   cancelBrowserAuth();
   disposeLabs();
 });
@@ -345,6 +505,7 @@ function createWindow() {
     },
   });
   const window = mainWindow;
+  window.on('focus', () => appUpdates.onFocus());
   window.once('ready-to-show', () => {
     if (!window.isDestroyed()) window.show();
   });
@@ -432,15 +593,55 @@ function createWindow() {
 if (started) app.quit();
 else {
   app.whenReady().then(async () => {
+    await prepareEncryption();
+    registerAudioProtocol();
     await offline.open();
     const saved = offline.session();
     if (saved) previewClient.restoreSession(saved);
+    // Labs: the saved copy first, else the development folder; then ask the server without waiting.
+    configureShellLabs({
+      cacheFile: path.join(app.getPath('userData'), 'shell-labs.json'),
+      devDir: devShellLabsDir(),
+    });
+    appUpdates.start();
+    void refreshLabsFromServer();
     app.setAboutPanelOptions({
       applicationName: 'Edorax',
       applicationVersion: app.getVersion(),
     });
     installApplicationMenu();
-    ideController = installIDE(() => mainWindow, requireRenderer);
+    ideController = installIDE(
+      () => mainWindow,
+      requireRenderer,
+      courseFolders,
+    );
+    ipcMain.handle('labs:prepare-terminal', async (event, course) => {
+      requireRenderer(event);
+      validateCourse(course);
+      const blockId = `terminal-${createHash('sha256').update(course).digest('hex')}`;
+      let folder: string;
+      try {
+        folder = (await courseFolders.get(course)) ?? app.getPath('home');
+      } catch {
+        // A missing or moved course folder never blocks the terminal.
+        folder = app.getPath('home');
+      }
+      if (locals.get(blockId)?.root !== folder) {
+        locals.get(blockId)?.dispose();
+        const pty = runtimeRequire(
+          path.join(app.getAppPath(), 'node_modules/node-pty'),
+        );
+        locals.set(
+          blockId,
+          new LocalRuntime(folder, pty, (data) => {
+            if (mainWindow && !mainWindow.isDestroyed())
+              mainWindow.webContents.send('labs:terminal-data', data);
+          }),
+        );
+      }
+      await locals.get(blockId)!.start();
+      return { blockId, folder };
+    });
     ipcMain.handle(
       'labs:configure',
       async (event, blockId, mode, createProject) => {
@@ -524,6 +725,89 @@ else {
         return handler(await labRuntime(blockId), ...args);
       });
     }
+    // Docker setup. Everything here is the learner pressing a button; nothing installs by itself.
+    let dockerSetupRunning: Promise<unknown> | null = null;
+    ipcMain.handle('shell-labs:docker-state', (event) => {
+      requireRenderer(event);
+      return dockerReadiness(localDocker());
+    });
+    ipcMain.handle('shell-labs:docker-start', (event) => {
+      requireRenderer(event);
+      return startDockerDesktop();
+    });
+    ipcMain.handle('shell-labs:docker-setup', async (event) => {
+      requireRenderer(event);
+      if (dockerSetupRunning) throw new Error('Docker setup is already running.');
+      const send = (progress: unknown) => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('shell-labs:docker-progress', progress);
+      };
+      const run = setUpDocker(send, {
+        platform: process.platform,
+        arch: process.arch,
+        downloadsDir: defaultDownloadsDir(app.getPath('downloads')),
+        openPath: (file) => shell.openPath(file),
+        openExternal: (url) => shell.openExternal(url),
+        showInFolder: (file) => shell.showItemInFolder(file),
+      });
+      dockerSetupRunning = run;
+      try {
+        return await run;
+      } finally {
+        dockerSetupRunning = null;
+      }
+    });
+    ipcMain.handle('shell-labs:list', (event) => {
+      requireRenderer(event);
+      return getShellLabs().map(shellLabSummary);
+    });
+    ipcMain.handle('shell-labs:refresh', (event) => {
+      requireRenderer(event);
+      return refreshLabsFromServer();
+    });
+    // Progress lives on the learner's account. Both calls swallow failures: progress is also kept on
+    // this computer, so the labs work offline and the next sync catches the account up.
+    ipcMain.handle('shell-labs:progress', async (event) => {
+      requireRenderer(event);
+      if (!previewClient.sessionSnapshot()) return null;
+      const result = await previewClient.request('/api/v1/shell-labs/progress', 'GET');
+      const data = result.ok ? (result.data as { progress?: unknown } | null)?.progress : null;
+      return data && typeof data === 'object' && !Array.isArray(data) ? data : null;
+    });
+    ipcMain.handle('shell-labs:save-progress', async (event, slug, steps) => {
+      requireRenderer(event);
+      if (typeof slug !== 'string' || !Array.isArray(steps) || !previewClient.sessionSnapshot()) return false;
+      const result = await previewClient.request(`/api/v1/shell-labs/progress/${encodeURIComponent(slug)}`, 'PUT', { steps });
+      return result.ok;
+    });
+    ipcMain.handle('shell-labs:view', (event, slug) => {
+      requireRenderer(event);
+      const lab = getShellLab(slug);
+      if (!lab) throw new Error('Unknown shell lab.');
+      return shellLabView(lab);
+    });
+    const shellHandlers: Record<
+      string,
+      (lab: ShellLabRuntime, ...args: unknown[]) => unknown
+    > = {
+      status: (lab) => lab.status(),
+      start: (lab) => lab.start(),
+      stop: (lab) => lab.stop(),
+      reset: (lab) => lab.reset(),
+      check: (lab, stepId) => lab.check(stepId),
+      'check-all': (lab) => lab.checkAll(),
+      answer: (lab, stepId, option) => lab.answer(stepId, option),
+      'terminal-open': (lab, id) => lab.openTerminal(id),
+      'terminal-close': (lab, id) => lab.closeTerminal(id),
+      'terminal-input': (lab, id, data) => lab.terminalInput(id, data),
+      'terminal-resize': (lab, id, cols, rows) =>
+        lab.resizeTerminal(id, cols, rows),
+    };
+    for (const [name, handler] of Object.entries(shellHandlers)) {
+      ipcMain.handle(`shell-labs:${name}`, async (event, slug, ...args) => {
+        requireRenderer(event);
+        return handler(await shellLabRuntime(slug), ...args);
+      });
+    }
     ipcMain.handle('course:start-learning', (event, slug) => {
       requireRenderer(event);
       return previewClient.nextLesson(slug).then((result) => {
@@ -531,6 +815,18 @@ else {
         const href = offline.course(slug)?.overview.syllabus?.continueHref;
         return href ? { ok: true as const, data: { href } } : result;
       });
+    });
+    ipcMain.handle('app:update-status', (event) => {
+      requireRenderer(event);
+      return appUpdates.state();
+    });
+    ipcMain.handle('app:update-check', (event) => {
+      requireRenderer(event);
+      return appUpdates.check();
+    });
+    ipcMain.handle('app:open-download', (event) => {
+      requireRenderer(event);
+      return appUpdates.openDownload();
     });
     ipcMain.handle('app:web-origin', (event) => {
       requireRenderer(event);
@@ -586,7 +882,13 @@ else {
     });
     ipcMain.handle('learning:complete', (event, id) => {
       requireRenderer(event);
-      return previewClient.learning.complete(id);
+      return previewClient.learning.complete(id).then(async (result) => {
+        if (!connectionFailure(result) || typeof id !== 'string' || !id || id.length > 200)
+          return result;
+        await offline.queueAction({ kind: 'complete', chapterId: id });
+        broadcastSync({ pending: offline.pending().length, message: 'Saved offline.', code: 'QUEUED', synced: 0, dropped: [] });
+        return { ok: true as const, data: { queued: true } };
+      });
     });
     ipcMain.handle('learning:save-log', (event, id, answers) => {
       requireRenderer(event);
@@ -646,6 +948,40 @@ else {
       requireRenderer(event);
       return previewClient.learnerProfile();
     });
+    ipcMain.handle('leaderboard:context', (event) => {
+      requireRenderer(event);
+      return previewClient.leaderboardContext();
+    });
+    ipcMain.handle('leaderboard:hub', (event, selection) => {
+      requireRenderer(event);
+      return previewClient.leaderboardHub(selection);
+    });
+    ipcMain.handle('leaderboard:opt-in', (event, optIn) => {
+      requireRenderer(event);
+      return previewClient.setLeaderboardOptIn(optIn);
+    });
+    ipcMain.handle('remote:request', (event, path, method, body) => {
+      requireRenderer(event);
+      if (!isAllowedRemoteRequest(path, method)) {
+        return { ok: false as const, code: 'FORBIDDEN', message: 'This action is not available on desktop.' };
+      }
+      return previewClient.request(path as string, method as string, body);
+    });
+    ipcMain.handle('app:open-web', (event, path) => {
+      requireRenderer(event);
+      if (!isAllowedWebPath(path)) return;
+      void shell.openExternal(
+        new URL(path as string, process.env.BUILDMENT_WEB_URL || 'https://edorax.com').toString(),
+      );
+    });
+    ipcMain.handle('learner:home', (event) => {
+      requireRenderer(event);
+      return previewClient.learnerHome();
+    });
+    ipcMain.handle('learner:progress', (event) => {
+      requireRenderer(event);
+      return previewClient.learnerProgress();
+    });
     ipcMain.handle('auth:status', async (event) => {
       requireRenderer(event);
       const result = await previewClient.authStatus();
@@ -669,6 +1005,7 @@ else {
           );
         }
       }
+      if (result.ok) void refreshLabsFromServer();
       if (result.ok && mainWindow) {
         mainWindow.show();
         mainWindow.focus();
@@ -695,6 +1032,47 @@ else {
       cancelBrowserAuth();
       await offline.clear();
       return previewClient.signOut();
+    });
+    const trustedAudioRequest = (event: Electron.IpcMainInvokeEvent) => {
+      if (
+        !mainWindow ||
+        event.sender !== mainWindow.webContents ||
+        event.senderFrame !== mainWindow.webContents.mainFrame
+      ) {
+        throw new Error('Untrusted request');
+      }
+    };
+    ipcMain.handle('audiobooks:download', async (event, slug: string) => {
+      trustedAudioRequest(event);
+      const library = await loadAudiobookLibrary(previewClient);
+      const book = library.books.find((entry) => entry.slug === slug);
+      if (!book) return { ok: false, message: 'This audiobook is not available right now.' };
+      if (book.downloaded) return { ok: true };
+      try {
+        await downloadBook(book);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: error instanceof Error ? error.message : 'Download failed.' };
+      }
+    });
+    ipcMain.handle('audiobooks:remove', async (event, slug: string) => {
+      trustedAudioRequest(event);
+      try {
+        await removeBook(slug);
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, message: error instanceof Error ? error.message : 'Could not remove the download.' };
+      }
+    });
+    ipcMain.handle('audiobooks:library', async (event) => {
+      if (
+        !mainWindow ||
+        event.sender !== mainWindow.webContents ||
+        event.senderFrame !== mainWindow.webContents.mainFrame
+      ) {
+        throw new Error('Untrusted request');
+      }
+      return loadAudiobookLibrary(previewClient);
     });
     ipcMain.handle('catalog:list', (event) => {
       if (
@@ -755,6 +1133,18 @@ else {
       requireRenderer(event);
       return syncPending();
     });
+    app.on('browser-window-created', (_event, win) => guardQuizShortcuts(win.webContents));
+    electronScreen.on('display-added', notifyQuizScreens);
+    electronScreen.on('display-removed', notifyQuizScreens);
+    ipcMain.handle('quiz:lockdown', (event, active) => {
+      requireRenderer(event);
+      applyQuizLockdown(active === true);
+      return { screens: screenCount() };
+    });
+    // Retry queued changes in the background so they sync as soon as the connection returns.
+    setInterval(() => {
+      if (offline.pending().length && !syncTask) void syncPending();
+    }, 20_000);
     createWindow();
     app.on('activate', () => {
       if (!mainWindow) createWindow();

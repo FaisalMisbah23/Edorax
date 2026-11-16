@@ -16,7 +16,14 @@ import { loadCourseGate } from "../progress/gate.js";
 import { loadLearnerHabit } from "../progress/learner-habit.js";
 import { milestoneReflectionBlocked } from "../progress/reflection.js";
 import { isCompletableBlock, previousChapterId } from "../progress/rules.js";
-import { releaseForEnrollment, releaseModulesWithBlocks, upgradeEnrollmentToRelease, variantForRelease } from "../courses/releases.js";
+import {
+  releaseForEnrollment,
+  releaseModulesWithBlocks,
+  upgradeEnrollmentToRelease,
+  variantForRelease,
+  readReleaseContent,
+  redirectedChapterSlug,
+} from "../courses/releases.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
 import { findChapterIndex } from "./chapter-slug.js";
 
@@ -67,21 +74,24 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
 
   const enrollment = await requireBlockSubmissionAccess(course.id, user);
 
-  // If the requested chapter is from a newer release, upgrade in-progress learners seamlessly.
-  const currentRelease = await releaseForEnrollment(course.id, enrollment, course.familySlug);
-  const inCurrentRelease = !currentRelease || currentRelease.modules.some(m => m.chapters.some(c => c.slug === chapterSlug));
-
-  if (!forDownload && !inCurrentRelease && course.activeReleaseId && enrollment.releaseId !== course.activeReleaseId && enrollment.status !== "COMPLETED") {
-    const upgraded = await prisma.$transaction((tx) =>
-      upgradeEnrollmentToRelease(tx, enrollment.id, course.activeReleaseId!), { timeout: 60_000 });
-    if (upgraded) enrollment.releaseId = course.activeReleaseId;
+  // Move in-progress learners to the newest release on any chapter open, the same as the course
+  // page does. Without this, a learner who opens a chapter link directly keeps reading the old
+  // text of a chapter that a later release corrected.
+  if (!forDownload && course.activeReleaseId && enrollment.releaseId !== course.activeReleaseId && enrollment.status !== "COMPLETED") {
+    try {
+      const upgraded = await prisma.$transaction((tx) =>
+        upgradeEnrollmentToRelease(tx, enrollment.id, course.activeReleaseId!), { timeout: 60_000 });
+      if (upgraded) enrollment.releaseId = course.activeReleaseId;
+    } catch {
+      // Keep the pinned release readable if the active release cannot accept this learner yet.
+    }
   }
 
   const bypassLocking = shouldBypassProgressGating(user);
-  const selectedRelease = await releaseForEnrollment(course.id, enrollment, course.familySlug);
-  const courseModules = selectedRelease ? await releaseModulesWithBlocks(selectedRelease.modules) : course.modules;
+  let selectedRelease = await releaseForEnrollment(course.id, enrollment, course.familySlug);
+  let courseModules = selectedRelease ? await releaseModulesWithBlocks(selectedRelease.modules) : course.modules;
 
-  const flatChapters = courseModules.flatMap((mod) =>
+  let flatChapters = courseModules.flatMap((mod) =>
     mod.chapters.map((ch) => ({
       ...ch,
       moduleTitle: mod.title,
@@ -89,7 +99,45 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
       blockCount: ch.blocks.filter((block) => isCompletableBlock(block)).length,
     }))
   );
-  const index = findChapterIndex(flatChapters, chapterSlug);
+  let index = findChapterIndex(flatChapters, chapterSlug);
+
+  // Variant-only lessons 404 when the learner is on another track. Before the variant is locked,
+  // switch to the track that owns the lesson so bookmarks still work. After lock, keep them on
+  // their chosen track (do not silently move a grocery learner onto digital-goods).
+  if (index === -1 && selectedRelease && !enrollment.variantLockedAt && enrollment.status !== "COMPLETED") {
+    const content = readReleaseContent(selectedRelease.release.content);
+    for (const [variantSlug, modules] of Object.entries(content.variants ?? {})) {
+      if (variantSlug === selectedRelease.variant) continue;
+      if (findChapterIndex(modules.flatMap((m) => m.chapters), chapterSlug) === -1) continue;
+      if (enrollment.variantSlug !== variantSlug) {
+        await prisma.enrollment.update({
+          where: { id: enrollment.id },
+          data: { variantSlug, variantChosenAt: enrollment.variantChosenAt ?? new Date() },
+        });
+        enrollment.variantSlug = variantSlug;
+      }
+      selectedRelease = { ...selectedRelease, variant: variantSlug, modules };
+      courseModules = await releaseModulesWithBlocks(modules);
+      flatChapters = courseModules.flatMap((mod) =>
+        mod.chapters.map((ch) => ({
+          ...ch,
+          moduleTitle: mod.title,
+          moduleOrder: mod.order,
+          blockCount: ch.blocks.filter((block) => isCompletableBlock(block)).length,
+        }))
+      );
+      index = findChapterIndex(flatChapters, chapterSlug);
+      break;
+    }
+  }
+
+  // A release that removed a lesson can name the lesson that replaced it, so an old link opens that
+  // one. The page then moves to the returned address, the same as it does for a long-form link.
+  if (index === -1 && selectedRelease) {
+    const target = redirectedChapterSlug(readReleaseContent(selectedRelease.release.content), chapterSlug);
+    if (target) index = findChapterIndex(flatChapters, target);
+  }
+
   if (index === -1) throw new NotFoundError("Chapter not found");
 
   const chapter = flatChapters[index]!;
