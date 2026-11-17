@@ -48,13 +48,46 @@ export function isLeaderboardSelection(value: unknown): value is LeaderboardSele
   return categoryOk && scopeOk && courseOk;
 }
 
-export const LEAGUE_TIER_ORDER: LeagueTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND'];
+export const LEAGUE_TIER_ORDER: LeagueTier[] = ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'COBALT', 'JADE', 'QUARTZ', 'AURORA', 'ZENITH', 'DIAMOND'];
+
+export const LEAGUE_WEEKLY_GOALS: Record<LeagueTier, number> = {
+  BRONZE: 100,
+  SILVER: 200,
+  GOLD: 400,
+  PLATINUM: 700,
+  COBALT: 1_000,
+  JADE: 1_400,
+  QUARTZ: 1_900,
+  AURORA: 2_500,
+  ZENITH: 3_200,
+  DIAMOND: 4_000,
+};
+
+export const LEAGUE_TIER_MARKS: Record<LeagueTier, string> = {
+  BRONZE: 'Br',
+  SILVER: 'Si',
+  GOLD: 'Go',
+  PLATINUM: 'Pt',
+  COBALT: 'Co',
+  JADE: 'Ja',
+  QUARTZ: 'Qz',
+  AURORA: 'Au',
+  ZENITH: 'Ze',
+  DIAMOND: 'Di',
+};
+
+export const LEAGUE_PROMOTION_PERCENT = 0.1;
 
 export const LEAGUE_TIER_LABELS: Record<LeagueTier, string> = {
   BRONZE: 'Bronze',
   SILVER: 'Silver',
   GOLD: 'Gold',
   PLATINUM: 'Platinum',
+  COBALT: 'Cobalt',
+  JADE: 'Jade',
+  QUARTZ: 'Quartz',
+  AURORA: 'Aurora',
+  ZENITH: 'Zenith',
   DIAMOND: 'Diamond',
 };
 
