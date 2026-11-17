@@ -4,6 +4,7 @@ import request from "supertest";
 import { createApp } from "../../src/app.js";
 import { prisma } from "../../src/db/prisma.js";
 import { createSession } from "../../src/services/auth/session.js";
+import { MAX_HIGHLIGHTS_PER_USER } from "../../src/services/chapters/highlights.js";
 import { createCourseFixture } from "../helpers/fixtures.js";
 
 const app = createApp();
@@ -80,6 +81,55 @@ describe("/api/v1/chapters/:chapterId/highlights", () => {
 
     const otherOccurrence = await request(app).post(highlightsPath()).set(learner()).send({ quote: "Plan the sprint", occurrence: 1 });
     expect(otherOccurrence.status).toBe(200);
+  });
+
+  it("creates only one highlight when the same request is sent in parallel", async () => {
+    const body = { quote: "Parallel text", occurrence: 0 };
+    const results = await Promise.all(
+      [1, 2, 3, 4].map(() => request(app).post(highlightsPath()).set(learner()).send(body))
+    );
+    expect(results.filter((r) => r.status === 200)).toHaveLength(1);
+    const rejected = results.filter((r) => r.status !== 200);
+    expect(rejected).toHaveLength(3);
+    for (const r of rejected) {
+      expect(r.status).toBe(409);
+      expect(r.body.code).toBe("HIGHLIGHT_EXISTS");
+    }
+    const rows = await prisma.chapterHighlight.count({
+      where: { chapterId: fx.chapterA.id, quote: "Parallel text", occurrence: 0 },
+    });
+    expect(rows).toBe(1);
+  });
+
+  it("returns 400 for a quote that is only whitespace", async () => {
+    const res = await request(app).post(highlightsPath()).set(learner()).send({ quote: "   " });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 409 once a learner reaches the highlight limit", async () => {
+    const enrollment = await prisma.enrollment.findFirstOrThrow({
+      where: { userId: otherUserId, courseId: fx.course.id },
+      select: { id: true },
+    });
+    const have = await prisma.chapterHighlight.count({ where: { userId: otherUserId } });
+    await prisma.chapterHighlight.createMany({
+      data: Array.from({ length: MAX_HIGHLIGHTS_PER_USER - have }, (_, i) => ({
+        userId: otherUserId,
+        enrollmentId: enrollment.id,
+        chapterId: fx.chapterA.id,
+        quote: `bulk ${i}`,
+        occurrence: 0,
+      })),
+    });
+    const res = await request(app).post(highlightsPath()).set(learner(otherToken)).send({ quote: "One too many" });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("HIGHLIGHT_LIMIT_REACHED");
+    const stillOk = await request(app).delete(`/api/v1/learner/highlights/${(await prisma.chapterHighlight.findFirstOrThrow({ where: { userId: otherUserId } })).id}`).set(learner(otherToken));
+    expect(stillOk.status).toBe(204);
+    const again = await request(app).post(highlightsPath()).set(learner(otherToken)).send({ quote: "Fits now" });
+    expect(again.status).toBe(200);
+    // Later tests expect this learner to have no highlights.
+    await prisma.chapterHighlight.deleteMany({ where: { userId: otherUserId } });
   });
 
   it("lets only the owner update or delete a highlight", async () => {

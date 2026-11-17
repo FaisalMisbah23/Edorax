@@ -1478,6 +1478,7 @@ model ChapterHighlight {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
+  @@unique([userId, chapterId, quote, occurrence])
   @@index([userId, createdAt])
   @@index([enrollmentId, chapterId])
   @@index([chapterId])

@@ -1,10 +1,13 @@
 import { prisma } from "../../db/prisma.js";
-import { ConflictError, NotFoundError, ForbiddenError } from "../../utils/errors.js";
+import { BadRequestError, ConflictError, NotFoundError, ForbiddenError } from "../../utils/errors.js";
 import type { SessionUser } from "../../types/auth.js";
 import type { HighlightColor } from "../../generated/prisma/index.js";
 import { requireBlockSubmissionAccess } from "../enrollment/api-learn-access.js";
 import { releaseContainsChapter } from "../courses/releases.js";
 import { ensureChapterStarted } from "../progress/compute.js";
+
+/** Highest number of highlights one learner can keep across all chapters. */
+export const MAX_HIGHLIGHTS_PER_USER = 2000;
 
 export type HighlightView = {
   id: string;
@@ -67,36 +70,48 @@ export async function createChapterHighlight(
 ): Promise<HighlightView> {
   const { chapter, enrollment } = await chapterAccess(user, input.chapterId);
   const quote = input.quote.trim();
-  if (!quote) throw new NotFoundError("Highlight text is required.");
+  if (!quote) throw new BadRequestError("Highlight text is required.");
   const occurrence = input.occurrence ?? 0;
+  const exists = () => new ConflictError("This text is already highlighted.", "HIGHLIGHT_EXISTS");
   const duplicate = await prisma.chapterHighlight.findFirst({
     where: { userId: user.id, chapterId: chapter.id, quote, occurrence },
     select: { id: true },
   });
-  if (duplicate) {
-    throw new ConflictError("This text is already highlighted.", "HIGHLIGHT_EXISTS");
+  if (duplicate) throw exists();
+  const count = await prisma.chapterHighlight.count({ where: { userId: user.id } });
+  if (count >= MAX_HIGHLIGHTS_PER_USER) {
+    throw new ConflictError(
+      `You have reached the limit of ${MAX_HIGHLIGHTS_PER_USER} highlights. Delete some to add more.`,
+      "HIGHLIGHT_LIMIT_REACHED"
+    );
   }
-  const row = await prisma.$transaction(async (tx) => {
-    await ensureChapterStarted(tx, enrollment.id, chapter.id);
-    return tx.chapterHighlight.create({
-      data: {
-        userId: user.id,
-        enrollmentId: enrollment.id,
-        chapterId: chapter.id,
-        color: input.color ?? "YELLOW",
-        quote,
-        prefix: input.prefix?.trim() || null,
-        suffix: input.suffix?.trim() || null,
-        occurrence,
-        note: input.note?.trim() || null,
-      },
-      select: {
-        id: true, color: true, quote: true, prefix: true, suffix: true, occurrence: true, note: true,
-        createdAt: true, updatedAt: true,
-      },
+  try {
+    const row = await prisma.$transaction(async (tx) => {
+      await ensureChapterStarted(tx, enrollment.id, chapter.id);
+      return tx.chapterHighlight.create({
+        data: {
+          userId: user.id,
+          enrollmentId: enrollment.id,
+          chapterId: chapter.id,
+          color: input.color ?? "YELLOW",
+          quote,
+          prefix: input.prefix?.trim() || null,
+          suffix: input.suffix?.trim() || null,
+          occurrence,
+          note: input.note?.trim() || null,
+        },
+        select: {
+          id: true, color: true, quote: true, prefix: true, suffix: true, occurrence: true, note: true,
+          createdAt: true, updatedAt: true,
+        },
+      });
     });
-  });
-  return toView(row);
+    return toView(row);
+  } catch (error) {
+    // Two parallel requests can both pass the check above; the unique index decides.
+    if ((error as { code?: string }).code === "P2002") throw exists();
+    throw error;
+  }
 }
 
 export async function updateChapterHighlight(

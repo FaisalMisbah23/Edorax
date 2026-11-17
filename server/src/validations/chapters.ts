@@ -20,7 +20,6 @@ export const headingNoteParams = z.object({ chapterId: id, headingId: z.string()
 export const headingNoteBody = z.object({ body: z.string().max(2000) });
 
 export const highlightColor = z.enum(["YELLOW", "GREEN", "BLUE", "PINK"]);
-export const highlightParams = z.object({ chapterId: id, highlightId: id });
 export const highlightIdParams = z.object({ highlightId: id });
 export const highlightCreateBody = z.object({
   color: highlightColor.optional(),

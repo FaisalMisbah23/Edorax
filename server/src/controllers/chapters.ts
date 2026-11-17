@@ -69,14 +69,14 @@ export async function postHighlight(req: Request, res: Response) {
   ok(res, await createChapterHighlight(req.user!, { chapterId, ...body }));
 }
 
-// PATCH /api/v1/chapters/:chapterId/highlights/:highlightId
+// PATCH /api/v1/learner/highlights/:highlightId
 export async function patchHighlight(req: Request, res: Response) {
   const highlightId = req.params.highlightId as string;
   const body = req.body as { color?: HighlightColor; note?: string | null };
   ok(res, await updateChapterHighlight(req.user!, highlightId, body));
 }
 
-// DELETE /api/v1/chapters/:chapterId/highlights/:highlightId
+// DELETE /api/v1/learner/highlights/:highlightId
 export async function deleteHighlight(req: Request, res: Response) {
   const highlightId = req.params.highlightId as string;
   await deleteChapterHighlight(req.user!, highlightId);

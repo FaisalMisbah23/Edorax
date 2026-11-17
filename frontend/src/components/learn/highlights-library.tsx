@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { deleteHighlight } from "@/server/actions/highlights";
 import type { UserHighlightView, HighlightColor } from "@/server/actions/highlights";
+import { toast } from "@/components/ui/app-toast";
 import { cn } from "@/lib/utils";
 
 const COLOR_CLASSES: Record<HighlightColor, string> = {
@@ -22,21 +23,32 @@ export function HighlightsLibrary({ initial }: { initial: UserHighlightView[] })
   const [colorFilter, setColorFilter] = useState<HighlightColor | "ALL">("ALL");
   const [pending, setPending] = useState<string | null>(null);
 
+  // Group by course slug and chapter id: two courses (or chapters) can share a title.
   const courses = useMemo(() => {
-    const set = new Set(items.map((h) => h.courseTitle));
-    return [...set].sort();
+    const map = new Map<string, { slug: string; title: string; count: number }>();
+    for (const h of items) {
+      const entry = map.get(h.courseSlug) ?? { slug: h.courseSlug, title: h.courseTitle, count: 0 };
+      entry.count++;
+      map.set(h.courseSlug, entry);
+    }
+    return [...map.values()].sort((a, b) => a.title.localeCompare(b.title));
   }, [items]);
 
   const chapters = useMemo(() => {
-    const filtered = selectedCourse ? items.filter((h) => h.courseTitle === selectedCourse) : items;
-    const set = new Set(filtered.map((h) => h.chapterTitle));
-    return [...set].sort();
+    const filtered = selectedCourse ? items.filter((h) => h.courseSlug === selectedCourse) : items;
+    const map = new Map<string, { id: string; title: string; courseTitle: string; count: number }>();
+    for (const h of filtered) {
+      const entry = map.get(h.chapterId) ?? { id: h.chapterId, title: h.chapterTitle, courseTitle: h.courseTitle, count: 0 };
+      entry.count++;
+      map.set(h.chapterId, entry);
+    }
+    return [...map.values()].sort((a, b) => a.title.localeCompare(b.title) || a.courseTitle.localeCompare(b.courseTitle));
   }, [items, selectedCourse]);
 
   const visible = useMemo(() => {
     let out = items;
-    if (selectedCourse) out = out.filter((h) => h.courseTitle === selectedCourse);
-    if (selectedChapter) out = out.filter((h) => h.chapterTitle === selectedChapter);
+    if (selectedCourse) out = out.filter((h) => h.courseSlug === selectedCourse);
+    if (selectedChapter) out = out.filter((h) => h.chapterId === selectedChapter);
     if (colorFilter !== "ALL") out = out.filter((h) => h.color === colorFilter);
     return out;
   }, [items, selectedCourse, selectedChapter, colorFilter]);
@@ -46,22 +58,23 @@ export function HighlightsLibrary({ initial }: { initial: UserHighlightView[] })
     const res = await deleteHighlight({ highlightId: id });
     setPending(null);
     if (res.ok) setItems((prev) => prev.filter((h) => h.id !== id));
+    else toast(res.error || "Could not delete the highlight.", "error");
   }
 
   function exportMarkdown() {
     const lines: string[] = ["# My Highlights", ""];
-    const grouped = new Map<string, Map<string, UserHighlightView[]>>();
+    const grouped = new Map<string, { title: string; chapters: Map<string, { title: string; items: UserHighlightView[] }> }>();
     for (const h of visible) {
-      if (!grouped.has(h.courseTitle)) grouped.set(h.courseTitle, new Map());
-      const chs = grouped.get(h.courseTitle)!;
-      if (!chs.has(h.chapterTitle)) chs.set(h.chapterTitle, []);
-      chs.get(h.chapterTitle)!.push(h);
+      if (!grouped.has(h.courseSlug)) grouped.set(h.courseSlug, { title: h.courseTitle, chapters: new Map() });
+      const course = grouped.get(h.courseSlug)!;
+      if (!course.chapters.has(h.chapterId)) course.chapters.set(h.chapterId, { title: h.chapterTitle, items: [] });
+      course.chapters.get(h.chapterId)!.items.push(h);
     }
-    for (const [courseTitle, chs] of grouped) {
-      lines.push(`## ${courseTitle}`, "");
-      for (const [chapterTitle, hs] of chs) {
-        lines.push(`### ${chapterTitle}`, "");
-        for (const h of hs) {
+    for (const course of grouped.values()) {
+      lines.push(`## ${course.title}`, "");
+      for (const chapter of course.chapters.values()) {
+        lines.push(`### ${chapter.title}`, "");
+        for (const h of chapter.items) {
           lines.push(`> ${h.quote.split("\n").join("\n> ")}`, "");
           if (h.note) lines.push(`**Note:** ${h.note}`, "");
         }
@@ -97,23 +110,20 @@ export function HighlightsLibrary({ initial }: { initial: UserHighlightView[] })
           All courses
           <span className="ml-auto text-xs text-muted-foreground">{items.length}</span>
         </button>
-        {courses.map((c) => {
-          const count = items.filter((h) => h.courseTitle === c).length;
-          return (
-            <button
-              key={c}
-              type="button"
-              onClick={() => selectCourse(c)}
-              className={cn(
-                "flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm",
-                selectedCourse === c ? "bg-accent font-medium" : "hover:bg-muted"
-              )}
-            >
-              <span className="truncate">{c}</span>
-              <span className="ml-auto shrink-0 text-xs text-muted-foreground">{count}</span>
-            </button>
-          );
-        })}
+        {courses.map((c) => (
+          <button
+            key={c.slug}
+            type="button"
+            onClick={() => selectCourse(c.slug)}
+            className={cn(
+              "flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm",
+              selectedCourse === c.slug ? "bg-accent font-medium" : "hover:bg-muted"
+            )}
+          >
+            <span className="truncate">{c.title}</span>
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground">{c.count}</span>
+          </button>
+        ))}
         {courses.length === 0 && (
           <p className="px-2 py-2 text-xs text-muted-foreground">No highlights yet.</p>
         )}
@@ -132,26 +142,23 @@ export function HighlightsLibrary({ initial }: { initial: UserHighlightView[] })
         >
           All chapters
           <span className="ml-auto text-xs text-muted-foreground">
-            {selectedCourse ? items.filter((h) => h.courseTitle === selectedCourse).length : items.length}
+            {selectedCourse ? items.filter((h) => h.courseSlug === selectedCourse).length : items.length}
           </span>
         </button>
-        {chapters.map((ch) => {
-          const count = (selectedCourse ? items.filter((h) => h.courseTitle === selectedCourse && h.chapterTitle === ch) : items.filter((h) => h.chapterTitle === ch)).length;
-          return (
-            <button
-              key={ch}
-              type="button"
-              onClick={() => setSelectedChapter(ch)}
-              className={cn(
-                "flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm",
-                selectedChapter === ch ? "bg-accent font-medium" : "hover:bg-muted"
-              )}
-            >
-              <span className="truncate">{ch}</span>
-              <span className="ml-auto shrink-0 text-xs text-muted-foreground">{count}</span>
-            </button>
-          );
-        })}
+        {chapters.map((ch) => (
+          <button
+            key={ch.id}
+            type="button"
+            onClick={() => setSelectedChapter(ch.id)}
+            className={cn(
+              "flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm",
+              selectedChapter === ch.id ? "bg-accent font-medium" : "hover:bg-muted"
+            )}
+          >
+            <span className="truncate" title={`${ch.courseTitle}: ${ch.title}`}>{ch.title}</span>
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground">{ch.count}</span>
+          </button>
+        ))}
       </aside>
 
       {/* Right: highlights (notes) */}
@@ -197,8 +204,8 @@ export function HighlightsLibrary({ initial }: { initial: UserHighlightView[] })
           >
             <option value="">All courses</option>
             {courses.map((course) => (
-              <option key={course} value={course}>
-                {course}
+              <option key={course.slug} value={course.slug}>
+                {course.title}
               </option>
             ))}
           </select>
@@ -210,8 +217,8 @@ export function HighlightsLibrary({ initial }: { initial: UserHighlightView[] })
           >
             <option value="">All chapters</option>
             {chapters.map((chapter) => (
-              <option key={chapter} value={chapter}>
-                {chapter}
+              <option key={chapter.id} value={chapter.id}>
+                {selectedCourse ? chapter.title : `${chapter.title} (${chapter.courseTitle})`}
               </option>
             ))}
           </select>

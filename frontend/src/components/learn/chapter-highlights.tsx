@@ -5,6 +5,7 @@ import { Highlighter, Trash2, X } from "lucide-react";
 import { saveHighlight, updateHighlight, deleteHighlight } from "@/server/actions/highlights";
 import type { HighlightView, HighlightColor } from "@/server/actions/highlights";
 import { toast } from "@/components/ui/app-toast";
+import { locateQuote } from "@/lib/highlight-locate";
 import { cn } from "@/lib/utils";
 
 const COLOR_CLASSES: Record<HighlightColor, string> = {
@@ -40,8 +41,8 @@ function contentTextNodes(container: HTMLElement): Text[] {
   return nodes;
 }
 
-function findTextRange(container: HTMLElement, quote: string, occurrence: number): Range | null {
-  if (!quote) return null;
+function findTextRange(container: HTMLElement, h: Highlight): Range | null {
+  if (!h.quote) return null;
   const nodes = contentTextNodes(container);
   let full = "";
   const offsets: { node: Text; start: number; end: number }[] = [];
@@ -50,16 +51,13 @@ function findTextRange(container: HTMLElement, quote: string, occurrence: number
     offsets.push({ node: tn, start: full.length, end: full.length + t.length });
     full += t;
   }
-  let idx = -1;
-  let searchFrom = 0;
-  for (let i = 0; i <= occurrence; i++) {
-    const found = full.indexOf(quote, searchFrom);
-    if (found === -1) return null;
-    idx = found;
-    searchFrom = found + 1;
-  }
+  // Pick the copy of the quote whose surrounding text matches what was saved, so a highlight does not
+  // jump to another passage when a republish adds an earlier copy of the same words.
+  const located = locateQuote(full, h);
+  if (located.status !== "found") return null;
+  const idx = located.index;
   const startOffset = idx;
-  const endOffset = idx + quote.length;
+  const endOffset = idx + h.quote.length;
   let startNode: Text | null = null;
   let startNodeOffset = 0;
   let endNode: Text | null = null;
@@ -92,14 +90,38 @@ function findTextRange(container: HTMLElement, quote: string, occurrence: number
   return range;
 }
 
+// The article's text nodes are owned by React. We never replace or normalize them: marking splits a text
+// node with splitText and moves the pieces into <mark>, and unmarking moves the pieces back out and glues
+// every split piece onto the node it came from, so the original Text objects React holds stay in place.
+// Remaining risk: while marks are present, a React update that removes or rewrites one of these text nodes
+// would act on a node whose parent is now a <mark>. The article body is static after hydration today.
+const splits = new WeakMap<HTMLElement, { original: Text; extra: Text }[]>();
+
 function unwrapMarks(article: HTMLElement) {
-  const marks = Array.from(article.querySelectorAll("mark.hl-mark"));
-  for (const mark of marks) {
+  for (const mark of Array.from(article.querySelectorAll("mark.hl-mark"))) {
     const parent = mark.parentNode;
     if (!parent) continue;
-    parent.replaceChild(document.createTextNode(mark.textContent || ""), mark);
+    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+    parent.removeChild(mark);
   }
-  article.normalize();
+  const records = splits.get(article) ?? [];
+  // Newest first, so a piece that was split again is merged back before the piece it was split from.
+  for (let i = records.length - 1; i >= 0; i--) {
+    const { original, extra } = records[i];
+    if (extra.parentNode && extra.parentNode === original.parentNode && original.nextSibling === extra) {
+      original.nodeValue = (original.nodeValue || "") + (extra.nodeValue || "");
+      extra.parentNode.removeChild(extra);
+    }
+  }
+  splits.delete(article);
+}
+
+function splitTracked(article: HTMLElement, node: Text, offset: number): Text {
+  const extra = node.splitText(offset);
+  const list = splits.get(article) ?? [];
+  list.push({ original: node, extra });
+  splits.set(article, list);
+  return extra;
 }
 
 function renderHighlights(article: HTMLElement, highlights: Highlight[]) {
@@ -114,7 +136,7 @@ function renderHighlights(article: HTMLElement, highlights: Highlight[]) {
   const resolved: { h: Highlight; range: Range }[] = [];
   const unanchored: string[] = [];
   for (const h of highlights) {
-    const range = findTextRange(article, h.quote, h.occurrence);
+    const range = findTextRange(article, h);
     if (range) resolved.push({ h, range });
     else unanchored.push(h.id);
   }
@@ -142,32 +164,33 @@ function renderHighlights(article: HTMLElement, highlights: Highlight[]) {
   }
 
   for (const [tn, colors] of nodeColors) {
-    const text = tn.nodeValue || "";
     const ids = nodeIds.get(tn)!;
-    const parent = tn.parentNode;
-    if (!parent) continue;
-    const frag = document.createDocumentFragment();
+    const len = tn.nodeValue?.length || 0;
+    const runs: { start: number; end: number; color: HighlightColor; id: string }[] = [];
     let i = 0;
-    while (i < text.length) {
+    while (i < len) {
       const color = colors[i];
       const id = ids[i];
       let j = i;
-      while (j < text.length && colors[j] === color && ids[j] === id) j++;
-      const chunk = text.slice(i, j);
-      if (color && id) {
-        const mark = document.createElement("mark");
-        mark.className = `hl-mark ${COLOR_CLASSES[color]}`;
-        mark.dataset.highlightId = id;
-        const h = highlights.find((x) => x.id === id);
-        if (h?.note) mark.title = h.note;
-        mark.textContent = chunk;
-        frag.appendChild(mark);
-      } else {
-        frag.appendChild(document.createTextNode(chunk));
-      }
+      while (j < len && colors[j] === color && ids[j] === id) j++;
+      if (color && id) runs.push({ start: i, end: j, color, id });
       i = j;
     }
-    parent.replaceChild(frag, tn);
+    // Last run first: `tn` keeps shrinking from the right, so earlier offsets stay valid.
+    for (let r = runs.length - 1; r >= 0; r--) {
+      const run = runs[r];
+      if (run.end < (tn.nodeValue?.length || 0)) splitTracked(article, tn, run.end);
+      const target = run.start > 0 ? splitTracked(article, tn, run.start) : tn;
+      const parent = target.parentNode;
+      if (!parent) continue;
+      const mark = document.createElement("mark");
+      mark.className = `hl-mark ${COLOR_CLASSES[run.color]}`;
+      mark.dataset.highlightId = run.id;
+      const h = highlights.find((x) => x.id === run.id);
+      if (h?.note) mark.title = h.note;
+      parent.insertBefore(mark, target);
+      mark.appendChild(target);
+    }
   }
   return unanchored;
 }
@@ -258,8 +281,13 @@ export function ChapterHighlights({
   const [noteDraft, setNoteDraft] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  // Ids of highlights whose passage moved or could not be found in this version of the chapter.
   const [unanchored, setUnanchored] = useState<string[]>([]);
   const savedSelection = useRef<ReturnType<typeof selectionToHighlight>>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
+  const returnFocusTo = useRef<HTMLElement | null>(null);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   // Render marks whenever highlights change
   useEffect(() => {
@@ -358,8 +386,59 @@ export function ChapterHighlights({
   }
 
   function openNote(h: Highlight) {
+    const active = document.activeElement;
+    returnFocusTo.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    setNoteError(null);
     setActiveId(h.id);
     setNoteDraft(h.note ?? "");
+  }
+
+  function closeNote() {
+    setActiveId(null);
+    setNoteError(null);
+  }
+
+  // Move focus into the note editor when it opens and give it back when it closes.
+  useEffect(() => {
+    if (!activeId) return;
+    noteRef.current?.focus();
+    return () => {
+      const target = returnFocusTo.current;
+      returnFocusTo.current = null;
+      if (target && target.isConnected) target.focus();
+    };
+  }, [activeId]);
+
+  // Escape also closes it when focus has moved elsewhere on the page.
+  useEffect(() => {
+    if (!activeId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeNote();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [activeId]);
+
+  function onDialogKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      closeNote();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const focusable = Array.from(
+      dialogRef.current?.querySelectorAll<HTMLElement>("button:not([disabled]), textarea, [href], input, select") ?? [],
+    );
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   async function saveNote() {
@@ -369,7 +448,10 @@ export function ChapterHighlights({
     setPending(false);
     if (res.ok) {
       setHighlights((prev) => prev.map((h) => (h.id === activeId ? res.data : h)));
-      setActiveId(null);
+      closeNote();
+    } else {
+      setNoteError(res.error || "Could not save the note.");
+      toast(res.error || "Could not save the note.", "error");
     }
   }
 
@@ -377,7 +459,12 @@ export function ChapterHighlights({
     setPending(true);
     const res = await updateHighlight({ highlightId: h.id, color });
     setPending(false);
-    if (res.ok) setHighlights((prev) => prev.map((x) => (x.id === h.id ? res.data : x)));
+    if (res.ok) {
+      setHighlights((prev) => prev.map((x) => (x.id === h.id ? res.data : x)));
+    } else {
+      setNoteError(res.error || "Could not change the colour.");
+      toast(res.error || "Could not change the colour.", "error");
+    }
   }
 
   async function remove(h: Highlight) {
@@ -386,7 +473,10 @@ export function ChapterHighlights({
     setPending(false);
     if (res.ok) {
       setHighlights((prev) => prev.filter((x) => x.id !== h.id));
-      setActiveId(null);
+      closeNote();
+    } else {
+      setNoteError(res.error || "Could not delete the highlight.");
+      toast(res.error || "Could not delete the highlight.", "error");
     }
   }
 
@@ -423,23 +513,35 @@ export function ChapterHighlights({
 
       {activeHighlight && (
         <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="hl-note-title"
+          onKeyDown={onDialogKeyDown}
           data-hl-toolbar
           className="fixed z-[60] w-72 rounded-xl border border-border bg-card p-3 shadow-xl"
           style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Highlight note</span>
-            <button type="button" onClick={() => setActiveId(null)} aria-label="Close">
+            <span id="hl-note-title" className="text-xs font-medium text-muted-foreground">Highlight note</span>
+            <button type="button" onClick={closeNote} aria-label="Close">
               <X className="size-3.5" />
             </button>
           </div>
           <textarea
+            ref={noteRef}
+            aria-label="Note"
             value={noteDraft}
             onChange={(e) => setNoteDraft(e.target.value)}
             maxLength={5000}
             rows={3}
             className="mt-2 w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
+          {noteError ? (
+            <p role="alert" className="mt-2 text-xs text-destructive">
+              {noteError}
+            </p>
+          ) : null}
           <div className="mt-2 flex items-center justify-between">
             <button
               type="button"
@@ -477,7 +579,8 @@ export function ChapterHighlights({
         type="button"
         onClick={() => setPanelOpen((v) => !v)}
         className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm shadow-lg hover:bg-muted"
-        aria-label="Open highlights"
+        aria-label={`Highlights, ${highlights.length} saved`}
+        aria-expanded={panelOpen}
       >
         <Highlighter className="size-4" />
         Highlights{highlights.length ? ` (${highlights.length})` : ""}
@@ -493,7 +596,7 @@ export function ChapterHighlights({
           </div>
           {unanchored.length > 0 ? (
             <p className="mb-2 rounded-md border border-border bg-muted/30 px-2 py-1.5 text-xs text-muted-foreground">
-              {unanchored.length} highlight{unanchored.length === 1 ? "" : "s"} could not be found in this version of the chapter.
+              {unanchored.length} highlight{unanchored.length === 1 ? "" : "s"} moved or could not be found in this version of the chapter. {unanchored.length === 1 ? "It is" : "They are"} kept here but not marked in the text.
             </p>
           ) : null}
           {highlights.length === 0 ? (
@@ -513,6 +616,9 @@ export function ChapterHighlights({
                     <span className={cn("inline-block size-2 rounded-full mr-2", COLOR_CLASSES[h.color].split(" ")[0])} />
                     <span className="text-sm">&ldquo;{h.quote.slice(0, 80)}{h.quote.length > 80 ? "…" : ""}&rdquo;</span>
                   </button>
+                  {unanchored.includes(h.id) && (
+                    <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">Moved or not found</p>
+                  )}
                   {h.note && <p className="mt-1 text-xs text-muted-foreground">{h.note}</p>}
                   <div className="mt-1 flex gap-2">
                     <button type="button" onClick={() => openNote(h)} className="text-xs text-muted-foreground hover:text-foreground">
