@@ -240,6 +240,11 @@ enum LeagueTier {
   SILVER
   GOLD
   PLATINUM
+  COBALT
+  JADE
+  QUARTZ
+  AURORA
+  ZENITH
   DIAMOND
 }
 
@@ -321,6 +326,7 @@ model User {
   helpThreadsAsked      HelpThread[]   @relation("HelpThreadsAsked")
   helpMessagesAuthored  HelpMessage[]  @relation("HelpMessagesAuthored")
   headingNotes          HeadingNote[]
+  highlights            ChapterHighlight[]
   organizationCourseRequestsReviewed OrganizationCourseRequest[] @relation("OrgCourseRequestReviewer")
   instructorAccessRequest       InstructorAccessRequest?
   instructorAccessReviews       InstructorAccessRequest[] @relation("InstructorAccessReviewer")
@@ -328,6 +334,7 @@ model User {
   aiInterviewSessions           AiInterviewSession[]
   learnerQuestions              LearnerQuestion[]
   capstoneChecks                CapstoneCheck[]
+  shellLabProgress              ShellLabProgress[]
   certificates                  Certificate[]
   appActivity                   UserAppActivity?
   appActivityDays               AppActivityDay[]
@@ -635,6 +642,7 @@ model Chapter {
   helpThreads       HelpThread[]
   studySessions     StudySession[]
   headingNotes      HeadingNote[]
+  highlights        ChapterHighlight[]
   integrityAttempts IntegrityAttempt[]
   releaseDraft CourseChapterDraft?
 
@@ -758,6 +766,7 @@ model Enrollment {
   specialisationChosenAt DateTime?
   createdAt         DateTime          @default(now())
   chapterProgress   ChapterProgress[]
+  highlights        ChapterHighlight[]
   dailyActivity     DailyActivity[]
   studySessions     StudySession[]
   integrityAttempts IntegrityAttempt[]
@@ -1450,6 +1459,36 @@ model HeadingNote {
   @@index([chapterId])
 }
 
+enum HighlightColor {
+  YELLOW
+  GREEN
+  BLUE
+  PINK
+}
+
+model ChapterHighlight {
+  id           String         @id @default(cuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollmentId String
+  enrollment   Enrollment     @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  chapterId    String
+  chapter      Chapter        @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  color        HighlightColor @default(YELLOW)
+  quote        String         @db.Text
+  prefix       String?        @db.Text
+  suffix       String?        @db.Text
+  occurrence   Int            @default(0)
+  note         String?        @db.Text
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([userId, chapterId, quote, occurrence])
+  @@index([userId, createdAt])
+  @@index([enrollmentId, chapterId])
+  @@index([chapterId])
+}
+
 // Mentor -> mentee assignment surface (docs/phases/m7-assignment-and-polish.mdx).
 // email set = email-bound invite (only that account can accept); email null =
 // open invite link anyone signed in can accept. Acceptance creates an Enrollment.
@@ -1703,6 +1742,19 @@ model ShellLab {
 
   @@index([active, position])
   @@map("shell_labs")
+}
+
+/// The steps a learner has passed in one shell lab. Kept on the account so progress follows the
+/// learner to a new computer or a reinstall. Step ids come from the lab's own YAML.
+model ShellLabProgress {
+  userId    String
+  labSlug   String
+  steps     String[]
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, labSlug])
+  @@map("shell_lab_progress")
 }
 
 enum DesktopPlatform {

@@ -16,7 +16,7 @@ function chapterPath(courseSlug: string, chapterSlug: string): string {
   return `/courses/${courseSlug}/${cleanChapterSlug(chapterSlug)}`;
 }
 import type { LearnerHabit } from "../../shared/lib/streak.js";
-import type { GamificationSummary } from "../../shared/api/gamification.js";
+import type { GamificationSummary, LeaderboardHubView } from "../../shared/api/gamification.js";
 import type {
   DashboardAction,
   DashboardCourse,
@@ -116,7 +116,7 @@ export type {
 
 /** What a caller that loads no gamification gets: every feature off. */
 export const GAMIFICATION_OFF: GamificationSummary = {
-  features: { xp: false, streakFreezes: false, levels: false, career: false, credits: false, leaderboards: false },
+  features: { xp: false, streakFreezes: false, levels: false, career: false, credits: false, leaderboards: false, leagueTiers: false, recovery: false },
   hidden: false,
   leaderboardOptIn: false,
   xp: null,
@@ -164,6 +164,7 @@ export function buildMenteeDashboardViewModel(args: {
   bypassLocking?: boolean;
   habit?: LearnerHabit;
   gamification?: GamificationSummary;
+  leaderboard?: LeaderboardHubView | null;
 }): MenteeDashboardViewModel {
   const gamification = args.gamification ?? GAMIFICATION_OFF;
   const showXp = gamification.features.xp && !gamification.hidden;
@@ -408,5 +409,6 @@ export function buildMenteeDashboardViewModel(args: {
       goal: null,
     },
     gamification,
+    leaderboard: args.leaderboard ?? null,
   };
 }

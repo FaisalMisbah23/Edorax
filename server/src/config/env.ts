@@ -161,6 +161,14 @@ const schema = z.object({
     .string()
     .optional()
     .transform((value) => value !== "false"),
+  GAMIFICATION_LEAGUE_TIERS: z
+    .string()
+    .optional()
+    .transform((value) => value !== "false"),
+  GAMIFICATION_RECOVERY: z
+    .string()
+    .optional()
+    .transform((value) => value !== "false"),
 
   /**
    * DEFAULT policy for forced desktop updates. Admins override it per platform (darwin, win32, linux)

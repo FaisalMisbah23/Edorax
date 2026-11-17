@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react';
 import {
   LEAGUE_TIER_LABELS,
+  LEAGUE_TIER_ORDER,
+  LEAGUE_WEEKLY_GOALS,
   formatNumber,
   formatScore,
   initials,
+  LEAGUE_PROMOTION_PERCENT,
   nextLeagueTier,
   prevLeagueTier,
   resetLabel,
@@ -26,6 +29,39 @@ const PILL = {
 
 export function Pill({ tone, children }: { tone: keyof typeof PILL; children: ReactNode }) {
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${PILL[tone]}`}>{children}</span>;
+}
+
+const BADGE_COLORS: Record<LeagueTier, string> = {
+  BRONZE: '#c87945',
+  SILVER: '#b7c4d2',
+  GOLD: '#f0b936',
+  PLATINUM: '#91a8b8',
+  COBALT: '#3276c8',
+  JADE: '#35a77d',
+  QUARTZ: '#a78bda',
+  AURORA: '#5fb7bd',
+  ZENITH: '#665ed0',
+  DIAMOND: '#55aee8',
+};
+
+export function LeagueBadge({ tier }: { tier: LeagueTier }) {
+  const colors = BADGE_COLORS[tier];
+  return (
+    <svg aria-label={`${LEAGUE_TIER_LABELS[tier]} League`} role="img" viewBox="0 0 48 48" className="size-7" fill="none">
+      <title>{LEAGUE_TIER_LABELS[tier]} League</title>
+      <circle cx="24" cy="24" r="19" fill={colors} stroke="#ffffff" strokeWidth="1.5" />
+      {tier === 'BRONZE' ? <path d="M24 10 35 15v9c0 7-4.4 11.5-11 15-6.6-3.5-11-8-11-15v-9l11-5Z" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {tier === 'SILVER' ? <path d="M12 27c0-8 5-13 12-13s12 5 12 13c0 5-4 9-12 9s-12-4-12-9Z" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {tier === 'GOLD' ? <path d="m24 8 3.5 8 8.5.8-6.4 5.6 1.9 8.3-7.5-4.4-7.5 4.4 1.9-8.3-6.4-5.6 8.5-.8L24 8Z" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {tier === 'PLATINUM' ? <path d="m13 14 11-6 11 6v13l-11 6-11-6V14Z" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {tier === 'COBALT' ? <path d="M24 8v32M8 24h32M13 13l22 22M35 13 13 35" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" /> : null}
+      {tier === 'JADE' ? <path d="M34 10c-12 1-20 7-20 17 0 6 5 10 10 7 7-4 10-12 10-24Z" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {tier === 'QUARTZ' ? <path d="m24 7 10 9-4 19H18l-4-19 10-9Z" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {tier === 'AURORA' ? <path d="M9 29c5-10 10-10 15 0s10 10 15 0M9 21c5-10 10-10 15 0s10 10 15 0" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" /> : null}
+      {tier === 'ZENITH' ? <path d="m24 7 4 12 13 5-13 5-4 12-4-12-13-5 13-5 4-12Z" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {tier === 'DIAMOND' ? <path d="m24 7 12 11-12 23-12-23L24 7Z" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" /> : null}
+    </svg>
+  );
 }
 
 export function Rank({ rank, highlight }: { rank: number; highlight?: boolean }) {
@@ -121,13 +157,18 @@ function LeagueOutcome({ league }: { league: LeagueInfo }) {
   const last = league.lastWeek;
   if (!last) return null;
   const box = 'rounded-xl border px-4 py-2.5 text-sm font-medium';
-  if (last.outcome === 'PROMOTED') {
+  if (last.outcome === 'PROMOTED' || last.outcome === 'PROMOTED_TARGET' || last.outcome === 'PROMOTED_BOTH') {
     const to = nextLeagueTier(last.fromTier);
+    const path = last.outcome === 'PROMOTED_TARGET' ? 'by reaching your weekly goal' : last.outcome === 'PROMOTED_BOTH' ? 'by rank and your weekly goal' : 'by rank';
     return (
       <p className={`${box} border-primary/30 bg-primary/10 text-primary`}>
-        Promoted to {to ? LEAGUE_TIER_LABELS[to] : 'a higher league'} last week.
+        Promoted to {to ? LEAGUE_TIER_LABELS[to] : 'a higher league'} last week {path}.
       </p>
     );
+  }
+  if (last.outcome === 'RECOVERY_HELD' || last.outcome === 'SHIELD_HELD') {
+    const protection = last.outcome === 'RECOVERY_HELD' ? 'recovery quest' : 'League Shield';
+    return <p className={`${box} border-primary/30 bg-primary/10 text-primary`}>Your {protection} protected your league place last week.</p>;
   }
   if (last.outcome === 'DEMOTED') {
     const to = prevLeagueTier(last.fromTier);
@@ -165,6 +206,51 @@ export function LeagueCard({
   const isDemoting = demoteCount > 0 && league.rank >= league.demotionZone && Boolean(prev);
   const best = bestScore ?? 0;
   const label = 'This week compared with your best week';
+  const currentIndex = LEAGUE_TIER_ORDER.indexOf(league.tier);
+
+  const journey = (
+    <section aria-labelledby="league-journey-heading" className="border-b border-border bg-muted/20 px-5 py-5 sm:px-6">
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">League journey</p>
+          <h3 id="league-journey-heading" className="mt-1 text-lg font-semibold">Your weekly path</h3>
+        </div>
+        <span className="text-xs text-muted-foreground">{currentIndex + 1} of {LEAGUE_TIER_ORDER.length}</span>
+      </div>
+      <ol aria-label="League progression" className="mt-5 flex min-w-[680px] items-start">
+        {LEAGUE_TIER_ORDER.map((tier, index) => {
+          const current = tier === league.tier;
+          const nextTier = tier === next;
+          const past = currentIndex > index;
+          return (
+            <li key={tier} className="flex min-w-0 flex-1 flex-col items-center">
+              <div className="flex w-full items-center">
+                <span className={`h-0.5 flex-1 ${index > 0 && past ? 'bg-primary' : 'bg-border'}`} />
+                <span className={`grid size-9 shrink-0 place-items-center rounded-full border text-[10px] font-bold uppercase ${current ? 'border-primary bg-primary text-primary-foreground ring-4 ring-primary/15' : nextTier ? 'border-primary/60 bg-primary/10 text-primary ring-2 ring-primary/10' : past ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground'}`}>
+                  <LeagueBadge tier={tier} />
+                </span>
+                <span className={`h-0.5 flex-1 ${past ? 'bg-primary' : 'bg-border'}`} />
+              </div>
+              <span className={`mt-2 text-center text-[11px] leading-tight ${current || nextTier ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>{LEAGUE_TIER_LABELS[tier]}</span>
+              <span className="mt-1 text-[10px] text-muted-foreground">{current ? 'You are here' : nextTier ? 'Next' : past ? 'Complete' : 'Upcoming'}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Current league</p>
+          <p className="mt-1 text-sm font-semibold">{LEAGUE_TIER_LABELS[league.tier]} · {formatNumber(league.goal)} XP goal</p>
+          <p className="mt-1 text-xs text-muted-foreground">Reach the goal or finish in the top {Math.round(LEAGUE_PROMOTION_PERCENT * 100)}%.</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Next league</p>
+          <p className="mt-1 text-sm font-semibold">{next ? `${LEAGUE_TIER_LABELS[next]} · ${formatNumber(LEAGUE_WEEKLY_GOALS[next])} XP goal` : 'Diamond · final league'}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{next ? `You are one tier away from ${LEAGUE_TIER_LABELS[next]}.` : 'You have reached the top of the league journey.'}</p>
+        </div>
+      </div>
+    </section>
+  );
 
   return (
     <section aria-labelledby="league-heading" className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -191,6 +277,8 @@ export function LeagueCard({
         </div>
       </div>
 
+      {journey}
+
       <div className="space-y-5 px-5 py-5 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -199,8 +287,10 @@ export function LeagueCard({
           </div>
           {next && promoteCount > 0 ? (
             <p className="text-sm font-medium text-primary">
-              Top {promoteCount} promote to {LEAGUE_TIER_LABELS[next]}
+              Top {Math.round(LEAGUE_PROMOTION_PERCENT * 100)}% ({promoteCount} {promoteCount === 1 ? 'spot' : 'spots'}) or the weekly goal promotes to {LEAGUE_TIER_LABELS[next]}
             </p>
+          ) : next && league.goal > 0 ? (
+            <p className="text-sm font-medium text-primary">Reach the weekly goal to promote</p>
           ) : prev && demoteCount > 0 ? (
             <p className="text-sm font-medium text-destructive">
               Bottom {demoteCount} demote to {LEAGUE_TIER_LABELS[prev]}
@@ -211,6 +301,31 @@ export function LeagueCard({
             <p className="text-sm text-muted-foreground">Base league. Protected from demotion.</p>
           )}
         </div>
+
+        {league.goal > 0 ? (
+          <div>
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span className={league.goalMet ? 'font-semibold text-primary' : 'font-medium text-foreground'}>
+                {league.goalMet ? 'Weekly goal met' : 'Achievement promotion'}
+              </span>
+              <span className="tabular-nums text-muted-foreground">{formatNumber(score)} / {formatNumber(league.goal)} XP</span>
+            </div>
+            <ProgressTrack score={score} best={league.goal} label="Weekly league goal progress" />
+            <p className="mt-2 text-xs text-muted-foreground">Reach your goal or finish in the top {Math.round(LEAGUE_PROMOTION_PERCENT * 100)}%. Both paths unlock the next league.</p>
+          </div>
+        ) : null}
+
+        {league.recovery ? (
+          <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium">Recovery quest</span>
+              <span className={league.recovery.completed ? 'font-semibold text-primary' : 'text-muted-foreground'}>
+                {league.recovery.completed ? 'Complete' : 'In progress'}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Complete {league.recovery.chapterTarget} chapter and earn {formatNumber(league.recovery.xpTarget)} XP to protect against one demotion.</p>
+          </div>
+        ) : null}
 
         {best > 0 ? (
           <div>

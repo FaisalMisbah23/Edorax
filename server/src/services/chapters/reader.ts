@@ -22,6 +22,7 @@ import {
   upgradeEnrollmentToRelease,
   variantForRelease,
   readReleaseContent,
+  redirectedChapterSlug,
 } from "../courses/releases.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
 import { findChapterIndex } from "./chapter-slug.js";
@@ -130,6 +131,13 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
     }
   }
 
+  // A release that removed a lesson can name the lesson that replaced it, so an old link opens that
+  // one. The page then moves to the returned address, the same as it does for a long-form link.
+  if (index === -1 && selectedRelease) {
+    const target = redirectedChapterSlug(readReleaseContent(selectedRelease.release.content), chapterSlug);
+    if (target) index = findChapterIndex(flatChapters, target);
+  }
+
   if (index === -1) throw new NotFoundError("Chapter not found");
 
   const chapter = flatChapters[index]!;
@@ -184,7 +192,7 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
     return loadChapterReader(courseSlug, chapterSlug, user, 1, forDownload);
   }
 
-  const [content, currentProgress, helpThreadRow, habit, chapterResponses, predictBlocks, headingNotes, existingRating] = await Promise.all([
+  const [content, currentProgress, helpThreadRow, habit, chapterResponses, predictBlocks, headingNotes, existingRating, highlights] = await Promise.all([
     prisma.chapter.findUnique({ where: { id: chapter.id }, select: { compiled: true, source: true } }),
     prisma.chapterProgress.findUnique({
       where: { enrollmentId_chapterId: { enrollmentId: enrollment.id, chapterId: chapter.id } },
@@ -206,6 +214,7 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
       where: { courseId_userId: { courseId: course.id, userId: user.id } },
       select: { id: true },
     }),
+    prisma.chapterHighlight.findMany({ where: { userId: user.id, chapterId: chapter.id }, select: { id: true, color: true, quote: true, prefix: true, suffix: true, occurrence: true, note: true } }),
   ]);
   if (!content) throw new NotFoundError("Chapter not found");
 
@@ -266,6 +275,7 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
       },
       streakMilestone: habit.streakMilestone,
       headingNotes: Object.fromEntries(headingNotes.map((note) => [note.headingId, note.body])),
+      highlights: highlights.map((h) => ({ id: h.id, color: h.color, quote: h.quote, prefix: h.prefix, suffix: h.suffix, occurrence: h.occurrence, note: h.note })),
       predictGate,
       predictRevealed: !predictGate || predictBlocks.every((block) => answeredIds.has(block.id)),
       helpThread: serializeHelpThread(helpThreadRow),

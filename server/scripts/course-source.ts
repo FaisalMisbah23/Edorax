@@ -177,12 +177,21 @@ export const CourseManifestSchema = z.object({
     /** Complete ordered module path for this variant; absent shared keys are omitted. */
     moduleOrder: z.array(z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/)).min(1).optional(),
   })).optional(),
-  remove: z.object({ moduleKeys: z.array(z.string()).default([]), lessonKeys: z.array(z.string()).default([]) }).optional(),
+  remove: z.object({
+    moduleKeys: z.array(z.string()).default([]),
+    lessonKeys: z.array(z.string()).default([]),
+    /** Remove a lesson by its public address (the last part of its reader link). For a course without lesson keys. */
+    lessons: z.array(z.object({
+      slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+      /** The address that old links to the removed lesson open instead. */
+      redirectTo: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+    }).strict()).min(1).optional(),
+  }).optional(),
 }).superRefine((manifest, ctx) => {
   if (manifest.legacySourceAudit && !manifest.repositoryTargetSlug) {
     ctx.addIssue({ code: "custom", path: ["legacySourceAudit"], message: "Legacy audit exception requires an existing repository target slug" });
   }
-  if (!manifest.modules.length && !manifest.remove?.moduleKeys.length && !manifest.remove?.lessonKeys.length &&
+  if (!manifest.modules.length && !manifest.remove?.moduleKeys.length && !manifest.remove?.lessonKeys.length && !manifest.remove?.lessons?.length &&
       !manifest.variants?.some(variant => variant.overrides.length || variant.modules.length || variant.omitLessonKeys.length || variant.moduleOrder)) {
     ctx.addIssue({ code: "custom", path: ["modules"], message: "Provide lessons, variant overrides, or explicit removals" });
   }
@@ -291,6 +300,13 @@ export const CourseManifestSchema = z.object({
   for (const field of ["moduleKeys", "lessonKeys"] as const) {
     const keys = manifest.remove?.[field] ?? [];
     if (new Set(keys).size !== keys.length) ctx.addIssue({ code: "custom", path: ["remove", field], message: "Removal keys must be unique" });
+  }
+  const removedSlugs = (manifest.remove?.lessons ?? []).map(lesson => lesson.slug);
+  if (new Set(removedSlugs).size !== removedSlugs.length) ctx.addIssue({ code: "custom", path: ["remove", "lessons"], message: "Removed lesson addresses must be unique" });
+  for (const lesson of manifest.remove?.lessons ?? []) {
+    if (lesson.redirectTo && removedSlugs.includes(lesson.redirectTo)) {
+      ctx.addIssue({ code: "custom", path: ["remove", "lessons"], message: `Lesson ${lesson.slug} cannot redirect to a removed lesson` });
+    }
   }
   for (const variant of manifest.variants ?? []) for (const override of variant.overrides) {
     if (manifest.remove?.lessonKeys.includes(override.lessonKey)) {

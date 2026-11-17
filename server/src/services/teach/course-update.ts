@@ -58,6 +58,7 @@ export async function previewCourseZipUpdate(user: SessionUser, courseId: string
       if (!priorId || !variantChapter || variantChapter.id === priorId) affected.add(lesson.key ?? lesson.title);
     }
     for (const key of plan.remove?.lessonKeys ?? []) affected.add(key);
+    for (const removal of plan.remove?.lessons ?? []) if (existing.some(chapter => chapter.slug === removal.slug)) affected.add(removal.slug);
     const variantPlan = plan.variants?.find(variant => variant.slug === slug);
     for (const override of variantPlan?.overrides ?? []) affected.add(override.lessonKey);
     for (const key of variantPlan?.omitLessonKeys ?? []) affected.add(key);

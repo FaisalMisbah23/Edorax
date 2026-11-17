@@ -2,7 +2,7 @@
 import type { EnrollStatus, HelpThreadStatus, ProgressStatus, BlockType } from "../domain/enums";
 import type { InstructorAccessView } from "../lib/instructor-access";
 import type { LearnerHabit, StreakMilestone } from "../lib/streak";
-import type { GamificationSummary } from "./gamification";
+import type { GamificationSummary, LeaderboardHubView } from "./gamification";
 
 // Wire contract for /api/v1/learner. Dates travel as ISO strings.
 
@@ -109,6 +109,7 @@ export type MenteeDashboardViewModel = {
   recentEvents: DashboardEvent[];
   habit: LearnerHabit;
   gamification: GamificationSummary;
+  leaderboard: LeaderboardHubView | null;
 };
 
 export type LearnerProgressModule = {
