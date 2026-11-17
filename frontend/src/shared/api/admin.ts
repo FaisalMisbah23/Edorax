@@ -241,24 +241,6 @@ export type AdminUserDetail = {
   coursesOwned: Array<{ id: string; title: string; slug: string; status: CourseStatus }>;
 };
 
-/** A refund less fees: fixed transaction fee, international fee, Polar fee, Edorax fee. */
-export type AdminRefundBreakdown = {
-  currency: string;
-  paidCents: number;
-  fixedFeeCents: number;
-  internationalFeeCents: number;
-  platformFeeCents: number;
-  edoraxFeeCents: number;
-  refundCents: number;
-};
-
-export type RefundPolicy = {
-  fixedFeeCents: number;
-  internationalFeeBps: number;
-  polarFeeBps: number;
-  edoraxFeeBps: number;
-};
-
 export type FeatureFlagInfo = {
   key: string;
   name: string;
@@ -276,6 +258,13 @@ export type AppSettingsView = {
   };
 };
 
+export type RefundPolicy = {
+  fixedFeeCents: number;
+  internationalFeeBps: number;
+  polarFeeBps: number;
+  edoraxFeeBps: number;
+};
+
 export type RefundPolicyView = {
   policy: RefundPolicy;
   example: {
@@ -283,6 +272,15 @@ export type RefundPolicyView = {
     standardRefundCents: number;
     fullRefundCents: number;
   };
+};
+export type AdminRefundBreakdown = {
+  currency: string;
+  paidCents: number;
+  fixedFeeCents: number;
+  internationalFeeCents: number;
+  platformFeeCents: number;
+  edoraxFeeCents: number;
+  refundCents: number;
 };
 
 export const ADMIN_ERROR_CODES = {
