@@ -13,6 +13,7 @@ import {
   LineChart,
   Receipt,
   MonitorDown,
+  SlidersHorizontal,
   Users,
   Wallet,
 } from "lucide-react";
@@ -94,6 +95,12 @@ export function AdminWorkspaceShell({
           href: "/admin/desktop-updates",
           icon: MonitorDown,
           active: pathname.startsWith("/admin/desktop-updates"),
+        },
+        {
+          label: "App settings",
+          href: "/admin/settings/app",
+          icon: SlidersHorizontal,
+          active: pathname === "/admin/settings" || pathname.startsWith("/admin/settings/app"),
         },
         { label: "Audit log", href: "/admin/audit", icon: History, active: pathname.startsWith("/admin/audit") },
       ],

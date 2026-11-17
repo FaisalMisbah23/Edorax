@@ -241,14 +241,48 @@ export type AdminUserDetail = {
   coursesOwned: Array<{ id: string; title: string; slug: string; status: CourseStatus }>;
 };
 
-/** A refund less Polar’s fees on the payment: $0.50 transaction fee, 1.5% international fee, 5% Polar fee. */
+/** A refund less fees: fixed transaction fee, international fee, Polar fee, Edorax fee. */
 export type AdminRefundBreakdown = {
   currency: string;
   paidCents: number;
   fixedFeeCents: number;
   internationalFeeCents: number;
   platformFeeCents: number;
+  edoraxFeeCents: number;
   refundCents: number;
+};
+
+export type RefundPolicy = {
+  fixedFeeCents: number;
+  internationalFeeBps: number;
+  polarFeeBps: number;
+  edoraxFeeBps: number;
+};
+
+export type FeatureFlagInfo = {
+  key: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  category: "gamification" | "infra";
+};
+
+export type AppSettingsView = {
+  refundPolicy: RefundPolicyView;
+  featureFlags: FeatureFlagInfo[];
+  polar: {
+    configured: boolean;
+    environment: string;
+  };
+};
+
+export type RefundPolicyView = {
+  policy: RefundPolicy;
+  example: {
+    paidCents: number;
+    standardRefundCents: number;
+    fullRefundCents: number;
+  };
 };
 
 export const ADMIN_ERROR_CODES = {

@@ -357,7 +357,15 @@ describe("confirmed-enrollment filtering in user list and detail", () => {
 
     const detail = await getUserDetail("user-1");
     const refund = Object.fromEntries(detail.enrollments.map((row) => [row.id, row.refund]));
-    expect(refund.polar).toEqual({ currency: "USD", paidCents: 1000, fixedFeeCents: 50, internationalFeeCents: 15, platformFeeCents: 50, refundCents: 885 });
+    expect(refund.polar).toEqual({
+      currency: "USD",
+      paidCents: 1000,
+      fixedFeeCents: 50,
+      internationalFeeCents: 15,
+      platformFeeCents: 50,
+      edoraxFeeCents: 0,
+      refundCents: 885,
+    });
     expect(refund.manual).toBeNull();
     expect(refund.free).toBeNull();
     expect(refund.tiny).toBeNull();

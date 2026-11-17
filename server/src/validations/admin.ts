@@ -263,3 +263,19 @@ export const desktopUpdatesBody = z.object({
     }),
 });
 export type DesktopUpdatesBody = z.infer<typeof desktopUpdatesBody>;
+
+// ─── Refund policy ────────────────────────────────────────────────────────────
+
+const bpsField = (name: string) =>
+  z
+    .number({ message: `${name} must be a number` })
+    .int({ message: `${name} must be an integer` })
+    .min(0, { message: `${name} must be 0 or greater` });
+
+export const refundPolicyBody = z.object({
+  fixedFeeCents: z.number({ message: "fixedFeeCents must be a number" }).int().min(0),
+  internationalFeeBps: bpsField("internationalFeeBps"),
+  polarFeeBps: bpsField("polarFeeBps"),
+  edoraxFeeBps: bpsField("edoraxFeeBps"),
+});
+export type RefundPolicyBody = z.infer<typeof refundPolicyBody>;

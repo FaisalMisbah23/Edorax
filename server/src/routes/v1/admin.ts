@@ -44,6 +44,7 @@ import {
   metricsQuery,
   orgIdParams,
   listAuditQuery,
+  refundPolicyBody,
   requestIdParams,
   suspendUserBody,
   totpCodeBody,
@@ -249,5 +250,9 @@ router.get("/desktop-updates", admin.listDesktopUpdates);
 router.put("/desktop-updates", validateBody(desktopUpdatesBody), admin.saveDesktopUpdates);
 router.get("/audit", validateQuery(listAuditQuery), admin.listAudit);
 router.get("/audit/export", admin.exportAuditCsv);
+
+router.get("/settings/refund-policy", admin.getRefundPolicy);
+router.put("/settings/refund-policy", validateBody(refundPolicyBody), admin.saveRefundPolicy);
+router.get("/settings/app", admin.getAppSettings);
 
 export default router;

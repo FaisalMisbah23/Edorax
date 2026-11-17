@@ -1,7 +1,7 @@
 import type { Prisma } from "../../generated/prisma/index.js";
 import { prisma } from "../../db/prisma.js";
 import { logger } from "../../utils/logger.js";
-import { refundEndsAccess } from "./refund-policy.js";
+import { getRefundPolicy, refundEndsAccess } from "./refund-policy.js";
 
 export type PolarOrderRefundedInput = {
   orderId: string;
@@ -58,9 +58,12 @@ export async function endAccessForRefund(tx: Prisma.TransactionClient, enrollmen
 }
 
 /**
- * Polar reported order.refunded. A refund at or above the refund policy amount (paid minus the
- * Polar’s payment fees kept back) ends access; a smaller one is goodwill and access stays. Idempotent,
- * because Polar retries webhooks and the admin refund may already have ended access.
+ * Polar reported order.refunded. A refund at or above the Standard policy amount (paid minus fees)
+ * ends access; a smaller one is goodwill and access stays. Idempotent, because Polar retries
+ * webhooks and the admin refund may already have ended access.
+ *
+ * The access decision always uses the live saved policy so it stays consistent with admin-issued
+ * refunds even if the policy has been updated since the payment was made.
  */
 export async function revokePolarOrderRefund(input: PolarOrderRefundedInput): Promise<PolarRefundOutcome> {
   const enrollmentIdFromMeta = metadataString(input.metadata, "enrollmentId");
@@ -89,7 +92,10 @@ export async function revokePolarOrderRefund(input: PolarOrderRefundedInput): Pr
     return { revoked: false, enrollmentId: enrollment.id, reason: "already-refunded" };
   }
 
-  if (!refundEndsAccess({ status: input.status, refundedCents: input.refundedAmount, paidCents: enrollment.payment.amountCents })) {
+  // Load the live policy to decide the Standard threshold.
+  const policy = await getRefundPolicy();
+
+  if (!refundEndsAccess({ status: input.status, refundedCents: input.refundedAmount, paidCents: enrollment.payment.amountCents, policy })) {
     logger.info(
       { orderId: input.orderId, enrollmentId: enrollment.id, refundedAmount: input.refundedAmount, paidCents: enrollment.payment.amountCents },
       "polar goodwill refund below the policy amount: course access kept",
