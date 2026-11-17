@@ -2,6 +2,8 @@
 // one-year horizon: tiers escalate so a consistent learner has meaningful goals across ~12 months.
 // Each tier pays Build Credits once (rewardFor), granted idempotently through the credit ledger.
 
+import { LEAGUE_TIER_ORDER } from "./leagues.js";
+
 export type AchievementCategory = "career" | "streak" | "xp" | "courses" | "quizzes" | "league" | "study";
 export type AchievementMetric = "xp" | "streak" | "courses" | "chapters" | "perfect" | "league" | "studyHours" | "nightOwl" | "earlyBird" | "weekends";
 
@@ -20,6 +22,16 @@ export type AchievementDef = {
 /** Credits paid for reaching tier index `i` (0-based). Once per tier, per learner. */
 export function rewardForTier(i: number): number {
   return 20 + 10 * i;
+}
+
+/**
+ * League Climber tiers fire at the learner's real league. The metric value is the index of their
+ * highest league in LEAGUE_TIER_ORDER (Bronze = 0), so each target is that league's index. Tier
+ * indices 0-3 stay Silver/Gold/Platinum/Diamond, which keeps the `achievement:league:<i>` credit
+ * ledger keys stable for learners who earned them before the ten-tier list.
+ */
+function leagueTarget(tier: (typeof LEAGUE_TIER_ORDER)[number]): number {
+  return LEAGUE_TIER_ORDER.indexOf(tier);
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -121,10 +133,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     metric: "league",
     icon: "trophy",
     tiers: [
-      { label: "Silver", target: 1 },
-      { label: "Gold", target: 2 },
-      { label: "Platinum", target: 3 },
-      { label: "Diamond", target: 4 },
+      { label: "Silver", target: leagueTarget("SILVER") },
+      { label: "Gold", target: leagueTarget("GOLD") },
+      { label: "Platinum", target: leagueTarget("PLATINUM") },
+      { label: "Diamond", target: leagueTarget("DIAMOND") },
     ],
   },
   {

@@ -6,6 +6,37 @@ import { loadLeaderboardHub } from "../gamification/leaderboard-categories.js";
 import { loadLearnerHabit } from "../progress/learner-habit.js";
 import { buildMenteeDashboardViewModel } from "./dashboard-model.js";
 import { learnerTimeZone } from "./time-zone.js";
+import { logger } from "../../utils/logger.js";
+
+// The dashboard card only needs the global weekly board, which reads every listable user. Cache it
+// per learner for a short time so page loads and refreshes do not each repeat that read.
+const LEADERBOARD_CARD_TTL_MS = 60_000;
+const LEADERBOARD_CARD_MAX_ENTRIES = 500;
+type LeaderboardCard = Awaited<ReturnType<typeof loadLeaderboardHub>>;
+const leaderboardCardCache = new Map<string, { value: LeaderboardCard; expiresAt: number }>();
+
+async function loadLeaderboardCard(learnerId: string): Promise<LeaderboardCard | null> {
+  const now = Date.now();
+  const hit = leaderboardCardCache.get(learnerId);
+  if (hit && hit.expiresAt > now) return hit.value;
+  try {
+    const value = await loadLeaderboardHub(learnerId, { category: "weekly_xp", scope: "global" });
+    if (leaderboardCardCache.size >= LEADERBOARD_CARD_MAX_ENTRIES) {
+      for (const [key, entry] of leaderboardCardCache) if (entry.expiresAt <= now) leaderboardCardCache.delete(key);
+      if (leaderboardCardCache.size >= LEADERBOARD_CARD_MAX_ENTRIES) leaderboardCardCache.clear();
+    }
+    leaderboardCardCache.set(learnerId, { value, expiresAt: now + LEADERBOARD_CARD_TTL_MS });
+    return value;
+  } catch (err) {
+    logger.error({ err, learnerId }, "[dashboard] leaderboard card failed to load");
+    return null;
+  }
+}
+
+/** Test hook: drop cached leaderboard cards. */
+export function clearLeaderboardCardCache(): void {
+  leaderboardCardCache.clear();
+}
 
 export async function loadMenteeDashboard(args: {
   learnerId: string;
@@ -161,7 +192,7 @@ export async function loadMenteeDashboard(args: {
   // here, so it always arrives with the mascot's reaction instead of silently during a page render.
   const [gamification, leaderboard] = await Promise.all([
     loadGamificationSummary(args.learnerId),
-    loadLeaderboardHub(args.learnerId, { category: "weekly_xp", scope: "global" }).catch(() => null),
+    loadLeaderboardCard(args.learnerId),
   ]);
 
   const byDay = new Map<string, number>();

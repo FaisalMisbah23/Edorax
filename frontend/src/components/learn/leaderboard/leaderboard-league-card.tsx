@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   LEAGUE_PROMOTION_PERCENT,
@@ -60,6 +61,16 @@ function LeagueOutcomeBanner({ league }: { league: LeagueInfo }) {
 function LeagueProgression({ league }: { league: LeagueInfo }) {
   const currentIndex = LEAGUE_TIER_ORDER.indexOf(league.tier);
   const next = nextLeagueTier(league.tier);
+  const currentRef = useRef<HTMLLIElement | null>(null);
+
+  // The tier rail is wider than a phone; bring the learner's tier into view.
+  useEffect(() => {
+    try {
+      currentRef.current?.scrollIntoView({ inline: "center", block: "nearest" });
+    } catch {
+      // Best effort only.
+    }
+  }, [league.tier]);
 
   return (
     <section aria-labelledby="league-journey-heading" className="border-b border-border bg-muted/20 px-5 py-5 sm:px-6">
@@ -80,7 +91,7 @@ function LeagueProgression({ league }: { league: LeagueInfo }) {
           const isPast = currentIndex > index;
           const isLast = index === LEAGUE_TIER_ORDER.length - 1;
           return (
-            <li key={tier} className="flex min-w-0 flex-1 flex-col items-center">
+            <li key={tier} ref={isCurrent ? currentRef : undefined} className="flex min-w-0 flex-1 flex-col items-center">
               <div className="flex w-full items-center">
                 {index > 0 ? <span aria-hidden className={`h-0.5 flex-1 ${isPast || isCurrent ? "bg-primary" : "bg-border"}`} /> : <span aria-hidden className="flex-1" />}
                 <span
@@ -114,12 +125,14 @@ function LeagueProgression({ league }: { league: LeagueInfo }) {
         <div className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Current league</p>
           <p className="mt-1 text-sm font-semibold text-foreground">{LEAGUE_TIER_LABELS[league.tier]} · {formatNumber(league.goal)} XP goal</p>
-          <p className="mt-1 text-xs text-muted-foreground">Reach this goal or finish in the top {Math.round(LEAGUE_PROMOTION_PERCENT * 100)}% to move up.</p>
+          {next ? (
+            <p className="mt-1 text-xs text-muted-foreground">Reach this goal or finish in the top {Math.round(LEAGUE_PROMOTION_PERCENT * 100)}% to move up.</p>
+          ) : null}
         </div>
         <div className="rounded-xl border border-border bg-card px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Next league</p>
           <p className="mt-1 text-sm font-semibold text-foreground">
-            {next ? `${LEAGUE_TIER_LABELS[next]} · ${formatNumber(leagueWeeklyGoal(next))} XP goal` : "Diamond · final league"}
+            {next ? `${LEAGUE_TIER_LABELS[next]} · ${formatNumber(leagueWeeklyGoal(next))} XP goal` : `${LEAGUE_TIER_LABELS[league.tier]} · final league`}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {next ? `You are one tier away from ${LEAGUE_TIER_LABELS[next]}.` : "You have reached the top of the league journey."}
@@ -216,14 +229,14 @@ export function LeaderboardLeagueCard({
             <p className="text-sm font-medium text-destructive">
               Bottom {demoteCount} demote to {LEAGUE_TIER_LABELS[prevLeagueTier(league.tier)!]}
             </p>
-          ) : league.tier === "DIAMOND" ? (
+          ) : league.tier === LEAGUE_TIER_ORDER[LEAGUE_TIER_ORDER.length - 1] ? (
             <p className="text-sm text-muted-foreground">Top league — no higher tier to promote to</p>
           ) : (
             <p className="text-sm text-muted-foreground">Base league — protected from demotion</p>
           )}
         </div>
 
-        {league.goal > 0 ? (
+        {league.goal > 0 && canPromote ? (
           <div>
             <div className="flex items-center justify-between gap-2 text-sm">
               <span className={league.goalMet ? "font-semibold text-ok" : "font-medium text-foreground"}>
