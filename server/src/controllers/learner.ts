@@ -20,6 +20,7 @@ import { loadLeaderboard } from "../services/gamification/leaderboard.js";
 import { loadLeaderboardHub } from "../services/gamification/leaderboard-categories.js";
 import { listRewards, purchaseReward as purchaseRewardService, setActiveReward as setActiveRewardService, useReward as useRewardService } from "../services/gamification/rewards.js";
 import { claimQuest as claimQuestService, loadWeeklyQuests } from "../services/gamification/quests.js";
+import { listUserHighlights } from "../services/chapters/highlights.js";
 import type { LeaderboardHubQuery } from "../validations/learner.js";
 
 function displayName(user: { name: string | null; email: string }) {
@@ -176,4 +177,8 @@ export async function leaderboards(req: Request, res: Response) {
     throw new BadRequestError("Course scope needs a courseId.");
   }
   ok(res, await loadLeaderboardHub(req.user!.id, { category, scope: effectiveScope, courseId: courseId ?? null }));
+}
+
+export async function highlights(req: Request, res: Response) {
+  ok(res, await listUserHighlights(req.user!));
 }
