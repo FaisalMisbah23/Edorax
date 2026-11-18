@@ -51,6 +51,7 @@ export const MDX_COMPONENT_NAMES = [
   "TraceRequest",
   "TraceStep",
   "InteractiveCanvas",
+  "HtmlPreview",
   "Lab",
   "EcosystemGallery",
   "GoDeeper",
