@@ -860,10 +860,10 @@ export function CoursePreviewShell({
                     ) : null}
 
                     {course.projectGoal ? (
-                      <p className="mt-4 rounded-lg border border-border bg-card px-4 py-3 text-base leading-6 text-muted-foreground">
-                        <span className="font-medium text-foreground">The project: </span>
-                        {course.projectGoal.trim().replace(/\.+$/, "")}.
-                      </p>
+                      <details className="mt-4 rounded-lg border border-border bg-card px-4 py-3 text-base leading-6 text-muted-foreground">
+                        <summary className="cursor-pointer font-medium text-foreground">Project overview</summary>
+                        <p className="mt-2">{course.projectGoal.trim().replace(/\.+$/, "")}.</p>
+                      </details>
                     ) : null}
 
                     {activeChapter.isMilestone ? (
