@@ -282,6 +282,18 @@ export type AdminRefundBreakdown = {
   refundCents: number;
 };
 
+export type AdminRefundOptions = {
+  fullCents: number;
+  standardCents: number;
+  maxCustomCents: number;
+  paidCents: number;
+  alreadyRefundedCents: number;
+  currency: string;
+  breakdown: Omit<AdminRefundBreakdown, "currency">;
+};
+
+export type AdminRefundMode = "FULL" | "STANDARD" | "CUSTOM";
+
 export const ADMIN_ERROR_CODES = {
   REQUEST_ALREADY_REVIEWED: "REQUEST_ALREADY_REVIEWED",
   COURSE_NOT_PUBLISHED: "COURSE_NOT_PUBLISHED",
