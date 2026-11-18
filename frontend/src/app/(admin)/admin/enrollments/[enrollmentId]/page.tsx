@@ -9,6 +9,7 @@ import { AdminBackLink, AdminPanel, AdminSection } from "@/components/admin/admi
 import { PaymentStatusBadge, discountKindLabel, providerLabel, wasCharged } from "../payment-badge";
 import { DeleteEnrollmentButton } from "../delete-enrollment-button";
 import { EnrollmentEditForm } from "./enrollment-edit-form";
+import { RefundEnrollmentButton } from "@/components/admin/refund-enrollment-button";
 
 const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 const when = (iso: string | null) => (iso ? dateTime.format(new Date(iso)) : "—");
@@ -135,14 +136,11 @@ export default async function AdminEnrollmentDetailPage({ params }: { params: Pr
                 <Field label="Paid">{when(payment.paidAt)}</Field>
                 <Field label="Last updated">{when(payment.updatedAt)}</Field>
               </dl>
-              {payment.status === "SUCCEEDED" && payment.provider === "polar" && learner.userId ? (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  To refund this payment, use the{" "}
-                  <Link href={`/admin/users/${learner.userId}`} className="font-medium text-primary hover:underline">
-                    learner&apos;s account page
-                  </Link>
-                  .
-                </p>
+              {payment.status === "SUCCEEDED" && payment.provider === "polar" ? (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 p-3">
+                  <p className="text-sm text-muted-foreground">Preview the saved policy and choose Standard, Full, or a custom refund.</p>
+                  <RefundEnrollmentButton enrollmentId={enrollment.id} courseTitle={course.title} eligible={true} />
+                </div>
               ) : null}
             </AdminPanel>
           </AdminSection>

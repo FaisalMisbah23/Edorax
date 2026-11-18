@@ -35,18 +35,23 @@ export type CourseRefundResult = {
  * Returns all three option amounts for the confirm dialog without issuing anything.
  * Uses the live saved policy so the UI shows the same numbers as the actual refund.
  */
-export async function previewCourseRefund(enrollmentId: string): Promise<AllRefundOptions> {
+export async function previewCourseRefund(enrollmentId: string): Promise<AllRefundOptions & { paidCents: number; alreadyRefundedCents: number; currency: string }> {
   const payment = await refundablePayment(enrollmentId);
   const policy = await getRefundPolicy();
-  // alreadyRefundedCents is 0 for the current single-refund model; kept for future partial refunds.
-  return allRefundOptions(payment.amountCents, 0, policy);
+  const alreadyRefundedCents = await getPriorRefundedCents(payment.providerRef);
+  return {
+    ...allRefundOptions(payment.amountCents, alreadyRefundedCents, policy),
+    paidCents: payment.amountCents,
+    alreadyRefundedCents,
+    currency: payment.currency,
+  };
 }
 
 // ─── Issue refund ─────────────────────────────────────────────────────────────
 
 export type RefundInput = {
   mode: RefundMode;
-  /** Required when mode === "CUSTOM". Max = order amount. */
+  /** Required when mode === "CUSTOM". Max = remaining order amount. */
   customCents?: number;
   reason?: RefundReasonInput;
   comment?: string | null;
@@ -83,10 +88,11 @@ export async function refundCoursePayment(
 
   const payment = await refundablePayment(enrollmentId);
   const policy = await getRefundPolicy();
+  const alreadyRefundedCents = await getPriorRefundedCents(payment.providerRef);
 
   let refundCents: number;
   try {
-    refundCents = resolveRefundCents(mode, payment.amountCents, 0, policy, customCents);
+    refundCents = resolveRefundCents(mode, payment.amountCents, alreadyRefundedCents, policy, customCents);
   } catch (err) {
     const isInvalidAmount = err instanceof Error && err.message === "INVALID_AMOUNT";
     // For STANDARD mode, INVALID_AMOUNT means the fees ate the whole payment.
@@ -144,14 +150,36 @@ export async function refundCoursePayment(
         mode,
         refundCents,
         paidCents: payment.amountCents,
+        alreadyRefundedCents,
         revokeAccess,
         policySnapshot: policy,
+        feeBreakdownSnapshot: breakdown,
+        decisionDetails: {
+          mode,
+          requestedCustomCents: mode === "CUSTOM" ? customCents : null,
+          resolvedRefundCents: refundCents,
+          remainingBeforeRefundCents: Math.max(0, payment.amountCents - alreadyRefundedCents),
+          reason: reason ?? null,
+          revokeAccess,
+        },
         reason: reason ?? "customer_request",
       },
     });
   });
 
   return { refundId: refund.id, enrollmentId, mode, refundCents };
+}
+
+/** Sum successful refunds at Polar so external or earlier partial refunds reduce the balance. */
+async function getPriorRefundedCents(orderId: string): Promise<number> {
+  let page = 1;
+  let totalCents = 0;
+  while (true) {
+    const refunds = await getPolarClient().refunds.list({ order_id: orderId, succeeded: true, limit: 100, page });
+    totalCents += refunds.items.reduce((sum, refund) => sum + refund.amount, 0);
+    if (refunds.items.length < 100) return totalCents;
+    page += 1;
+  }
 }
 
 // ─── Shared guard ─────────────────────────────────────────────────────────────

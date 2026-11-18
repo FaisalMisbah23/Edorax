@@ -19,6 +19,7 @@ import { buildListQuery } from "@/components/admin/admin-list-controls";
 import { AdminLiveFilterBar } from "@/components/admin/admin-live-filter-bar";
 import { AdminPagination } from "@/components/admin/admin-pagination";
 import { DiscountBadge, PaymentStatusBadge, providerLabel, wasCharged } from "./payment-badge";
+import { RefundEnrollmentButton } from "@/components/admin/refund-enrollment-button";
 
 type SearchParams = { query?: string; payment?: string; lifecycle?: string; discount?: string; page?: string };
 
@@ -173,12 +174,15 @@ export default async function AdminEnrollmentsPage({ searchParams }: { searchPar
                     )}
                   </AdminTableCell>
                   <AdminTableCell align="right" className="w-px">
-                    <DeleteEnrollmentButton
-                      enrollmentId={row.id}
-                      learner={row.learner.email ?? row.learner.name ?? "this learner"}
-                      courseTitle={row.course.title}
-                      paid={payment && wasCharged(payment.status) ? formatPriceCents(payment.amountCents, payment.currency) : null}
-                    />
+                    <div className="flex justify-end gap-2">
+                      {payment ? <RefundEnrollmentButton enrollmentId={row.id} courseTitle={row.course.title} eligible={payment.provider === "polar" && payment.status === "SUCCEEDED"} /> : null}
+                      <DeleteEnrollmentButton
+                        enrollmentId={row.id}
+                        learner={row.learner.email ?? row.learner.name ?? "this learner"}
+                        courseTitle={row.course.title}
+                        paid={payment && wasCharged(payment.status) ? formatPriceCents(payment.amountCents, payment.currency) : null}
+                      />
+                    </div>
                   </AdminTableCell>
                 </AdminTableRow>
               );
