@@ -109,12 +109,15 @@ function LearningLogQuestion({
   );
 }
 
+/** One shared object, so the default never looks like new data on every render. */
+const NO_INITIAL_ANSWERS: LearningLogAnswers = {};
+
 export function LearningLog({
   title = "Share what you learned",
   instruction,
   questions,
   variant = "default",
-  initialAnswers = {},
+  initialAnswers = NO_INITIAL_ANSWERS,
   onSave,
 }: {
   title?: string;
