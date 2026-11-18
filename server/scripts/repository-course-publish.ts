@@ -63,6 +63,25 @@ export function ownershipSlugGroups(packages: Package[]): string[][] {
   return packages.map(pkg => [pkg.slug, ...(pkg.manifest.repositoryTargetSlug ? [pkg.manifest.repositoryTargetSlug] : [])]);
 }
 
+/**
+ * The instructor who owns a course: the `creatorEmail` in its course.yaml, or else the
+ * default instructor in courses/publishing.yaml. A course without `creatorEmail` behaves
+ * exactly as before.
+ */
+export function courseInstructorEmail(pkg: Package, defaultEmail: string): string {
+  return pkg.manifest.creatorEmail?.trim() || defaultEmail;
+}
+
+/** The distinct instructor emails a set of packages needs, compared without regard to case. */
+export function instructorEmailsFor(packages: Package[], defaultEmail: string): string[] {
+  const seen = new Map<string, string>();
+  for (const pkg of packages) {
+    const email = courseInstructorEmail(pkg, defaultEmail);
+    if (!seen.has(email.toLowerCase())) seen.set(email.toLowerCase(), email);
+  }
+  return [...seen.values()];
+}
+
 function filesForZip(dir: string): Record<string, Uint8Array> {
   const files: Record<string, Uint8Array> = {};
   function visit(current: string) {
@@ -129,11 +148,8 @@ export function packageZip(pkg: Package, publication: "create" | "update", instr
   return zip;
 }
 
-function validate(pkg: Package, instructorEmail: string) {
-  if (pkg.manifest.creatorEmail && pkg.manifest.creatorEmail.toLowerCase() !== instructorEmail.toLowerCase()) {
-    throw new Error(`${pkg.slug}: creatorEmail conflicts with courses/publishing.yaml`);
-  }
-  packageZip(pkg, "create", instructorEmail);
+function validate(pkg: Package, defaultInstructorEmail: string) {
+  packageZip(pkg, "create", courseInstructorEmail(pkg, defaultInstructorEmail));
   const env = { ...process.env };
   delete env.COURSE_IMPORT_SOURCE;
   delete env.COURSE_IMPORT_RESULT;
@@ -163,7 +179,7 @@ function validate(pkg: Package, instructorEmail: string) {
   }
 }
 
-async function publish(packages: Package[], instructorEmail: string) {
+async function publish(packages: Package[], defaultInstructorEmail: string) {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL must be configured in the backend release environment");
   const { prisma } = await import("../src/db/prisma.js");
   const { Prisma } = await import("../src/generated/prisma/index.js");
@@ -171,32 +187,44 @@ async function publish(packages: Package[], instructorEmail: string) {
   const { previewCourseZipUpdate, approveCourseZipUpdate } = await import("../src/services/teach/course-update.js");
   const { publishCourse } = await import("../src/services/teach/courses.js");
   try {
-    const owner = await prisma.user.findUnique({ where: { email: instructorEmail },
-      select: { id: true, email: true, name: true, image: true, role: true, emailVerified: true, zipImportEnabled: true, testerEnabled: true } });
-    if (!owner || !["MENTOR", "ADMIN"].includes(owner.role) || !owner.emailVerified || !owner.zipImportEnabled) {
-      throw new Error(`${instructorEmail} must be a verified instructor with ZIP import access before repository publishing runs`);
+    // Check every instructor before any course changes, so one missing account stops the whole release.
+    const owners = new Map<string, SessionUser>();
+    for (const email of instructorEmailsFor(packages, defaultInstructorEmail)) {
+      const owner = await prisma.user.findUnique({ where: { email },
+        select: { id: true, email: true, name: true, image: true, role: true, emailVerified: true, zipImportEnabled: true, testerEnabled: true } });
+      if (!owner || !["MENTOR", "ADMIN"].includes(owner.role) || !owner.emailVerified || !owner.zipImportEnabled) {
+        throw new Error(`${email} must be a verified instructor with ZIP import access before repository publishing runs`);
+      }
+      owners.set(email.toLowerCase(), owner);
     }
-    const user: SessionUser = owner;
+    const instructorFor = (pkg: Package) => {
+      const email = courseInstructorEmail(pkg, defaultInstructorEmail);
+      return { email, user: owners.get(email.toLowerCase())! };
+    };
     // Bind only opted-in repository courses. The previous owner keeps
     // COURSE_CREATOR access; unpublished source packages must not mutate DB ownership.
-    for (const slugs of ownershipSlugGroups(packages)) {
-      const courses = await prisma.course.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true, mentorId: true } });
-      for (const course of courses) {
-        if (course.mentorId === user.id) continue;
-        await prisma.$transaction(async tx => {
-          await tx.courseInstructor.upsert({
-            where: { courseId_userId: { courseId: course.id, userId: course.mentorId } },
-            update: { role: "COURSE_CREATOR" },
-            create: { courseId: course.id, userId: course.mentorId, role: "COURSE_CREATOR" },
+    for (const pkg of packages) {
+      const { email: instructorEmail, user } = instructorFor(pkg);
+      for (const slugs of ownershipSlugGroups([pkg])) {
+        const courses = await prisma.course.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true, mentorId: true } });
+        for (const course of courses) {
+          if (course.mentorId === user.id) continue;
+          await prisma.$transaction(async tx => {
+            await tx.courseInstructor.upsert({
+              where: { courseId_userId: { courseId: course.id, userId: course.mentorId } },
+              update: { role: "COURSE_CREATOR" },
+              create: { courseId: course.id, userId: course.mentorId, role: "COURSE_CREATOR" },
+            });
+            await tx.courseInstructor.deleteMany({ where: { courseId: course.id, userId: user.id } });
+            const changed = await tx.course.updateMany({ where: { id: course.id, mentorId: course.mentorId }, data: { mentorId: user.id } });
+            if (changed.count !== 1) throw new Error(`${course.slug}: course ownership changed during binding; retry the workflow`);
           });
-          await tx.courseInstructor.deleteMany({ where: { courseId: course.id, userId: user.id } });
-          const changed = await tx.course.updateMany({ where: { id: course.id, mentorId: course.mentorId }, data: { mentorId: user.id } });
-          if (changed.count !== 1) throw new Error(`${course.slug}: course ownership changed during binding; retry the workflow`);
-        });
-        console.log(`${course.slug}: assigned course ownership to ${instructorEmail}`);
+          console.log(`${course.slug}: assigned course ownership to ${instructorEmail}`);
+        }
       }
     }
     for (const pkg of packages) {
+      const { email: instructorEmail, user } = instructorFor(pkg);
       const targetSlug = pkg.manifest.repositoryTargetSlug ?? pkg.slug;
       const sourceHash = courseSourceHash(pkg);
       const prior = await prisma.course.findUnique({ where: { slug: targetSlug }, select: {
@@ -257,11 +285,11 @@ async function main() {
     else console.log("No private course checkout configured; platform is ready for content publishing.");
     return;
   }
-  const { instructorEmail } = publishingSettings();
+  const { instructorEmail: defaultInstructorEmail } = publishingSettings();
   const packages = selectedPackages();
   if (mode === "--count") { console.log(packages.length); return; }
-  for (const pkg of packages) validate(pkg, instructorEmail);
-  if (mode === "--publish") await publish(packages, instructorEmail);
+  for (const pkg of packages) validate(pkg, defaultInstructorEmail);
+  if (mode === "--publish") await publish(packages, defaultInstructorEmail);
   else console.log(`Validated ${packages.length} opted-in course package(s).`);
 }
 
