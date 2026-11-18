@@ -22,6 +22,10 @@ npm --prefix desktop start
 
 Remote backends must use HTTPS. The API must implement `GET /api/v1/catalog`, returning the existing Buildment success envelope. The app imports only shared API types from `server/`; it does not bundle backend runtime code. Run install/build commands from this repository checkout.
 
+On Windows, `pnpm --dir desktop make` builds an assisted NSIS setup wizard. It lets the learner
+choose the install folder and whether to add Start menu and desktop shortcuts. The final page
+includes a checkbox to launch Edorax after installation.
+
 Sign-in opens the default browser (Chrome if configured as default). The web app defaults to `http://localhost:3000`; configure `BUILDMENT_WEB_URL` alongside `BUILDMENT_API_URL` for other deployments. Deploy the included web connection page and backend desktop authorization/exchange endpoints together. A short-lived, single-use code with proof verification returns through a loopback callback. Session tokens remain in Electron main-process memory, and closing the app requires signing in again. No database migration is required.
 
 Course requests run in Electron's main process over a narrowly scoped preload bridge. Renderer Node integration is disabled. There are no credentials, fixture courses, or secrets in the application. Cover images use remote HTTPS URLs or local HTTP URLs; missing images show a decorative placeholder.

@@ -1,7 +1,7 @@
 import { preparePty } from './scripts/prepare-pty.mjs';
 import { stageIde } from './scripts/stage-ide.mjs';
 import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
+import { MakerNsis } from 'electron-forge-maker-nsis';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
@@ -30,7 +30,7 @@ const config: ForgeConfig = {
       !file.startsWith('/node_modules/node-addon-api'),
     name: 'Edorax',
     executableName: 'Edorax',
-    icon: './assets/edorax',
+    icon: './assets/edorax.ico',
     extraResource: [
       './assets/edorax.png',
       './assets/edorax-dock.png',
@@ -43,7 +43,18 @@ const config: ForgeConfig = {
   // Remove this line (back to rebuildConfig: {}) once the Build Tools are detected.
   rebuildConfig: { onlyModules: [] },
   makers: [
-    new MakerSquirrel({}),
+    new MakerNsis({
+      oneClick: false,
+      perMachine: false,
+      allowToChangeInstallationDirectory: true,
+      shortcutName: 'Edorax',
+      createStartMenuShortcut: false,
+      createDesktopShortcut: false,
+      runAfterFinish: true,
+      installerIcon: './assets/edorax.ico',
+      uninstallerIcon: './assets/edorax.ico',
+      include: './packaging/nsis-shortcut-options.nsh',
+    }),
     // Zip for every system.
     new MakerZIP({}, ['darwin', 'win32', 'linux']),
     // Debian and Ubuntu: `sudo apt install ./edorax_<version>_amd64.deb`. The package sets up the

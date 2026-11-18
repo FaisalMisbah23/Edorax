@@ -71,7 +71,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex flex-col gap-1.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/dw/dw-wordmark-black.png" alt="Dev Weekends" width={82} height={60} className="h-[60px] w-[82px]" />
+              {certificate.imageData ? <img src={certificate.imageData} alt="Certificate artwork" className="max-h-40 max-w-full object-contain object-left" /> : <img src="/brand/dw/dw-wordmark-black.png" alt="Dev Weekends" width={82} height={60} className="h-[60px] w-[82px]" />}
               <WeekBars />
             </div>
             <p className="font-mono text-xs tracking-wide text-[#46507A]">{certificate.code}</p>
@@ -80,7 +80,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
           <p className="mt-10 font-mono text-xs uppercase tracking-[0.18em] text-[#46507A]">{"// Certificate of completion"}</p>
           <h1 className="mt-3 font-heading text-3xl font-bold leading-tight tracking-[-0.035em] sm:text-5xl">{certificate.recipientName}</h1>
           <p className="mt-4 max-w-2xl text-lg font-bold leading-7 sm:text-2xl">{certificate.title}</p>
-          <p className="mt-1.5 max-w-2xl text-base leading-7">{certificate.program}. Capstone project reviewed by a mentor.</p>
+          <p className="mt-1.5 max-w-2xl text-base leading-7">{certificate.program}. Course completed and AI capstone requirements passed.</p>
           {certificate.skills.length > 0 ? (
             <p className="mt-4 max-w-2xl text-sm leading-6 text-[#46507A]">Skills: {certificate.skills.join(", ")}</p>
           ) : null}
@@ -139,7 +139,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
         ) : null}
 
         <p className="text-xs leading-5 text-muted-foreground">
-          {SITE_NAME} issues and hosts this certificate for {certificate.organization}. The capstone was checked automatically and approved by a mentor.
+          {SITE_NAME} issues and hosts this certificate for {certificate.organization}. Course completion and AI capstone checks were verified.
         </p>
       </div>
     </main>

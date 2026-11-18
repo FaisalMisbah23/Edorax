@@ -14,6 +14,7 @@ import * as audit from "../services/admin/audit.js";
 import * as desktopUpdates from "../services/admin/desktop-updates.js";
 import * as refundPolicySvc from "../services/admin/refund-policy.js";
 import * as appSettingsSvc from "../services/admin/app-settings.js";
+import * as certificateSettingsSvc from "../services/admin/certificate-settings.js";
 import * as appActivity from "../services/activity/reports.js";
 import type { AppActivityUsersQuery } from "../validations/activity.js";
 import type {
@@ -414,4 +415,8 @@ export async function saveRefundPolicy(req: Request, res: Response) {
 // GET /api/v1/admin/settings/app
 export async function getAppSettings(_req: Request, res: Response) {
   ok(res, await appSettingsSvc.getAppSettingsAdmin());
+}
+
+export async function savePlatformCertificateSettings(req: Request, res: Response) {
+  ok(res, await certificateSettingsSvc.savePlatformCertificateSettings(req.body));
 }

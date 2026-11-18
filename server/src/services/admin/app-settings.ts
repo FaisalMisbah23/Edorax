@@ -2,6 +2,8 @@
 
 import { env, polarPaymentsConfigured, rateLimitsEnabled } from "../../config/env.js";
 import { getRefundPolicyAdmin, type RefundPolicyView } from "./refund-policy.js";
+import { getPlatformCertificateSettings } from "./certificate-settings.js";
+import type { PlatformCertificateSettings } from "../../shared/lib/certificates.js";
 
 export type FeatureFlagInfo = {
   key: string;
@@ -13,6 +15,7 @@ export type FeatureFlagInfo = {
 
 export type AppSettingsView = {
   refundPolicy: RefundPolicyView;
+  certificateSettings: PlatformCertificateSettings;
   featureFlags: FeatureFlagInfo[];
   polar: {
     configured: boolean;
@@ -22,7 +25,7 @@ export type AppSettingsView = {
 
 /** Gathers platform settings, policy, and active feature flags for the Admin App Settings Console. */
 export async function getAppSettingsAdmin(): Promise<AppSettingsView> {
-  const refundPolicy = await getRefundPolicyAdmin();
+  const [refundPolicy, certificateSettings] = await Promise.all([getRefundPolicyAdmin(), getPlatformCertificateSettings()]);
 
   const featureFlags: FeatureFlagInfo[] = [
     {
@@ -78,6 +81,7 @@ export async function getAppSettingsAdmin(): Promise<AppSettingsView> {
 
   return {
     refundPolicy,
+    certificateSettings,
     featureFlags,
     polar: {
       configured: Boolean(polarPaymentsConfigured),

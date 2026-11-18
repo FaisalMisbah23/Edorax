@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { apiFetch, ApiError } from "@/lib/api-client";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { RefundPolicyForm } from "@/components/admin/refund-policy-form";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -20,7 +23,7 @@ import {
 import type { AppSettingsView, FeatureFlagInfo } from "@/shared/api/admin";
 
 export function AppSettingsDashboard({ data }: { data: AppSettingsView }) {
-  const [activeTab, setActiveTab] = useState<"policy" | "flags" | "payment">("policy");
+  const [activeTab, setActiveTab] = useState<"policy" | "flags" | "payment" | "certificate">("policy");
   const [filterQuery, setFilterQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
@@ -34,6 +37,40 @@ export function AppSettingsDashboard({ data }: { data: AppSettingsView }) {
   });
 
   const enabledCount = data.featureFlags.filter((f) => f.enabled).length;
+
+  const [certificateSettings, setCertificateSettings] = useState(data.certificateSettings);
+  const [certificateSaving, setCertificateSaving] = useState(false);
+  const [certificateMessage, setCertificateMessage] = useState("");
+
+  async function saveCertificateSettings(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCertificateSaving(true);
+    setCertificateMessage("");
+    try {
+      const saved = await apiFetch<AppSettingsView["certificateSettings"]>("/api/v1/admin/settings/certificate", {
+        method: "PUT",
+        json: certificateSettings,
+      });
+      setCertificateSettings(saved);
+      setCertificateMessage("Certificate settings saved.");
+    } catch (error) {
+      setCertificateMessage(error instanceof ApiError ? error.message : "Could not save certificate settings.");
+    } finally {
+      setCertificateSaving(false);
+    }
+  }
+
+  async function loadCertificateArtwork(file?: File) {
+    if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type) || file.size > 700 * 1024) {
+      setCertificateMessage("Choose a PNG, JPEG, or WebP image smaller than 700 KB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setCertificateSettings((value) => ({ ...value, imageData: String(reader.result) }));
+    reader.onerror = () => setCertificateMessage("Could not read that image.");
+    reader.readAsDataURL(file);
+  }
 
   return (
     <div className="space-y-6">
@@ -80,10 +117,55 @@ export function AppSettingsDashboard({ data }: { data: AppSettingsView }) {
           <CreditCard className="size-4" />
           <span>Gateway & processor</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("certificate")}
+          className={`inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === "certificate" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
+        >
+          <ShieldCheck className="size-4" />
+          <span>Certificates</span>
+        </button>
       </div>
 
       {/* Tab 1: Refund Policy Form */}
       {activeTab === "policy" && <RefundPolicyForm initial={data.refundPolicy} />}
+
+      {activeTab === "certificate" && (
+        <form onSubmit={saveCertificateSettings} className="max-w-3xl space-y-5 rounded-xl border bg-card p-6">
+          <div>
+            <h3 className="text-base font-semibold">Platform certificate</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Set the default issuer and artwork used on learner certificates.</p>
+          </div>
+          <label className="flex items-center gap-3 text-sm font-medium">
+            <input type="checkbox" checked={certificateSettings.enabled} onChange={(event) => setCertificateSettings((value) => ({ ...value, enabled: event.target.checked }))} />
+            Automatically issue certificates when course and AI capstone requirements are complete
+          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {(["program", "organization", "issuerName"] as const).map((field) => (
+              <label key={field} className="space-y-1.5 text-sm">
+                <Label htmlFor={`certificate-${field}`}>{field === "issuerName" ? "Issuer name" : field[0]!.toUpperCase() + field.slice(1)}</Label>
+                <Input id={`certificate-${field}`} value={certificateSettings[field]} maxLength={120} onChange={(event) => setCertificateSettings((value) => ({ ...value, [field]: event.target.value }))} required />
+              </label>
+            ))}
+          </div>
+          <label className="block space-y-2 text-sm">
+            <Label htmlFor="certificate-artwork">Certificate artwork (PNG, JPEG, or WebP; max 700 KB)</Label>
+            <Input id="certificate-artwork" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void loadCertificateArtwork(event.target.files?.[0])} />
+          </label>
+          {certificateSettings.imageData ? (
+            <div className="space-y-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={certificateSettings.imageData} alt="Certificate artwork preview" className="max-h-64 max-w-full border object-contain" />
+              <Button type="button" variant="outline" size="sm" onClick={() => setCertificateSettings((value) => ({ ...value, imageData: null }))}>Remove artwork</Button>
+            </div>
+          ) : <p className="text-sm text-muted-foreground">No artwork uploaded.</p>}
+          <div className="flex items-center gap-3">
+            <Button type="submit" loading={certificateSaving} disabled={certificateSaving}>Save certificate settings</Button>
+            {certificateMessage ? <p role="status" className="text-sm text-muted-foreground">{certificateMessage}</p> : null}
+          </div>
+        </form>
+      )}
 
       {/* Tab 2: Feature Flags */}
       {activeTab === "flags" && (

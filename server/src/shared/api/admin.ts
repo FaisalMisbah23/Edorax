@@ -250,6 +250,7 @@ export type FeatureFlagInfo = {
 
 export type AppSettingsView = {
   refundPolicy: RefundPolicyView;
+  certificateSettings: import("../lib/certificates.js").PlatformCertificateSettings;
   featureFlags: FeatureFlagInfo[];
   polar: {
     configured: boolean;

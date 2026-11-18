@@ -243,6 +243,11 @@ export async function recomputeEnrollmentRollup(
       }
     }
   }
+  if (percentComplete >= 100 && enrollment.userId) {
+    setTimeout(() => {
+      import("../certificates/service.js").then(({ issueCertificateAutomatically }) => issueCertificateAutomatically(enrollmentId)).catch(() => undefined);
+    }, 250);
+  }
 }
 
 export async function ensureChapterStarted(

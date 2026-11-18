@@ -42,7 +42,7 @@ export default async function Image({ params }: { params: Promise<{ code: string
   const date = issuedOn(certificate.issuedAt);
   const verify = certificate.verifyUrl.replace(/^https?:\/\//, "");
   const skills = certificate.skills.join(", ");
-  const bodyText = `${certificate.title} ${certificate.program}. Capstone project reviewed by a mentor. ${skills} ${line} ${certificate.organization} ${date} ${verify} Issued Verify ${certificate.code} // CERTIFICATE OF COMPLETION Skills: WITHDRAWN`;
+  const bodyText = `${certificate.title} ${certificate.program}. Course complete; AI capstone passed. ${skills} ${line} ${certificate.organization} ${date} ${verify} Issued Verify ${certificate.code} // CERTIFICATE OF COMPLETION Skills: WITHDRAWN`;
   const [heading, body, bold] = await Promise.all([
     googleFont("Unbounded", 700, name),
     googleFont("DM+Sans", 400, bodyText),
@@ -61,7 +61,10 @@ export default async function Image({ params }: { params: Promise<{ code: string
         <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", background: "#FFFFFF", border: `1px solid ${LINE}`, padding: "44px 56px", color: INK }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {wordmark ? (
+              {certificate.imageData ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={certificate.imageData} width={180} height={92} alt="" style={{ objectFit: "contain", objectPosition: "left" }} />
+              ) : wordmark ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={`data:image/png;base64,${wordmark.toString("base64")}`} width={96} height={70} alt="" />
               ) : (
@@ -79,7 +82,7 @@ export default async function Image({ params }: { params: Promise<{ code: string
           <div style={{ display: "flex", marginTop: 34, fontSize: 16, color: MUTED, letterSpacing: 3 }}>{"// CERTIFICATE OF COMPLETION"}</div>
           <div style={{ display: "flex", marginTop: 10, fontFamily: "Unbounded", fontWeight: 700, fontSize: nameSize, letterSpacing: -2, lineHeight: 1.05 }}>{name}</div>
           <div style={{ display: "flex", marginTop: 18, fontSize: 32, fontWeight: 700, lineHeight: 1.2, maxWidth: 1000 }}>{certificate.title}</div>
-          <div style={{ display: "flex", marginTop: 8, fontSize: 22, maxWidth: 1000 }}>{`${certificate.program}. Capstone project reviewed by a mentor.`}</div>
+          <div style={{ display: "flex", marginTop: 8, fontSize: 22, maxWidth: 1000 }}>{`${certificate.program}. Course completed and AI capstone requirements passed.`}</div>
           {skills ? <div style={{ display: "flex", marginTop: 10, fontSize: 19, color: MUTED, maxWidth: 1000 }}>{`Skills: ${skills}`}</div> : null}
 
           <div style={{ display: "flex", marginTop: "auto", borderTop: `1px solid ${INK}`, paddingTop: 16, justifyContent: "space-between", fontSize: 19 }}>

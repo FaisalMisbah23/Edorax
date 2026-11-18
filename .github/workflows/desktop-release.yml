@@ -110,8 +110,6 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             dist/**/*.exe
-            dist/**/*.nupkg
-            dist/**/RELEASES
             dist/**/*.zip
             dist/**/*.deb
             dist/**/*.rpm

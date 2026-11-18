@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Award } from "lucide-react";
-import { ApiError, apiFetch } from "@/lib/api-client";
+import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { buttonVariants } from "@/components/ui/button";
 import type { CertificateView, MyCertificateState } from "@/shared/lib/certificates";
 
 // Shown under an approved capstone. The learner confirms their name once, then gets the
@@ -14,9 +13,6 @@ import type { CertificateView, MyCertificateState } from "@/shared/lib/certifica
 
 export function CertificateCard({ courseSlug }: { courseSlug: string }) {
   const [state, setState] = useState<MyCertificateState | null>(null);
-  const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [claiming, setClaiming] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -24,7 +20,6 @@ export function CertificateCard({ courseSlug }: { courseSlug: string }) {
       .then((result) => {
         if (!live) return;
         setState(result);
-        setName(result.suggestedName ?? "");
       })
       .catch(() => undefined);
     return () => {
@@ -32,24 +27,17 @@ export function CertificateCard({ courseSlug }: { courseSlug: string }) {
     };
   }, [courseSlug]);
 
-  if (!state || !state.eligibility.offered) return null;
+  useEffect(() => {
+    if (!state?.eligibility.eligible || state.certificate) return;
+    const timer = window.setInterval(() => {
+      apiFetch<MyCertificateState>(`/api/v1/courses/${encodeURIComponent(courseSlug)}/certificate`)
+        .then(setState)
+        .catch(() => undefined);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [courseSlug, state?.certificate, state?.eligibility.eligible]);
 
-  async function claim(event: React.FormEvent) {
-    event.preventDefault();
-    setError(null);
-    setClaiming(true);
-    try {
-      const result = await apiFetch<{ certificate: CertificateView }>(`/api/v1/courses/${encodeURIComponent(courseSlug)}/certificate`, {
-        method: "POST",
-        json: { recipientName: name },
-      });
-      setState((current) => (current ? { ...current, certificate: result.certificate } : current));
-    } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Could not issue the certificate. Try again.");
-    } finally {
-      setClaiming(false);
-    }
-  }
+  if (!state || !state.eligibility.offered) return null;
 
   const certificate = state.certificate;
   return (
@@ -73,17 +61,7 @@ export function CertificateCard({ courseSlug }: { courseSlug: string }) {
           </div>
         </>
       ) : state.eligibility.eligible ? (
-        <form onSubmit={claim} className="space-y-2">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">Your name, exactly as it should appear</span>
-            <Input value={name} onChange={(event) => setName(event.target.value)} required minLength={2} maxLength={80} autoComplete="name" />
-          </label>
-          <p className="text-xs text-muted-foreground">You can only set this once.</p>
-          <Button type="submit" size="sm" loading={claiming} disabled={claiming}>
-            Get my certificate
-          </Button>
-          {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
-        </form>
+        <p className="text-sm text-muted-foreground">Your certificate is being prepared. Refresh this page in a moment.</p>
       ) : (
         <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-muted-foreground">
           {state.eligibility.missing.map((item) => <li key={item}>{item}</li>)}

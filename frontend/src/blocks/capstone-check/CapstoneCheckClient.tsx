@@ -136,7 +136,7 @@ function Report({ check, onSend, sending, decided }: { check: CapstoneCheckView;
               <Send />
               Ask my mentor to look
             </Button>
-            <p className="text-xs text-muted-foreground">This is an AI check. A mentor confirms every pass.</p>
+            <p className="text-xs text-muted-foreground">The AI checks your project. You can also ask a mentor for feedback.</p>
           </>
         )}
       </div>
@@ -350,7 +350,7 @@ export function CapstoneCheckClient({
           </div>
         ) : null}
 
-        {params.courseSlug && state.decision?.verdict === "APPROVED" ? <CertificateCard courseSlug={params.courseSlug} /> : null}
+        {params.courseSlug ? <CertificateCard courseSlug={params.courseSlug} /> : null}
       </div>
     </section>
   );

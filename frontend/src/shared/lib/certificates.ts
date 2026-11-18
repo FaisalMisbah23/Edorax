@@ -29,8 +29,20 @@ export const CertificateSettingsSchema = z
       .strict()
       .default({}),
     skills: z.array(z.string().trim().min(1).max(60)).max(12).default([]),
+    /** Optional course-specific override; platform admins manage the default artwork. */
+    imageData: z.string().max(970_000).optional(),
   })
   .strict();
+
+export const PlatformCertificateSettingsSchema = z.object({
+  enabled: z.boolean().default(false),
+  program: z.string().trim().min(1).max(120).default("Edorax Learning"),
+  organization: z.string().trim().min(1).max(120).default("Edorax"),
+  issuerName: z.string().trim().min(1).max(120).default("Edorax"),
+  imageData: z.string().max(970_000).nullable().default(null),
+}).strict();
+
+export type PlatformCertificateSettings = z.infer<typeof PlatformCertificateSettingsSchema>;
 
 export type CertificateSettings = z.infer<typeof CertificateSettingsSchema>;
 
@@ -59,6 +71,7 @@ export type CertificateView = {
   imageUrl: string;
   linkedInAddUrl: string;
   linkedInShareUrl: string;
+  imageData: string | null;
 };
 
 /** The organisation LinkedIn lists as the issuer: the platform that issues and verifies certificates. */
