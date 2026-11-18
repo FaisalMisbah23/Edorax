@@ -5,7 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { unzipSync } from "fflate";
 import { load as loadYaml } from "js-yaml";
-import { courseDetailsUpdate, courseSourceHash, ownershipSlugGroups, packageZip, publishingSettings, selectedPackages } from "../../scripts/repository-course-publish.js";
+import { courseDetailsUpdate, courseInstructorEmail, courseSourceHash, instructorEmailsFor, ownershipSlugGroups, packageZip, publishingSettings, selectedPackages } from "../../scripts/repository-course-publish.js";
 import { coursesRootForServer } from "../../scripts/course-source.js";
 
 const temporary: string[] = [];
@@ -149,3 +149,36 @@ describe("repository course publishing selection", () => {
     expect(courseDetailsUpdate(manifest, { ...base, assistant: { effort: "low" } })).toEqual({ assistant: null });
   });
 });
+
+describe("per-course instructor", () => {
+  const DEFAULT = "devweekends@gmail.com";
+  const OTHER = "aqibnawab1100@gmail.com";
+
+  function packagesWith(extras: Record<string, string>) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "buildment-instructor-test-"));
+    temporary.push(root);
+    fs.writeFileSync(path.join(root, "publishing.yaml"), `instructorEmail: ${DEFAULT}\n`);
+    for (const [slug, extra] of Object.entries(extras)) course(root, slug, `repositoryPublish: true\n${extra}`);
+    return selectedPackages(root);
+  }
+
+  it("uses the default instructor unless a course names its own", () => {
+    const packages = packagesWith({ plain: "", own: `creatorEmail: ${OTHER}\n` });
+    const bySlug = (slug: string) => packages.find(pkg => pkg.slug === slug)!;
+    expect(courseInstructorEmail(bySlug("plain"), DEFAULT)).toBe(DEFAULT);
+    expect(courseInstructorEmail(bySlug("own"), DEFAULT)).toBe(OTHER);
+  });
+
+  it("puts the course's own instructor in its transport ZIP", () => {
+    const [own] = packagesWith({ own: `creatorEmail: ${OTHER}\n` });
+    const files = unzipSync(packageZip(own!, "create", courseInstructorEmail(own!, DEFAULT)));
+    const manifest = loadYaml(Buffer.from(files["course.yaml"]!).toString("utf8")) as Record<string, unknown>;
+    expect(manifest.creatorEmail).toBe(OTHER);
+  });
+
+  it("lists each instructor once, without regard to case", () => {
+    const packages = packagesWith({ a: "", b: `creatorEmail: ${OTHER}\n`, c: "", d: `creatorEmail: ${OTHER.toUpperCase()}\n` });
+    expect(instructorEmailsFor(packages, DEFAULT)).toEqual([DEFAULT, OTHER]);
+  });
+});
+
