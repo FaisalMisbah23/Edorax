@@ -6,6 +6,7 @@ const db = vi.hoisted(() => ({
   $transaction: vi.fn(),
 }));
 const refundsCreate = vi.hoisted(() => vi.fn());
+const refundsList = vi.hoisted(() => vi.fn());
 const recordAdminAction = vi.hoisted(() => vi.fn());
 const getRefundPolicyMock = vi.hoisted(() => vi.fn());
 
@@ -13,7 +14,7 @@ vi.mock("../../../../src/db/prisma.js", () => ({ prisma: db }));
 vi.mock("../../../../src/utils/logger.js", () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 vi.mock("../../../../src/services/payments/polar.js", () => ({
   requirePolarConfig: () => ({}),
-  getPolarClient: () => ({ refunds: { create: refundsCreate } }),
+  getPolarClient: () => ({ refunds: { create: refundsCreate, list: refundsList } }),
 }));
 vi.mock("../../../../src/services/admin/audit.js", () => ({
   recordAdminAction,
@@ -48,6 +49,7 @@ describe("refundCoursePayment", () => {
     db.$transaction.mockImplementation(async (fn: (tx: typeof db) => Promise<unknown>) => fn(db));
     db.payment.updateMany.mockResolvedValue({ count: 1 });
     refundsCreate.mockResolvedValue({ id: "ref_1" });
+    refundsList.mockResolvedValue({ items: [] });
     getRefundPolicyMock.mockResolvedValue(DEFAULT_REFUND_POLICY);
   });
 
