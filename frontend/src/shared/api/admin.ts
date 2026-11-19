@@ -1,5 +1,6 @@
 // GENERATED from server/src/shared — do not edit here. Run `pnpm sync-shared` in server/.
 import type { CoursePricingType, CourseStatus, EnrollmentLifecycle, RequestStatus, Role } from "../domain/enums";
+import type { PlatformCertificateSettings } from "../lib/certificates";
 
 // Wire contract for /api/v1/admin — platform administration. Dates are ISO strings.
 
@@ -251,7 +252,7 @@ export type FeatureFlagInfo = {
 
 export type AppSettingsView = {
   refundPolicy: RefundPolicyView;
-  certificateSettings: import("../lib/certificates.js").PlatformCertificateSettings;
+  certificateSettings: PlatformCertificateSettings;
   featureFlags: FeatureFlagInfo[];
   polar: {
     configured: boolean;

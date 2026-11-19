@@ -130,7 +130,9 @@ async function loadLearnerEnrollment(courseSlug: string, user: SessionUser | und
 }
 
 export async function getMyCertificate(courseSlug: string, user: SessionUser | undefined): Promise<MyCertificateState> {
-  let { enrollment, settings, platform } = await loadLearnerEnrollment(courseSlug, user);
+  const loaded = await loadLearnerEnrollment(courseSlug, user);
+  const { settings, platform } = loaded;
+  let { enrollment } = loaded;
   if (settings) {
     await issueCertificateAutomatically(enrollment.id);
     enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: enrollment.id }, select: { id: true, userId: true, courseId: true, completedAt: true, percentComplete: true, certificate: true } });
