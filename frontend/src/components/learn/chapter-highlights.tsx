@@ -7,6 +7,7 @@ import type { HighlightView, HighlightColor } from "@/server/actions/highlights"
 import { toast } from "@/components/ui/app-toast";
 import { locateQuote } from "@/lib/highlight-locate";
 import { cn } from "@/lib/utils";
+import { useAskChapter } from "@/components/learn/ask-chapter-context";
 
 const COLOR_CLASSES: Record<HighlightColor, string> = {
   YELLOW: "bg-yellow-200/70 dark:bg-yellow-400/30",
@@ -270,11 +271,25 @@ export function ChapterHighlights({
   chapterId,
   initialHighlights,
   articleRef,
+  focusMode = false,
 }: {
   chapterId: string;
   initialHighlights: Highlight[];
   articleRef: React.RefObject<HTMLElement | null>;
+  /** Focus mode lifts the corner buttons above the reader dock. */
+  focusMode?: boolean;
 }) {
+  // The Ask AI button sits in the same bottom-right corner (ask-ai-floating.tsx). When it is there,
+  // this button stacks above it (3rem button + 0.75rem gap) instead of covering it.
+  const { ask } = useAskChapter();
+  const stacked = ask.available;
+  const togglePosition = focusMode
+    ? stacked ? "bottom-[calc(5rem+3.75rem)]" : "bottom-20"
+    : stacked ? "bottom-[calc(max(1rem,env(safe-area-inset-bottom))+3.75rem)] sm:bottom-[calc(1.5rem+3.75rem)]" : "bottom-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-6";
+  // The list opens just above the button (about 2.25rem tall) with a small gap.
+  const panelPosition = focusMode
+    ? stacked ? "bottom-[calc(5rem+3.75rem+3rem)]" : "bottom-[calc(5rem+3rem)]"
+    : stacked ? "bottom-[calc(max(1rem,env(safe-area-inset-bottom))+3.75rem+3rem)] sm:bottom-[calc(1.5rem+3.75rem+3rem)]" : "bottom-[calc(max(1rem,env(safe-area-inset-bottom))+3rem)] sm:bottom-[calc(1.5rem+3rem)]";
   const [highlights, setHighlights] = useState<Highlight[]>(initialHighlights);
   const [toolbar, setToolbar] = useState<{ x: number; y: number; selection: ReturnType<typeof selectionToHighlight> } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -578,7 +593,7 @@ export function ChapterHighlights({
       <button
         type="button"
         onClick={() => setPanelOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm shadow-lg hover:bg-muted"
+        className={cn("fixed right-4 z-50 mb-[var(--audiobook-bar-space,0px)] inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm shadow-lg hover:bg-muted sm:right-6", togglePosition)}
         aria-label={`Highlights, ${highlights.length} saved`}
         aria-expanded={panelOpen}
       >
@@ -587,7 +602,7 @@ export function ChapterHighlights({
       </button>
 
       {panelOpen && (
-        <div className="fixed bottom-20 right-6 z-50 w-80 max-h-[60vh] overflow-auto rounded-xl border border-border bg-card p-3 shadow-2xl">
+        <div className={cn("fixed right-4 z-50 mb-[var(--audiobook-bar-space,0px)] w-80 max-w-[calc(100vw-2rem)] max-h-[60vh] overflow-auto rounded-xl border border-border bg-card p-3 shadow-2xl sm:right-6", panelPosition)}>
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-medium">This chapter</span>
             <button type="button" onClick={() => setPanelOpen(false)} aria-label="Close">
