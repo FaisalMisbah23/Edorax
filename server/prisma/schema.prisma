@@ -1781,3 +1781,14 @@ model DesktopUpdatePolicy {
 
   @@map("desktop_update_policies")
 }
+
+/// Generic key-value store for platform-wide settings editable by admins.
+/// Each row holds one JSON-encoded value identified by a stable string key.
+model AppSetting {
+  key       String   @id @db.VarChar(80)
+  /// JSON-encoded value. The shape is key-specific and validated in the service layer.
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}

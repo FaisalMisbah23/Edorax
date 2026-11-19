@@ -11,7 +11,9 @@ import {
   History,
   LayoutDashboard,
   LineChart,
+  Receipt,
   MonitorDown,
+  SlidersHorizontal,
   Users,
   Wallet,
 } from "lucide-react";
@@ -68,6 +70,7 @@ export function AdminWorkspaceShell({
       title: "Catalog & sales",
       items: [
         { label: "Courses", href: "/admin/courses", icon: BookOpen, active: pathname.startsWith("/admin/courses") },
+        { label: "Enrollments", href: "/admin/enrollments", icon: Receipt, active: pathname.startsWith("/admin/enrollments") },
         { label: "Discounts", href: "/admin/discounts", icon: BadgePercent, active: pathname.startsWith("/admin/discounts") },
       ],
     },
@@ -92,6 +95,12 @@ export function AdminWorkspaceShell({
           href: "/admin/desktop-updates",
           icon: MonitorDown,
           active: pathname.startsWith("/admin/desktop-updates"),
+        },
+        {
+          label: "App settings",
+          href: "/admin/settings/app",
+          icon: SlidersHorizontal,
+          active: pathname === "/admin/settings" || pathname.startsWith("/admin/settings/app"),
         },
         { label: "Audit log", href: "/admin/audit", icon: History, active: pathname.startsWith("/admin/audit") },
       ],

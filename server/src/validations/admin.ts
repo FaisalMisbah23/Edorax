@@ -206,6 +206,15 @@ export const grantOrganizationCreditsBody = z.object({
 export type GrantOrganizationCreditsBody = z.infer<typeof grantOrganizationCreditsBody>;
 
 
+export const listEnrollmentsQuery = listQuery.extend({
+  /** A payment status, or "NONE" for enrollments with no payment row (free or admin-granted). */
+  payment: z.enum(["PENDING", "SUCCEEDED", "FAILED", "REFUNDED", "NONE"]).optional(),
+  lifecycle: z.enum(["PENDING_ACCOUNT", "PAYMENT_REQUIRED", "ACTIVE", "COMPLETED", "CANCELLED", "EXPIRED"]).optional(),
+  /** "true": a coupon or campaign was applied; "admin": enrolled by an admin; "false": full price. */
+  discount: z.enum(["true", "admin", "false"]).optional(),
+});
+export type ListEnrollmentsQuery = z.infer<typeof listEnrollmentsQuery>;
+
 /** Forced desktop updates: platforms and the fields to apply to each of them. */
 const desktopPlatform = z.enum(["darwin", "win32", "linux"], { message: 'platform must be "darwin", "win32" or "linux"' });
 const semverField = (name: string) =>
@@ -254,3 +263,19 @@ export const desktopUpdatesBody = z.object({
     }),
 });
 export type DesktopUpdatesBody = z.infer<typeof desktopUpdatesBody>;
+
+// ─── Refund policy ────────────────────────────────────────────────────────────
+
+const bpsField = (name: string) =>
+  z
+    .number({ message: `${name} must be a number` })
+    .int({ message: `${name} must be an integer` })
+    .min(0, { message: `${name} must be 0 or greater` });
+
+export const refundPolicyBody = z.object({
+  fixedFeeCents: z.number({ message: "fixedFeeCents must be a number" }).int().min(0),
+  internationalFeeBps: bpsField("internationalFeeBps"),
+  polarFeeBps: bpsField("polarFeeBps"),
+  edoraxFeeBps: bpsField("edoraxFeeBps"),
+});
+export type RefundPolicyBody = z.infer<typeof refundPolicyBody>;

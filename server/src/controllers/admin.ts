@@ -12,6 +12,8 @@ import * as courseAccess from "../services/admin/course-access.js";
 import * as profile from "../services/admin/profile.js";
 import * as audit from "../services/admin/audit.js";
 import * as desktopUpdates from "../services/admin/desktop-updates.js";
+import * as refundPolicySvc from "../services/admin/refund-policy.js";
+import * as appSettingsSvc from "../services/admin/app-settings.js";
 import * as appActivity from "../services/activity/reports.js";
 import type { AppActivityUsersQuery } from "../validations/activity.js";
 import type {
@@ -33,6 +35,7 @@ import type {
   ListUsersQuery,
   MetricsQuery,
   PageQuery,
+  RefundPolicyBody,
   SuspendUserBody,
   TotpCodeBody,
 } from "../validations/admin.js";
@@ -396,4 +399,19 @@ export async function listDesktopUpdates(_req: Request, res: Response) {
 export async function saveDesktopUpdates(req: Request, res: Response) {
   const { platforms, fields } = req.body as DesktopUpdatesBody;
   ok(res, await desktopUpdates.saveDesktopUpdatePolicies({ id: req.user!.id, email: req.user!.email }, platforms, fields));
+}
+
+// GET /api/v1/admin/settings/refund-policy
+export async function getRefundPolicy(_req: Request, res: Response) {
+  ok(res, await refundPolicySvc.getRefundPolicyAdmin());
+}
+
+// PUT /api/v1/admin/settings/refund-policy
+export async function saveRefundPolicy(req: Request, res: Response) {
+  ok(res, await refundPolicySvc.updateRefundPolicyAdmin(req.body as RefundPolicyBody, { id: req.user!.id, email: req.user!.email }));
+}
+
+// GET /api/v1/admin/settings/app
+export async function getAppSettings(_req: Request, res: Response) {
+  ok(res, await appSettingsSvc.getAppSettingsAdmin());
 }
