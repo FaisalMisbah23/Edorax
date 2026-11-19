@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CERTIFICATE_TEMPLATE_IDS } from "../shared/lib/certificates.js";
 import { COURSE_CATEGORIES } from "../shared/domain/enums.js";
 import { isSafeAssetUrl } from "../shared/lib/asset-url.js";
 import { VARIANT_ASSIGNMENTS } from "../shared/lib/course-tracks.js";
@@ -72,6 +73,9 @@ export const courseSettingsBody = z.object({
   currency: z.string().trim().length(3),
 });
 export type CourseSettingsBody = z.infer<typeof courseSettingsBody>;
+
+export const courseCertificateTemplateBody = z.object({ template: z.enum(CERTIFICATE_TEMPLATE_IDS) });
+export type CourseCertificateTemplateBody = z.infer<typeof courseCertificateTemplateBody>;
 
 const moduleTitle = z.string().trim().min(1).max(120);
 export const createModuleBody = z.object({ title: moduleTitle });

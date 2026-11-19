@@ -279,3 +279,12 @@ export const refundPolicyBody = z.object({
   edoraxFeeBps: bpsField("edoraxFeeBps"),
 });
 export type RefundPolicyBody = z.infer<typeof refundPolicyBody>;
+
+export const platformCertificateSettingsBody = z.object({
+  enabled: z.boolean(),
+  program: z.string().trim().min(1).max(120),
+  organization: z.string().trim().min(1).max(120),
+  issuerName: z.string().trim().min(1).max(120),
+  imageData: z.string().max(970_000).nullable(),
+});
+export type PlatformCertificateSettingsBody = z.infer<typeof platformCertificateSettingsBody>;

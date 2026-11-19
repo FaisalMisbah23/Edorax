@@ -468,6 +468,8 @@ model Course {
   variantFamily  Json? // creator-defined variant catalog; null uses a built-in family
   assistant      Json? // tutor settings from course.yaml (effort, guidance, starters); null means defaults
   certificate    Json? // certificate settings from course.yaml (program, title, code, skills); null means no certificate
+  /// The certificate design an instructor picked in course settings. Wins over `certificate.template`; null uses it or the default.
+  certificateTemplate String?
   certificates   Certificate[]
   availableVariantSlugs String[] @default([]) // empty means every family variant is available
   variantAssignment VariantAssignment @default(SELF_SELECT)
@@ -1706,6 +1708,8 @@ model Certificate {
   recipientName String
   program       String
   title         String
+  /// The design the certificate was issued with (CERTIFICATE_TEMPLATES). A later change to the course does not restyle it.
+  template      String     @default("edorax")
   issuerName    String
   issuerTitle   String?
   skills        String[]   @default([])

@@ -16,6 +16,7 @@ import { Progress, ProgressLabel } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { helpUiCopy } from "@/shared/lib/help-ui-copy";
 import { formatStudyAmount } from "@/lib/format-study-duration";
+import { CourseCertificateLink } from "@/components/learn/course-certificate-link";
 import { WeeklyGoalEditor } from "@/components/learn/dashboard/weekly-goal-editor";
 import { WeeklyQuests } from "@/components/learn/dashboard/weekly-quests";
 import { LeagueGoalCard } from "@/components/learn/dashboard/league-goal-card";
@@ -421,6 +422,7 @@ function CourseCard({ course, featured }: { course: DashboardCourse; featured: b
           >
             {course.actionLabel}
           </Link>
+          {course.state === "COMPLETED" ? <CourseCertificateLink courseSlug={course.slug} /> : null}
           <Link href={course.overviewHref} className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">Course overview</Link>
         </div>
       </div>

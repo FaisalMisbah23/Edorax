@@ -5,7 +5,8 @@ import { slugify } from "../../shared/lib/mdx-headings.js";
 import { prisma } from "../../db/prisma.js";
 import { ConflictError, UnprocessableError } from "../../utils/errors.js";
 import type { SessionUser } from "../../types/auth.js";
-import type { CourseSettingsBody, CreateCourseBody } from "../../validations/teach.js";
+import type { CourseCertificateTemplateBody, CourseSettingsBody, CreateCourseBody } from "../../validations/teach.js";
+import { certificateTemplateId } from "../../shared/lib/certificates.js";
 import { requireCourseById, requireCourseBySlug } from "./access.js";
 import { publishChapters } from "./chapters.js";
 import { ensureBaselineRelease } from "../courses/releases.js";
@@ -146,7 +147,7 @@ export async function loadCourseSettings(user: SessionUser, courseSlug: string):
       id: true, slug: true, title: true, description: true, projectGoal: true,
       difficulty: true, estimatedHours: true, category: true, subcategory: true, tags: true, sequential: true, autoGradeOpenQuestions: true, coverUrl: true,
       status: true, pricingType: true, priceCents: true, currency: true, integritySnapshots: true,
-      familySlug: true, variantFamily: true, variantAssignment: true,
+      familySlug: true, variantFamily: true, variantAssignment: true, certificate: true, certificateTemplate: true,
       _count: {
         select: {
           enrollments: { where: CONFIRMED_ENROLLMENT_WHERE },
@@ -156,8 +157,15 @@ export async function loadCourseSettings(user: SessionUser, courseSlug: string):
     },
   });
   const account = await prisma.user.findUnique({ where: { id: user.id }, select: { zipImportEnabled: true } });
-  const { variantFamily, ...settings } = course;
-  return { ...settings, hasVariants: Boolean(resolveCourseFamily(course.familySlug, variantFamily)), enrollmentCount: _count.enrollments, chapterCount: _count.chapters, zipImportEnabled: account?.zipImportEnabled ?? false };
+  const { variantFamily, certificate, certificateTemplate, ...settings } = course;
+  const yamlTemplate = certificate && typeof certificate === "object" && !Array.isArray(certificate) ? (certificate as { template?: unknown }).template : undefined;
+  return { ...settings, certificateTemplate: certificateTemplateId(certificateTemplate ?? yamlTemplate), hasVariants: Boolean(resolveCourseFamily(course.familySlug, variantFamily)), enrollmentCount: _count.enrollments, chapterCount: _count.chapters, zipImportEnabled: account?.zipImportEnabled ?? false };
+}
+
+/** The certificate design learners of this course receive from now on. Issued certificates keep theirs. */
+export async function setCourseCertificateTemplate(user: SessionUser, courseId: string, input: CourseCertificateTemplateBody): Promise<void> {
+  await requireCourseById(user, courseId);
+  await prisma.course.update({ where: { id: courseId }, data: { certificateTemplate: input.template } });
 }
 
 /** Read-only preview of the latest saved draft, available to the course team. */

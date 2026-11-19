@@ -31,6 +31,10 @@ export async function updateCourseIntegrity(input: { courseId: string; integrity
   return builderCall(`/api/v1/teach/courses/${encodeURIComponent(input.courseId)}/integrity`, { method: "PUT", json: { integritySnapshots: input.integritySnapshots } });
 }
 
+export async function updateCourseCertificateTemplate(input: { courseId: string; template: string }): Promise<CourseBuilderActionResult> {
+  return builderCall(`/api/v1/teach/courses/${encodeURIComponent(input.courseId)}/certificate-template`, { method: "PUT", json: { template: input.template } });
+}
+
 export async function updateCourseSettings(input: { courseId: string } & CourseSettingsInput): Promise<CourseBuilderActionResult> {
   const { courseId, ...settings } = input;
   return builderCall(`/api/v1/teach/courses/${encodeURIComponent(courseId)}/settings`, { method: "PATCH", json: settings });

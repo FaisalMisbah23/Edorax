@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { ok } from "../utils/responses.js";
-import { claimCertificate, getMyCertificate, getPublicCertificate, revokeCertificate } from "../services/certificates/service.js";
+import { claimCertificate, getMyCertificate, getPublicCertificate, listMyCertificates, revokeCertificate } from "../services/certificates/service.js";
 
 // GET /api/v1/certificates/verify/:code  (public)
 export async function verify(req: Request, res: Response) {
@@ -23,4 +23,9 @@ export async function claim(req: Request, res: Response) {
 export async function revoke(req: Request, res: Response) {
   const { reason } = req.body as { reason: string };
   ok(res, { certificate: await revokeCertificate(req.user!, req.params.code as string, reason) });
+}
+
+// GET /api/v1/certificates/mine  (the signed-in learner's certificates)
+export async function listMine(req: Request, res: Response) {
+  ok(res, { certificates: await listMyCertificates(req.user) });
 }

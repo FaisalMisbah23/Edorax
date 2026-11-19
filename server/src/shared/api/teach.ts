@@ -1,3 +1,4 @@
+import type { CertificateTemplateId } from "../lib/certificates.js";
 import type { CapstoneMentorView } from "../blocks/capstone-check/report.js";
 import type {
   ChapterReaderMode,
@@ -157,6 +158,8 @@ export type CourseSettingsView = Pick<CourseBuilderCourse,
   familySlug: string | null;
   hasVariants: boolean;
   variantAssignment: VariantAssignment;
+  /** The certificate design this course issues (see CERTIFICATE_TEMPLATES). */
+  certificateTemplate: CertificateTemplateId;
 };
 
 export type CourseDraftPreview = {

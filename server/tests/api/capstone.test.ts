@@ -168,7 +168,7 @@ describe("capstone checks", () => {
     }
   });
 
-  it("shows the mentor the report, then the approval unlocks the certificate", async () => {
+  it("shows the mentor the report, then the certificate is issued once the course is complete", async () => {
     const pending = await prisma.response.findFirstOrThrow({ where: { blockId, status: "PENDING_REVIEW" } });
     const detail = await authed(request(app).get(`/api/v1/teach/review/${pending.id}`), mentorToken);
     expect(detail.status).toBe(200);
@@ -187,22 +187,32 @@ describe("capstone checks", () => {
     const ready = await authed(request(app).get(`/api/v1/courses/${fx.course.slug}/certificate`));
     expect(ready.body.data.eligibility).toEqual({ offered: true, eligible: true, missing: [] });
 
-    const claim = await authed(request(app).post(`/api/v1/courses/${fx.course.slug}/certificate`).send({ recipientName: "Ayesha Khan" }));
-    expect(claim.status).toBe(200);
-    const certificate = claim.body.data.certificate;
-    expect(certificate).toMatchObject({ recipientName: "Ayesha Khan", title: "Level 2: Personal Site and Outreach Engine", issuerName: "Test Mentor", organization: "Dev Weekends", skills: ["Personal site", "Link tracking"] });
+    // The certificate is issued automatically once the course and the capstone are done, signed by the
+    // platform issuer unless course.yaml names someone (the PR's documented default), in the
+    // learner's account name. Reading the state is what the page does, so it is already there.
+    const certificate = ready.body.data.certificate;
+    expect(certificate).toMatchObject({ recipientName: "Test Learner", title: "Level 2: Personal Site and Outreach Engine", issuerName: "Edorax", organization: "Edorax", template: "edorax", skills: ["Personal site", "Link tracking"] });
     expect(certificate.code).toMatch(/^DW-L2-[0-9A-Z]{8}$/);
     expect(certificate.evidence[0]).toMatchObject({ repoUrl: "https://github.com/me/site", percent: 90 });
     expect(certificate.linkedInAddUrl).toContain("startTask=CERTIFICATION_NAME");
-    // The course's trainer signs; LinkedIn lists Edorax, never Dev Weekends, as the issuing organisation.
+    // LinkedIn lists Edorax, never Dev Weekends, as the issuing organisation.
     expect(new URL(certificate.linkedInAddUrl).searchParams.get("organizationName")).toBe("Edorax");
 
-    const again = await authed(request(app).post(`/api/v1/courses/${fx.course.slug}/certificate`).send({ recipientName: "Someone Else" }));
-    expect(again.body.data.certificate.code).toBe(certificate.code);
+    // Claiming still works for an older client, and never makes a second certificate or renames this one.
+    const claim = await authed(request(app).post(`/api/v1/courses/${fx.course.slug}/certificate`).send({ recipientName: "Someone Else" }));
+    expect(claim.status).toBe(200);
+    expect(claim.body.data.certificate.code).toBe(certificate.code);
+    expect(claim.body.data.certificate.recipientName).toBe("Test Learner");
+    expect(await prisma.certificate.count({ where: { enrollmentId: fx.enrollment.id } })).toBe(1);
+
+    const mine = await authed(request(app).get("/api/v1/certificates/mine"));
+    expect(mine.status).toBe(200);
+    expect(mine.body.data.certificates).toHaveLength(1);
+    expect(mine.body.data.certificates[0]).toMatchObject({ code: certificate.code, courseSlug: fx.course.slug });
 
     const verify = await request(app).get(`/api/v1/certificates/verify/${certificate.code}`);
     expect(verify.status).toBe(200);
-    expect(verify.body.data.certificate).toMatchObject({ recipientName: "Ayesha Khan", revokedAt: null });
+    expect(verify.body.data.certificate).toMatchObject({ recipientName: "Test Learner", revokedAt: null });
     expect((await request(app).get("/api/v1/certificates/verify/DW-L2-AAAAAAAA")).status).toBe(404);
 
     const revoke = await authed(request(app).post(`/api/v1/certificates/${certificate.code}/revoke`).send({ reason: "Issued to the wrong learner." }), mentorToken);

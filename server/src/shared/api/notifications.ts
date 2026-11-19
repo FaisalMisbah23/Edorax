@@ -50,6 +50,7 @@ export const NOTIFICATION_TYPES = [
   "enrollment.created",
   "enrollment.new_learner",
   "course.completed",
+  "certificate.issued",
   "course.learner_completed",
   "course.curriculum_updated",
   "study.reminder",

@@ -28,6 +28,7 @@ import { anthropicGrader, costMicroUsd, GraderError, recomputeReport, type Grade
 import { gradeWithModel } from "./run-grade.js";
 import { assertLearnerMayCheck, remainingChecksToday, reserveModelCall, STALE_CHECK_MESSAGE, STALE_CHECK_MS } from "./limits.js";
 import { fetchPublicPage, type PublicPage } from "./safe-fetch.js";
+import { issueCertificateAutomatically } from "../certificates/service.js";
 
 // The capstone check pipeline (docs/16-capstone-checker-and-certificates.mdx):
 //   start -> QUEUED -> RUNNING -> automated checks -> (stop, reuse, or AI grade) -> DONE | FAILED
@@ -285,6 +286,7 @@ export async function runCapstoneCheck(checkId: string, deps: CapstoneDeps = {})
       const report = previous.report as unknown as CapstoneReport;
       await finish({ status: "DONE", commitSha, automated: automated as unknown as Prisma.InputJsonValue, report: report as unknown as Prisma.InputJsonValue, percent: report.percent, completed: report.completed, reusedFromId: previous.reusedFromId ?? previous.id, model: previous.model });
       if (needsMentor(report)) await queueForMentor(checkId);
+      if (report.completed) await issueCertificateAutomatically(check.enrollmentId).catch((error) => logger.warn({ err: error, enrollmentId: check.enrollmentId }, "automatic certificate issuance failed"));
       return;
     }
 
@@ -308,6 +310,7 @@ export async function runCapstoneCheck(checkId: string, deps: CapstoneDeps = {})
       costMicroUsd: costMicroUsd(call.model, call.inputTokens, call.outputTokens),
     });
     if (needsMentor(report)) await queueForMentor(checkId);
+    if (report.completed) await issueCertificateAutomatically(check.enrollmentId).catch((error) => logger.warn({ err: error, enrollmentId: check.enrollmentId }, "automatic certificate issuance failed"));
   } catch (error) {
     const grader = error instanceof GraderError ? error : null;
     if (!grader) logger.warn({ err: error, checkId }, "capstone check failed");

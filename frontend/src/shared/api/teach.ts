@@ -1,4 +1,5 @@
 // GENERATED from server/src/shared — do not edit here. Run `pnpm sync-shared` in server/.
+import type { CertificateTemplateId } from "../lib/certificates";
 import type { CapstoneMentorView } from "../blocks/capstone-check/report";
 import type {
   ChapterReaderMode,
@@ -158,6 +159,8 @@ export type CourseSettingsView = Pick<CourseBuilderCourse,
   familySlug: string | null;
   hasVariants: boolean;
   variantAssignment: VariantAssignment;
+  /** The certificate design this course issues (see CERTIFICATE_TEMPLATES). */
+  certificateTemplate: CertificateTemplateId;
 };
 
 export type CourseDraftPreview = {

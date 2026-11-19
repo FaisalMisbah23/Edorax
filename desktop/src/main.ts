@@ -26,7 +26,6 @@ import {
   type IpcMainInvokeEvent,
 } from 'electron';
 import path from 'node:path';
-import started from 'electron-squirrel-startup';
 import { backendBase } from './api';
 import { loadAudiobookLibrary } from './audiobooks/library';
 import { downloadBook, registerAudioProtocol, registerAudioScheme, removeBook } from './audiobooks/offline';
@@ -590,8 +589,7 @@ function createWindow() {
       .catch(showLoadError);
 }
 
-if (started) app.quit();
-else {
+{
   app.whenReady().then(async () => {
     await prepareEncryption();
     registerAudioProtocol();

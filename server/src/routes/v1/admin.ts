@@ -45,6 +45,7 @@ import {
   orgIdParams,
   listAuditQuery,
   refundPolicyBody,
+  platformCertificateSettingsBody,
   requestIdParams,
   suspendUserBody,
   totpCodeBody,
@@ -254,5 +255,6 @@ router.get("/audit/export", admin.exportAuditCsv);
 router.get("/settings/refund-policy", admin.getRefundPolicy);
 router.put("/settings/refund-policy", validateBody(refundPolicyBody), admin.saveRefundPolicy);
 router.get("/settings/app", admin.getAppSettings);
+router.put("/settings/certificate", validateBody(platformCertificateSettingsBody), admin.savePlatformCertificateSettings);
 
 export default router;

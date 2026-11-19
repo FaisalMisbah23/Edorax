@@ -150,6 +150,12 @@ export function MenteeWorkspaceShell({
     icon: User,
     active: pathname === "/profile",
   };
+  const certificates: LearnerNavItem = {
+    label: "Certificates",
+    href: "/certificates",
+    icon: Award,
+    active: pathname.startsWith("/certificates"),
+  };
   const youItems: LearnerNavItem[] = [
     { label: "Progress", href: "/progress", icon: TrendingUp, active: pathname === "/progress" },
     { label: "Highlights", href: "/highlights", icon: Highlighter, active: pathname === "/highlights" },
@@ -166,7 +172,7 @@ export function MenteeWorkspaceShell({
   const sidebarGroups: { label?: string; items: LearnerNavItem[] }[] = [
     { items: [home] },
     { label: "Learn", items: areaItems },
-    { label: "You", items: [myLearning, youItems[0]!, profile, ...youItems.slice(1)] },
+    { label: "You", items: [myLearning, youItems[0]!, profile, certificates, ...youItems.slice(1)] },
   ];
   // Five slots on a phone: the areas share one "Learn" tab that opens the hub, and the hub's tabs switch between them.
   const mobileItems: LearnerNavItem[] = [

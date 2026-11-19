@@ -8,6 +8,7 @@ const router = Router();
 
 // Public verify page data: anyone with the link can check a certificate. The global API limiter applies.
 router.get("/verify/:code", validateParams(certificateCodeParams), certificates.verify);
+router.get("/mine", authenticate, certificates.listMine);
 router.post("/:code/revoke", authenticate, validate({ params: certificateCodeParams, body: certificateRevokeBody }), certificates.revoke);
 
 export default router;

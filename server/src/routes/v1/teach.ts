@@ -10,6 +10,7 @@ import { requireZipImport } from "../../middlewares/require-zip-import.js";
 import { validate, validateBody, validateParams } from "../../middlewares/validate.js";
 import {
   assignByEmailsBody,
+  courseCertificateTemplateBody,
   approveCourseZipUpdateBody,
   campaignIdParams,
   chapterDraftBody,
@@ -80,6 +81,7 @@ router.post("/instructor-invites/:token/accept", validateParams(courseInstructor
 router.delete("/courses/:courseId/instructors/:userId", validateParams(courseInstructorMemberParams), teach.removeCourseInstructor);
 router.delete("/courses/:courseId/instructor-invites/:inviteId", validateParams(courseInstructorPendingInviteParams), teach.revokeCourseInstructorInvite);
 router.patch("/courses/:courseId/settings", validate({ params: courseIdParams, body: courseSettingsBody }), teach.updateCourseSettings);
+router.put("/courses/:courseId/certificate-template", validate({ params: courseIdParams, body: courseCertificateTemplateBody }), teach.setCourseCertificateTemplate);
 router.put("/courses/:courseId/integrity", validate({ params: courseIdParams, body: courseIntegrityBody }), integrity.updateCourseSettings);
 router.post("/courses/:courseId/chapters/publish", validateParams(courseIdParams), teach.publishCourseChapters);
 router.post("/modules/:moduleId/chapters/publish", validateParams(moduleIdParams), teach.publishModuleChapters);
