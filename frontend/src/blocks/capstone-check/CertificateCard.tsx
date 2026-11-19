@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import type { CertificateView, MyCertificateState } from "@/shared/lib/certificates";
 
-// Shown under an approved capstone. The learner confirms their name once, then gets the
-// verify link, Add to LinkedIn and the share image.
+// Shown at the end of a finished course (and under a capstone check). Certificates are issued
+// automatically, so this gives the learner the verify link and Add to LinkedIn at any time.
 
 export function CertificateCard({ courseSlug }: { courseSlug: string }) {
   const [state, setState] = useState<MyCertificateState | null>(null);
@@ -44,7 +44,7 @@ export function CertificateCard({ courseSlug }: { courseSlug: string }) {
     <section className="space-y-3 border p-4">
       <p className="flex items-center gap-2 text-sm font-semibold">
         <Award className="size-4" />
-        Track certificate
+        Your certificate
       </p>
       {certificate ? (
         <>
@@ -56,6 +56,7 @@ export function CertificateCard({ courseSlug }: { courseSlug: string }) {
               Add to LinkedIn
             </a>
             <Link href={`/verify/${certificate.code}`} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+              <Award className="size-4" aria-hidden />
               View certificate
             </Link>
           </div>
