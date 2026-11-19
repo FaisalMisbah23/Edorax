@@ -508,7 +508,7 @@ export function ChapterReaderShell({
                 </ChapterLinkProvider>
 
                 {readerMode !== "QUIZ" ? (
-                  <ChapterHighlights chapterId={chapterId} initialHighlights={highlights} articleRef={articleRef} />
+                  <ChapterHighlights chapterId={chapterId} initialHighlights={highlights} articleRef={articleRef} focusMode={focusMode} />
                 ) : null}
 
                 {readerMode !== "QUIZ" ? <AskChapterPanel /> : null}
