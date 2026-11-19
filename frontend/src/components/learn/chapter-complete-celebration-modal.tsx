@@ -10,6 +10,50 @@ import { Progress, ProgressLabel } from "@/components/ui/progress";
 import { apiFetch } from "@/lib/api-client";
 import type { MyCertificateState } from "@/shared/lib/certificates";
 
+/**
+ * The certificate button. The certificate is created in the background right after the last
+ * chapter, so this asks until it exists. It lives in its own component, rendered only while the
+ * dialog is open, so every opening starts fresh.
+ */
+function CertificateAction({ courseSlug }: { courseSlug: string }) {
+  const [certificateCode, setCertificateCode] = useState<string | null>(null);
+  const [certificateChecked, setCertificateChecked] = useState(false);
+  useEffect(() => {
+    let live = true;
+    let timer: number | undefined;
+    let tries = 0;
+    const check = () => {
+      apiFetch<MyCertificateState>(`/api/v1/courses/${encodeURIComponent(courseSlug)}/certificate`)
+        .then((state) => {
+          if (!live) return;
+          if (state.certificate) {
+            setCertificateCode(state.certificate.code);
+            setCertificateChecked(true);
+          } else if (state.eligibility.offered && state.eligibility.eligible && ++tries < 8) {
+            timer = window.setTimeout(check, 1500);
+          } else {
+            setCertificateChecked(true);
+          }
+        })
+        .catch(() => live && setCertificateChecked(true));
+    };
+    check();
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [courseSlug]);
+
+  if (certificateCode) {
+    return (
+      <Link href={`/verify/${certificateCode}`} className={buttonVariants({ className: "min-h-11" })}>
+        <Award aria-hidden /> View your certificate
+      </Link>
+    );
+  }
+  return certificateChecked ? null : <Button type="button" disabled className="min-h-11">Preparing your certificate...</Button>;
+}
+
 export function ChapterCompleteCelebrationModal({
   open,
   onClose,
@@ -49,36 +93,6 @@ export function ChapterCompleteCelebrationModal({
   useEffect(() => {
     if (open && courseComplete) firePartyPopper();
   }, [open, courseComplete]);
-
-  // The certificate is created in the background right after the last chapter, so ask until it exists.
-  const [certificateCode, setCertificateCode] = useState<string | null>(null);
-  const [certificateChecked, setCertificateChecked] = useState(false);
-  useEffect(() => {
-    if (!open || !courseComplete || !courseSlug) return;
-    let live = true;
-    let timer: number | undefined;
-    let tries = 0;
-    const check = () => {
-      apiFetch<MyCertificateState>(`/api/v1/courses/${encodeURIComponent(courseSlug)}/certificate`)
-        .then((state) => {
-          if (!live) return;
-          if (state.certificate) {
-            setCertificateCode(state.certificate.code);
-            setCertificateChecked(true);
-          } else if (state.eligibility.offered && state.eligibility.eligible && ++tries < 8) {
-            timer = window.setTimeout(check, 1500);
-          } else {
-            setCertificateChecked(true);
-          }
-        })
-        .catch(() => live && setCertificateChecked(true));
-    };
-    check();
-    return () => {
-      live = false;
-      window.clearTimeout(timer);
-    };
-  }, [open, courseComplete, courseSlug]);
 
   return (
     <dialog
@@ -140,15 +154,9 @@ export function ChapterCompleteCelebrationModal({
         ) : null}
 
         <div className="mt-5 flex flex-col gap-2">
-          {courseComplete && certificateCode ? (
-            <Link href={`/verify/${certificateCode}`} className={buttonVariants({ className: "min-h-11" })}>
-              <Award aria-hidden /> View your certificate
-            </Link>
-          ) : courseComplete && courseSlug && !certificateChecked ? (
-            <Button type="button" disabled className="min-h-11">Preparing your certificate...</Button>
-          ) : null}
+          {courseComplete && courseSlug ? <CertificateAction courseSlug={courseSlug} /> : null}
           {courseComplete ? (
-            <Link href="/my-courses" className={buttonVariants({ variant: certificateCode ? "outline" : "default", className: "min-h-11" })}>View my courses <ArrowRight aria-hidden /></Link>
+            <Link href="/my-courses" className={buttonVariants({ variant: courseSlug ? "outline" : "default", className: "min-h-11" })}>View my courses <ArrowRight aria-hidden /></Link>
           ) : nextHref ? (
             <Link href={nextHref} className={cn(buttonVariants(), "h-auto min-h-11 whitespace-normal py-3 text-center")}>
               {nextTitle ? `Continue to ${nextTitle}` : "Continue to the next chapter"}

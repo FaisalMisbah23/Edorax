@@ -9,7 +9,7 @@ import { MinimalTemplate } from "./templates/minimal";
 // TemplateProps, add it here, and add its id to CERTIFICATE_TEMPLATES in shared/lib/certificates.ts.
 //
 // Templates are written for Satori (the engine behind ImageResponse): every box is flex, text sits
-// in its own box and art is inline SVG. opengraph-image.tsx renders the result to a PNG, which the
+// in its own box and art is inline SVG. render-certificate.tsx renders the result to a PNG, which the
 // verify page shows and offers as the PNG and PDF download, so all of them are the same document.
 
 export const CERTIFICATE_SIZE = { width: 1536, height: 1024 };

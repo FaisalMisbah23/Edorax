@@ -7,7 +7,7 @@ import { CERTIFICATE_TEMPLATES, type CertificateTemplateId } from "@/shared/lib/
 import { cn } from "@/lib/utils";
 
 /** Lets the instructor pick the certificate design learners of this course receive. */
-export function CourseCertificatePanel({ courseId, courseTitle, template }: { courseId: string; courseTitle: string; template: CertificateTemplateId }) {
+export function CourseCertificatePanel({ courseId, template }: { courseId: string; template: CertificateTemplateId }) {
   const [selected, setSelected] = useState<CertificateTemplateId>(template);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -36,7 +36,7 @@ export function CourseCertificatePanel({ courseId, courseTitle, template }: { co
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-primary"><Award className="size-5" aria-hidden /></span>
         <div>
           <h2 id="certificate-heading" className="text-lg font-semibold tracking-tight">Certificate design</h2>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Pick the design learners get when they finish this course. Certificates already issued keep the design they were issued with.</p>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Pick the design learners get when they finish this course. Certificates already issued keep the design they were issued with. This choice overrides `certificate.template` in course.yaml.</p>
         </div>
       </div>
 
@@ -53,7 +53,7 @@ export function CourseCertificatePanel({ courseId, courseTitle, template }: { co
               className={cn("overflow-hidden rounded-xl border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", active ? "border-primary ring-2 ring-primary/30" : "hover:border-foreground/40")}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/certificate-preview/${option.id}?title=${encodeURIComponent(courseTitle)}`} alt={`${option.label} design preview`} width={1536} height={1024} loading="lazy" className="block h-auto w-full border-b bg-muted/30" />
+              <img src={`/certificate-preview/${option.id}`} alt={`${option.label} design preview`} width={1536} height={1024} loading="lazy" className="block h-auto w-full border-b bg-muted/30" />
               <span className="flex items-start justify-between gap-3 p-3">
                 <span>
                   <span className="block text-sm font-semibold">{option.label}{option.id === "edorax" ? " (default)" : ""}</span>

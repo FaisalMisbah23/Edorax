@@ -9,7 +9,7 @@ import { issuedOn, loadCertificate } from "./certificate-data";
 
 // Public certificate page: anyone with the link can confirm a certificate is real.
 // The certificate is drawn once, in certificate-artwork.tsx, and shown here as the PNG from
-// opengraph-image.tsx, so a LinkedIn post and the page it opens look like the same document.
+// render-certificate.tsx, so a LinkedIn post and the page it opens look like the same document.
 
 type Props = { params: Promise<{ code: string }> };
 
@@ -58,7 +58,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
         {/* The document itself: the same PNG that Download image saves and LinkedIn previews. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/verify/${certificate.code}/opengraph-image`}
+          src={`/verify/${certificate.code}/image`}
           alt={`Certificate of completion. ${certificate.recipientName} completed ${certificate.title}. Issued by ${certificate.organization} on ${issuedOn(certificate.issuedAt)}. Certificate ID ${certificate.code}.`}
           width={1536}
           height={1024}
@@ -76,7 +76,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
             <a href={`/verify/${certificate.code}/pdf`} download={`${certificate.code}.pdf`} className={cn(buttonVariants({ variant: "outline" }))}>
               Download PDF
             </a>
-            <a href={`/verify/${certificate.code}/opengraph-image`} download={`${certificate.code}.png`} className={cn(buttonVariants({ variant: "outline" }))}>
+            <a href={`/verify/${certificate.code}/image`} download={`${certificate.code}.png`} className={cn(buttonVariants({ variant: "outline" }))}>
               Download image
             </a>
           </div>

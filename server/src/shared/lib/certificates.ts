@@ -98,6 +98,9 @@ export type CertificateView = {
   imageData: string | null;
 };
 
+/** A certificate in the learner's own list, with the course it belongs to. */
+export type MyCertificateListItem = CertificateView & { courseSlug: string };
+
 /** The organisation LinkedIn lists as the issuer: the platform that issues and verifies certificates. */
 export const LINKEDIN_ISSUER_NAME = "Edorax";
 

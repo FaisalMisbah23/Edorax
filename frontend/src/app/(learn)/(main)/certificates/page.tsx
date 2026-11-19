@@ -31,7 +31,7 @@ export default async function CertificatesPage() {
               <Link href={`/verify/${certificate.code}`} className="block border-b bg-muted/30">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`/verify/${certificate.code}/opengraph-image`}
+                  src={`/verify/${certificate.code}/image`}
                   alt={`Certificate for ${certificate.title}, issued to ${certificate.recipientName}`}
                   width={1536}
                   height={1024}

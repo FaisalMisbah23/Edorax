@@ -12,6 +12,7 @@ import {
   certificateTemplateId,
   type ResolvedCertificateSettings,
   type CertificateView,
+  type MyCertificateListItem,
   type MyCertificateState,
 } from "../../shared/lib/certificates.js";
 import { getPlatformCertificateSettings } from "../admin/certificate-settings.js";
@@ -240,7 +241,7 @@ export async function claimCertificate(courseSlug: string, user: SessionUser | u
 /** Public, no sign-in. Unknown codes are a plain 404 so ids cannot be probed for details. */
 export async function getPublicCertificate(code: string): Promise<CertificateView> {
   if (!CERTIFICATE_CODE_PATTERN.test(code)) throw new NotFoundError("Certificate not found");
-  const certificate = await prisma.certificate.findUnique({ where: { code }, include: { course: { select: { certificate: true, slug: true, title: true } } } });
+  const certificate = await prisma.certificate.findUnique({ where: { code }, include: { course: { select: { certificate: true, certificateTemplate: true, slug: true, title: true } } } });
   if (!certificate) throw new NotFoundError("Certificate not found");
   const platform = await getPlatformCertificateSettings();
   const settings = settingsFor(certificate.course, platform);
@@ -249,7 +250,7 @@ export async function getPublicCertificate(code: string): Promise<CertificateVie
 
 /** Mentors of the course and platform admins can revoke, with a reason shown on the verify page. */
 export async function revokeCertificate(user: SessionUser, code: string, reason: string): Promise<CertificateView> {
-  const certificate = await prisma.certificate.findUnique({ where: { code }, include: { course: { select: { id: true, certificate: true, slug: true, title: true } } } });
+  const certificate = await prisma.certificate.findUnique({ where: { code }, include: { course: { select: { id: true, certificate: true, certificateTemplate: true, slug: true, title: true } } } });
   if (!certificate) throw new NotFoundError("Certificate not found");
   await requireCourseById(user, certificate.course.id, "SUBMISSION_EVALUATOR");
   const trimmed = reason.trim();
@@ -264,18 +265,18 @@ export async function revokeCertificate(user: SessionUser, code: string, reason:
 }
 
 /** Every certificate the signed-in learner has earned, newest first, for the My certificates page. */
-export async function listMyCertificates(user: SessionUser | undefined): Promise<CertificateView[]> {
+export async function listMyCertificates(user: SessionUser | undefined): Promise<MyCertificateListItem[]> {
   if (!user) throw new UnauthorizedError();
   const [rows, platform] = await Promise.all([
     prisma.certificate.findMany({
       where: { userId: user.id },
       orderBy: { issuedAt: "desc" },
-      include: { course: { select: { certificate: true, slug: true, title: true } } },
+      include: { course: { select: { certificate: true, certificateTemplate: true, slug: true, title: true } } },
     }),
     getPlatformCertificateSettings(),
   ]);
   return rows.map((row) => {
     const settings = settingsFor(row.course, platform);
-    return toCertificateView(row, settings?.organization ?? platform.organization, settings?.imageData ?? platform.imageData);
+    return { ...toCertificateView(row, settings?.organization ?? platform.organization, settings?.imageData ?? platform.imageData), courseSlug: row.course.slug };
   });
 }

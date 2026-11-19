@@ -53,7 +53,7 @@ export default async function CourseSettingsPage({ params }: { params: Promise<{
       </nav>
 
       <CourseSettings key={course.id} course={course} />
-      <CourseCertificatePanel courseId={course.id} courseTitle={course.title} template={course.certificateTemplate} />
+      <CourseCertificatePanel courseId={course.id} template={course.certificateTemplate} />
       <CourseIntegritySettings courseId={course.id} integritySnapshots={course.integritySnapshots} />
       {course.pricingType === "PAID" ? <CourseCouponsPanel courseId={course.id} courseSlug={course.slug} coupons={coupons} /> : null}
       <div id="course-team" className="scroll-mt-24"><CourseTeamPanel courseId={course.id} courseSlug={course.slug} team={team} /></div>
