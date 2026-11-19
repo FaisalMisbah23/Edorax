@@ -452,6 +452,27 @@ ${next ? `<p>${escapeHtml(next.lead)} <a href="${appBaseUrl()}${next.url}">${esc
   );
 }
 
+/** Tells a learner their certificate is ready, with a link to the verify page that shows and downloads it. */
+export async function notifyCertificateIssued(certificate: { id: string; code: string; userId: string; title: string }): Promise<void> {
+  const link = `${appBaseUrl()}/verify/${certificate.code}`;
+  await notify({
+    type: "certificate.issued",
+    recipients: [{ userId: certificate.userId }],
+    dedupeKey: `certificate-issued:${certificate.id}`,
+    title: "Your certificate is ready",
+    body: `${certificate.title}. Certificate ${certificate.code}.`,
+    url: `/verify/${certificate.code}`,
+    email: ({ name }) => ({
+      subject: `Your certificate · ${certificate.title}`,
+      html: `${hi(name)}
+<p>Your certificate for <strong>${escapeHtml(certificate.title)}</strong> is ready.</p>
+<p><a href="${link}">View and download your certificate</a></p>
+<p>Anyone with this link can check that the certificate is real. Certificate ID: ${escapeHtml(certificate.code)}</p>`,
+      text: `Your certificate for ${certificate.title} is ready. View and download it: ${link} Certificate ID: ${certificate.code}`,
+    }),
+  });
+}
+
 type NextCourse = { courseId: string; url: string; lead: string; action: string };
 
 /** Where a learner who just finished a course should go next, or null when there is nowhere. */

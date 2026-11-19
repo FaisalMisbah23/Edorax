@@ -5,11 +5,11 @@ import { CircleAlert, CircleCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { SITE_NAME } from "@/lib/site";
-import { issuedOn, issuerLine, loadCertificate } from "./certificate-data";
+import { issuedOn, loadCertificate } from "./certificate-data";
 
 // Public certificate page: anyone with the link can confirm a certificate is real.
-// The artwork matches the share image (opengraph-image.tsx) so a LinkedIn post and the
-// page it opens look like the same document.
+// The certificate is drawn once, in certificate-artwork.tsx, and shown here as the PNG from
+// opengraph-image.tsx, so a LinkedIn post and the page it opens look like the same document.
 
 type Props = { params: Promise<{ code: string }> };
 
@@ -29,17 +29,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function WeekBars({ size = 8 }: { size?: number }) {
-  const weekday = Math.round(size * 0.58);
-  return (
-    <span aria-hidden className="flex items-end gap-[3px]" style={{ height: size }}>
-      {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-        <span key={day} className="block w-[7px] bg-[#0A0A0A]" style={{ height: day < 5 ? weekday : size, opacity: day < 5 ? 0.32 : 1 }} />
-      ))}
-    </span>
-  );
-}
-
 export default async function VerifyCertificatePage({ params }: Props) {
   const { code } = await params;
   const certificate = await loadCertificate(code);
@@ -48,7 +37,7 @@ export default async function VerifyCertificatePage({ params }: Props) {
 
   return (
     <main className="min-h-dvh bg-background px-4 py-8 text-foreground sm:px-6 sm:py-12">
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex items-center justify-between gap-4 text-sm">
           <Link href="/" className="font-heading text-base font-bold tracking-tight">{SITE_NAME}</Link>
           <span className="text-muted-foreground">Certificate check</span>
@@ -66,40 +55,15 @@ export default async function VerifyCertificatePage({ params }: Props) {
           </p>
         </div>
 
-        {/* The document itself. White, one hairline border, square corners, ink type. */}
-        <article className="border border-[#DCE0F2] bg-white p-6 text-[#0A0F2C] sm:p-10" aria-label="Certificate">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex flex-col gap-1.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {certificate.imageData ? <img src={certificate.imageData} alt="Certificate artwork" className="max-h-40 max-w-full object-contain object-left" /> : <img src="/brand/dw/dw-wordmark-black.png" alt="Dev Weekends" width={82} height={60} className="h-[60px] w-[82px]" />}
-              <WeekBars />
-            </div>
-            <p className="font-mono text-xs tracking-wide text-[#46507A]">{certificate.code}</p>
-          </div>
-
-          <p className="mt-10 font-mono text-xs uppercase tracking-[0.18em] text-[#46507A]">{"// Certificate of completion"}</p>
-          <h1 className="mt-3 font-heading text-3xl font-bold leading-tight tracking-[-0.035em] sm:text-5xl">{certificate.recipientName}</h1>
-          <p className="mt-4 max-w-2xl text-lg font-bold leading-7 sm:text-2xl">{certificate.title}</p>
-          <p className="mt-1.5 max-w-2xl text-base leading-7">{certificate.program}. Course completed and AI capstone requirements passed.</p>
-          {certificate.skills.length > 0 ? (
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-[#46507A]">Skills: {certificate.skills.join(", ")}</p>
-          ) : null}
-
-          <div className="mt-10 grid gap-6 border-t border-[#0A0F2C] pt-5 text-sm sm:grid-cols-3">
-            <div>
-              <p className="font-bold">{issuerLine(certificate)}</p>
-              <p className="text-[#46507A]">{certificate.organization}</p>
-            </div>
-            <div>
-              <p className="font-bold">{issuedOn(certificate.issuedAt)}</p>
-              <p className="text-[#46507A]">Issued</p>
-            </div>
-            <div className="sm:text-right">
-              <p className="font-bold">{certificate.code}</p>
-              <p className="text-[#46507A]">Certificate ID</p>
-            </div>
-          </div>
-        </article>
+        {/* The document itself: the same PNG that Download image saves and LinkedIn previews. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/verify/${certificate.code}/opengraph-image`}
+          alt={`Certificate of completion. ${certificate.recipientName} completed ${certificate.title}. Issued by ${certificate.organization} on ${issuedOn(certificate.issuedAt)}. Certificate ID ${certificate.code}.`}
+          width={1536}
+          height={1024}
+          className="block h-auto w-full border border-border shadow-sm"
+        />
 
         {!revoked ? (
           <div className="flex flex-wrap gap-3">
@@ -108,6 +72,9 @@ export default async function VerifyCertificatePage({ params }: Props) {
             </a>
             <a href={certificate.linkedInShareUrl} target="_blank" rel="noreferrer noopener" className={cn(buttonVariants({ variant: "outline" }))}>
               Share a post
+            </a>
+            <a href={`/verify/${certificate.code}/pdf`} download={`${certificate.code}.pdf`} className={cn(buttonVariants({ variant: "outline" }))}>
+              Download PDF
             </a>
             <a href={`/verify/${certificate.code}/opengraph-image`} download={`${certificate.code}.png`} className={cn(buttonVariants({ variant: "outline" }))}>
               Download image

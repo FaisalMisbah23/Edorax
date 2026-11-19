@@ -480,10 +480,16 @@ describe("certificates", () => {
     const settings = CertificateSettingsSchema.parse({ title: "Level 1: Foundations", code: "L1" });
     expect(settings).toMatchObject({ program: "Dev Weekends Mentorship", organization: "Dev Weekends", prefix: "DW", issuer: {} });
     expect(CertificateSettingsSchema.parse({ title: "T", code: "MV", issuer: { name: "Aqib Nawab" } }).issuer.name).toBe("Aqib Nawab");
-    const codes = new Set(Array.from({ length: 200 }, () => newCertificateCode(settings)));
+    const codes = new Set(Array.from({ length: 200 }, () => newCertificateCode({ prefix: settings.prefix, code: settings.code ?? "L1" })));
     expect(codes.size).toBe(200);
     for (const code of codes) expect(code).toMatch(CERTIFICATE_CODE_PATTERN);
     expect([...codes][0]).toMatch(/^DW-L1-/);
+  });
+
+  it("lets a course pick a certificate template and rejects an unknown one", () => {
+    expect(CertificateSettingsSchema.parse({ template: "classic" }).template).toBe("classic");
+    expect(CertificateSettingsSchema.parse({}).template).toBeUndefined();
+    expect(() => CertificateSettingsSchema.parse({ template: "gold-foil" })).toThrow();
   });
 });
 

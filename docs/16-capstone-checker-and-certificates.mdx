@@ -185,6 +185,12 @@ are issued automatically once per enrollment; a mentor or admin can revoke one.
 organization and issuer, the issue date, a unique id, and AI-passed capstone evidence. Course
 certificate settings can still provide a title, code, skills, or issuer override.
 
+**Templates:** a course picks a design with `certificate.template` in `course.yaml` (`edorax`, the default,
+`classic` or `minimal`). The choice is saved on each certificate when it is issued, so changing it later does
+not restyle old certificates. Designs are components in `frontend/src/app/verify/[code]/templates/`; add one by
+writing a component, registering it in `certificate-artwork.tsx` and adding its id to `CERTIFICATE_TEMPLATES`.
+The verify page also offers a PDF download, and every certificate carries a QR code with its verify link.
+
 **Configured by platform admins** in Admin → App settings → Certificates. The setting can be
 enabled, sets the program, organization, and issuer, and accepts PNG, JPEG, or WebP artwork up
 to 2 MB. It is stored in the existing `app_settings` key/value table. Existing per-course

@@ -4,14 +4,31 @@ import { z } from "zod";
 // with a `certificate` block in course.yaml; the API issues one per passed enrollment and
 // the public page /verify/<code> shows it to anyone.
 
+/** The certificate designs an instructor can pick. "edorax" is the default and matches the platform look. */
+export const CERTIFICATE_TEMPLATES = [
+  { id: "edorax", label: "Edorax", description: "Blue and white with a seal. The default." },
+  { id: "classic", label: "Classic", description: "Cream paper, gold double border and serif type." },
+  { id: "minimal", label: "Minimal", description: "Clean white page with large type." },
+] as const;
+export type CertificateTemplateId = (typeof CERTIFICATE_TEMPLATES)[number]["id"];
+export const DEFAULT_CERTIFICATE_TEMPLATE: CertificateTemplateId = "edorax";
+export const CERTIFICATE_TEMPLATE_IDS = CERTIFICATE_TEMPLATES.map((template) => template.id) as [CertificateTemplateId, ...CertificateTemplateId[]];
+const TEMPLATE_IDS = CERTIFICATE_TEMPLATE_IDS;
+
+export function certificateTemplateId(value: unknown): CertificateTemplateId {
+  return TEMPLATE_IDS.find((id) => id === value) ?? DEFAULT_CERTIFICATE_TEMPLATE;
+}
+
 export const CertificateSettingsSchema = z
   .object({
     /** The programme line, for example "Dev Weekends Mentorship". */
     program: z.string().trim().min(1).max(120).default("Dev Weekends Mentorship"),
-    /** The track title on the certificate and in LinkedIn's Name field. */
-    title: z.string().trim().min(1).max(120),
-    /** Short track code used in the public id, for example L2 in DW-L2-7K3F9QXM. */
-    code: z.string().regex(/^[A-Z0-9]{1,6}$/, "Use 1 to 6 capital letters or digits"),
+    /** The track title on the certificate and in LinkedIn's Name field. Defaults to the course title. */
+    title: z.string().trim().min(1).max(120).optional(),
+    /** Short track code used in the public id, for example L2 in DW-L2-7K3F9QXM. Defaults to one made from the course slug. */
+    code: z.string().regex(/^[A-Z0-9]{1,6}$/, "Use 1 to 6 capital letters or digits").optional(),
+    /** Which design the certificate uses. Defaults to "edorax". */
+    template: z.enum(TEMPLATE_IDS).optional(),
     /** The programme's organisation, shown on the certificate. LinkedIn's issuer is always Edorax. */
     organization: z.string().trim().min(1).max(120).default("Dev Weekends"),
     /** Prefix of the public id. */
@@ -45,6 +62,13 @@ export type PlatformCertificateSettings = z.infer<typeof PlatformCertificateSett
 
 export type CertificateSettings = z.infer<typeof CertificateSettingsSchema>;
 
+/** Settings with every default filled in, which is what issuing a certificate needs. */
+export type ResolvedCertificateSettings = Omit<CertificateSettings, "title" | "code" | "template"> & {
+  title: string;
+  code: string;
+  template: CertificateTemplateId;
+};
+
 export type CertificateEvidence = {
   chapterTitle: string;
   repoUrl: string;
@@ -55,6 +79,7 @@ export type CertificateEvidence = {
 
 export type CertificateView = {
   code: string;
+  template: CertificateTemplateId;
   recipientName: string;
   title: string;
   program: string;

@@ -9,7 +9,8 @@ import {
   linkedInShareUrl,
   type CertificateEligibility,
   type CertificateEvidence,
-  type CertificateSettings,
+  certificateTemplateId,
+  type ResolvedCertificateSettings,
   type CertificateView,
   type MyCertificateState,
 } from "../../shared/lib/certificates.js";
@@ -19,28 +20,37 @@ import type { SessionUser } from "../../types/auth.js";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError } from "../../utils/errors.js";
 import { requireCourseById } from "../teach/access.js";
 import { newCertificateCode } from "./code.js";
+import { notifyCertificateIssued } from "../notifications/events.js";
+import { logger } from "../../utils/logger.js";
 
 // Certificates are automatic on course completion once every capstone has an AI pass.
 // The platform template is stored in AppSetting; issued names and course titles are snapshots.
 
-function settingsFor(course: { certificate: Prisma.JsonValue | null; title?: string; slug?: string; mentor?: { name: string | null } }, platform: PlatformCertificateSettings): CertificateSettings | null {
+function courseCode(slug?: string): string {
+  return (slug ?? "COURSE").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "COURSE";
+}
+
+function settingsFor(course: { certificate: Prisma.JsonValue | null; certificateTemplate?: string | null; title?: string; slug?: string; mentor?: { name: string | null } }, platform: PlatformCertificateSettings): ResolvedCertificateSettings | null {
   const parsed = course.certificate ? CertificateSettingsSchema.safeParse(course.certificate) : null;
   if (parsed?.success) return {
     ...parsed.data,
+    title: parsed.data.title ?? course.title ?? "Course completion",
+    code: parsed.data.code ?? courseCode(course.slug),
+    template: certificateTemplateId(course.certificateTemplate ?? parsed.data.template),
     organization: platform.organization,
     program: platform.program,
     issuer: { ...parsed.data.issuer, name: parsed.data.issuer.name ?? platform.issuerName },
     imageData: platform.imageData ?? parsed.data.imageData,
   };
   if (!platform.enabled) return null;
-  const code = (course.slug ?? "COURSE").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "COURSE";
-  return { program: platform.program, title: course.title ?? "Course completion", code, organization: platform.organization, prefix: "ED", issuer: { name: platform.issuerName }, skills: [], imageData: platform.imageData ?? undefined };
+  return { program: platform.program, title: course.title ?? "Course completion", code: courseCode(course.slug), template: certificateTemplateId(course.certificateTemplate), organization: platform.organization, prefix: "ED", issuer: { name: platform.issuerName }, skills: [], imageData: platform.imageData ?? undefined };
 }
 
 export function toCertificateView(certificate: Certificate, organization: string, imageData: string | null = null): CertificateView {
   const verifyUrl = `${env.APP_URL}/verify/${certificate.code}`;
   return {
     code: certificate.code,
+    template: certificateTemplateId(certificate.template),
     recipientName: certificate.recipientName,
     title: certificate.title,
     program: certificate.program,
@@ -78,7 +88,7 @@ type EnrollmentForCertificate = {
 /** Eligibility plus the evidence the certificate will list. */
 export async function certificateEligibility(
   enrollment: EnrollmentForCertificate,
-  settings: CertificateSettings | null
+  settings: ResolvedCertificateSettings | null
 ): Promise<CertificateEligibility & { evidence: CertificateEvidence[] }> {
   if (!settings) return { offered: false, eligible: false, missing: [], evidence: [] };
   const missing: string[] = [];
@@ -117,7 +127,7 @@ async function loadLearnerEnrollment(courseSlug: string, user: SessionUser | und
   if (!user) throw new UnauthorizedError();
   const course = await prisma.course.findUnique({
     where: { slug: courseSlug },
-    select: { id: true, slug: true, title: true, certificate: true, mentor: { select: { name: true } } },
+    select: { id: true, slug: true, title: true, certificate: true, certificateTemplate: true, mentor: { select: { name: true } } },
   });
   if (!course) throw new NotFoundError("Course not found");
   const enrollment = await prisma.enrollment.findUnique({
@@ -152,7 +162,7 @@ const NAME = /^[\p{L}\p{M}][\p{L}\p{M}' .-]{1,79}$/u;
 export async function issueCertificateAutomatically(enrollmentId: string): Promise<void> {
   const enrollment = await prisma.enrollment.findUnique({
     where: { id: enrollmentId },
-    include: { certificate: true, user: { select: { id: true, name: true, email: true } }, course: { select: { id: true, slug: true, title: true, certificate: true, mentor: { select: { name: true } } } } },
+    include: { certificate: true, user: { select: { id: true, name: true, email: true } }, course: { select: { id: true, slug: true, title: true, certificate: true, certificateTemplate: true, mentor: { select: { name: true } } } } },
   });
   if (!enrollment?.user || enrollment.certificate || (!enrollment.completedAt && enrollment.percentComplete < 100)) return;
   const platform = await getPlatformCertificateSettings();
@@ -164,13 +174,18 @@ export async function issueCertificateAutomatically(enrollmentId: string): Promi
   const recipientName = NAME.test(candidate) ? candidate : "Learner";
   for (let tries = 0; tries < 5; tries++) {
     try {
-      await prisma.certificate.create({ data: {
+      const created = await prisma.certificate.create({ data: {
         code: newCertificateCode(settings), userId: enrollment.user.id, courseId: enrollment.course.id,
-        enrollmentId: enrollment.id, recipientName, program: settings.program, title: settings.title,
+        enrollmentId: enrollment.id, recipientName, program: settings.program, title: settings.title, template: settings.template,
         issuerName: settings.issuer.name ?? enrollment.course.mentor.name ?? platform.issuerName,
         issuerTitle: settings.issuer.title ?? null, skills: settings.skills,
         evidence: eligibility.evidence as unknown as Prisma.InputJsonValue,
       } });
+      // Email only a fresh completion. A certificate backfilled for a course finished long ago (the
+      // learner just opened a page) is issued quietly, so nobody gets a burst of old emails. The email
+      // must never undo an issued certificate.
+      const finishedRecently = !enrollment.completedAt || Date.now() - enrollment.completedAt.getTime() < 24 * 60 * 60 * 1000;
+      if (finishedRecently) await notifyCertificateIssued(created).catch((error) => logger.warn({ err: error, certificateId: created.id }, "certificate email failed"));
       return;
     } catch (error) {
       const code = (error as { code?: string }).code;
@@ -201,6 +216,7 @@ export async function claimCertificate(courseSlug: string, user: SessionUser | u
           recipientName,
           program: settings.program,
           title: settings.title,
+          template: settings.template,
           // The course's trainer signs unless course.yaml names someone else.
           issuerName: settings.issuer.name ?? course.mentor.name ?? platform.issuerName ?? LINKEDIN_ISSUER_NAME,
           issuerTitle: settings.issuer.title ?? null,
@@ -208,6 +224,7 @@ export async function claimCertificate(courseSlug: string, user: SessionUser | u
           evidence: eligibility.evidence as unknown as Prisma.InputJsonValue,
         },
       });
+      await notifyCertificateIssued(certificate).catch((error) => logger.warn({ err: error, certificateId: certificate.id }, "certificate email failed"));
       return toCertificateView(certificate, settings.organization, settings.imageData ?? platform.imageData);
     } catch (error) {
       const code = (error as { code?: string; meta?: { target?: unknown } }).code;
@@ -244,4 +261,21 @@ export async function revokeCertificate(user: SessionUser, code: string, reason:
   const platform = await getPlatformCertificateSettings();
   const settings = settingsFor(certificate.course, platform);
   return toCertificateView(updated, settings?.organization ?? platform.organization, settings?.imageData ?? platform.imageData);
+}
+
+/** Every certificate the signed-in learner has earned, newest first, for the My certificates page. */
+export async function listMyCertificates(user: SessionUser | undefined): Promise<CertificateView[]> {
+  if (!user) throw new UnauthorizedError();
+  const [rows, platform] = await Promise.all([
+    prisma.certificate.findMany({
+      where: { userId: user.id },
+      orderBy: { issuedAt: "desc" },
+      include: { course: { select: { certificate: true, slug: true, title: true } } },
+    }),
+    getPlatformCertificateSettings(),
+  ]);
+  return rows.map((row) => {
+    const settings = settingsFor(row.course, platform);
+    return toCertificateView(row, settings?.organization ?? platform.organization, settings?.imageData ?? platform.imageData);
+  });
 }

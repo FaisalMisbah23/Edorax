@@ -15,7 +15,7 @@ import * as helpInbox from "../services/teach/help-inbox.js";
 import * as courseTeam from "../services/teach/course-team.js";
 import type {
   ChapterSettingsBody,
-  CourseSettingsBody,
+  CourseCertificateTemplateBody, CourseSettingsBody,
   CreateChapterBody,
   CreateCourseBody,
   HelpInboxQuery,
@@ -99,6 +99,12 @@ export async function revokeCourseInstructorInvite(req: Request, res: Response) 
 // PATCH /api/v1/teach/courses/:courseId/settings
 export async function updateCourseSettings(req: Request, res: Response) {
   await courses.updateCourseSettings(req.user!, param(req, "courseId"), req.body as CourseSettingsBody);
+  noContent(res);
+}
+
+// PUT /api/v1/teach/courses/:courseId/certificate-template
+export async function setCourseCertificateTemplate(req: Request, res: Response) {
+  await courses.setCourseCertificateTemplate(req.user!, param(req, "courseId"), req.body as CourseCertificateTemplateBody);
   noContent(res);
 }
 
