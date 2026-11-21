@@ -1,5 +1,5 @@
 import type { ReactNode, Ref } from "react";
-import { GREY, HEADING } from "./brand";
+import { HEADING, MUTED } from "./brand";
 import s from "./try-it.module.css";
 
 export interface StepProps {
@@ -15,7 +15,7 @@ export interface StepProps {
 export function StepHeading({ eyebrow, children, headingRef }: { eyebrow: string; children: ReactNode; headingRef: Ref<HTMLHeadingElement> }) {
   return (
     <div>
-      <div style={{ fontSize: "14px", color: GREY }}>{eyebrow}</div>
+      <div style={{ fontSize: "14px", color: MUTED }}>{eyebrow}</div>
       <h2
         ref={headingRef}
         tabIndex={-1}

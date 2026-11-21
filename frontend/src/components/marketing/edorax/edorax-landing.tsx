@@ -13,16 +13,16 @@ import s from "./edorax-landing.module.css";
 // globally in layout.tsx.
 
 function AccountLink({ dashboardHref }: { dashboardHref: string | null }) {
-  return <Link href={dashboardHref ?? "/login"} style={{ color: "#0A0A0A", textDecoration: "none", fontWeight: 700, padding: "12px 0", whiteSpace: "nowrap" }}>{dashboardHref ? "Dashboard" : "Sign in"}</Link>;
+  return <Link href={dashboardHref ?? "/login"} style={{ color: "#0A0F2C", textDecoration: "none", fontWeight: 700, padding: "12px 0", whiteSpace: "nowrap" }}>{dashboardHref ? "Dashboard" : "Sign in"}</Link>;
 }
 
 // Courses are public, so the nav links to the catalog on every screen size, phones included.
 function CoursesNavLink() {
-  return <Link href="/catalog" style={{ color: "#0A0A0A", textDecoration: "none", fontWeight: 700, padding: "12px 0", whiteSpace: "nowrap" }}>Courses</Link>;
+  return <Link href="/catalog" style={{ color: "#0A0F2C", textDecoration: "none", fontWeight: 700, padding: "12px 0", whiteSpace: "nowrap" }}>Courses</Link>;
 }
 
 function LabsNavLink() {
-  return <Link href="/labs" className={s.navLink} style={{ color: "#0A0A0A", textDecoration: "none", fontWeight: 700, padding: "12px 0", whiteSpace: "nowrap" }}>Labs</Link>;
+  return <Link href="/labs" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", fontWeight: 700, padding: "12px 0", whiteSpace: "nowrap" }}>Labs</Link>;
 }
 
 function CatalogLink() {
@@ -32,37 +32,37 @@ function CatalogLink() {
 export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string | null }) {
   return (
     <div className={s.root} style={{ width: "100%", boxSizing: "border-box", background: "#F6F7FB", color: "#0A0F2C", fontFamily: "var(--font-dm-sans), system-ui, sans-serif", fontSize: "18px", lineHeight: "1.55" }}>
-      <div className={s.lightHero} style={{ width: "100%", background: "#FFFFFF", color: "#0A0A0A", borderBottom: "1px solid #E4E4E7" }}>
+      <div style={{ width: "100%", background: "#F6F7FB", color: "#0A0F2C" }}>
         <header style={{ width: "100%" }}>
           <div className={s.header} style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px 24px", boxSizing: "border-box", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
             <a href="#top" aria-label="Edorax home" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
               <Wordmark tone="light" height={30} />
             </a>
             <nav aria-label="Main" className={s.nav} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 28px", fontSize: "16px" }}>
-              <a href="#how" className={s.navLink} style={{ color: "#3F3F46", textDecoration: "none", padding: "12px 0" }}>How it works</a>
-              <a href="#labs" className={s.navLink} style={{ color: "#3F3F46", textDecoration: "none", padding: "12px 0" }}>Hands-on labs</a>
-              <a href="#desktop" className={s.navLink} style={{ color: "#3F3F46", textDecoration: "none", padding: "12px 0" }}>Desktop app</a>
-              <a href="#topics" className={s.navLink} style={{ color: "#3F3F46", textDecoration: "none", padding: "12px 0" }}>What you can learn</a>
+              <a href="#how" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>How it works</a>
+              <a href="#labs" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>Hands-on labs</a>
+              <a href="#desktop" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>Desktop app</a>
+              <a href="#topics" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>What you can learn</a>
               <CoursesNavLink />
               <LabsNavLink />
               <AccountLink dashboardHref={dashboardHref} />
-              <Link href="/signup" className={`${s.navCta} ${s.hideSm}`} style={{ background: "#0A0A0A", color: "#FFFFFF", textDecoration: "none", fontWeight: "700", padding: "11px 22px", borderRadius: "999px" }}>Start free</Link>
+              <Link href="/signup" className={`${s.navCta} ${s.hideSm}`} style={{ background: "#2434E0", color: "#F6F7FB", textDecoration: "none", fontWeight: "700", padding: "12px 22px" }}>Start free</Link>
             </nav>
           </div>
         </header>
         <section id="top" style={{ width: "100%" }}>
           <div className={s.hero} style={{ maxWidth: "1200px", margin: "0 auto", padding: "44px 24px 88px", boxSizing: "border-box", textAlign: "center" }}>
             <h1 className={s.h1} style={{ margin: "0", fontFamily: "var(--font-unbounded), sans-serif", fontWeight: "700", fontSize: "64px", lineHeight: "1.05", letterSpacing: "-0.04em" }}>Run it. Break it. Learn it.</h1>
-            <p className={s.heroLead} style={{ margin: "22px auto 0", fontSize: "20px", color: "#3F3F46", maxWidth: "700px" }}>Shell labs, visual system design labs and courses you can hear. Try one below.</p>
+            <p className={s.heroLead} style={{ margin: "22px auto 0", fontSize: "20px", color: "#46507A", maxWidth: "700px", textWrap: "balance" }}>Shell labs, visual system design labs and courses you can hear. Try one below.</p>
             <div className={s.heroCtas} style={{ marginTop: "32px", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "14px" }}>
-              <Link href="/signup" style={{ background: "#0A0A0A", color: "#FFFFFF", textDecoration: "none", fontWeight: "700", padding: "15px 30px", borderRadius: "999px" }}>Start free <span aria-hidden="true">&rarr;</span></Link>
-              <Link href="/catalog" style={{ color: "#0A0A0A", textDecoration: "none", fontWeight: "700", padding: "14px 29px", border: "1px solid #0A0A0A", borderRadius: "999px" }}>Browse courses <span aria-hidden="true">&rarr;</span></Link>
+              <Link href="/signup" style={{ background: "#2434E0", color: "#F6F7FB", textDecoration: "none", fontWeight: "700", padding: "15px 30px" }}>Start free <span aria-hidden="true">&rarr;</span></Link>
+              <Link href="/catalog" style={{ color: "#0A0F2C", textDecoration: "none", fontWeight: "700", padding: "13px 28px", border: "2px solid #0A0F2C" }}>Browse courses <span aria-hidden="true">&rarr;</span></Link>
             </div>
-            <ul className={s.ticks} aria-label="What you get" style={{ listStyle: "none", margin: "24px 0 0", padding: "0", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px 24px", fontSize: "15px", color: "#3F3F46" }}>
+            <ul className={s.ticks} aria-label="What you get" style={{ listStyle: "none", margin: "24px 0 0", padding: "0", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px 24px", fontSize: "15px", color: "#46507A" }}>
               {["No account to try", "Nothing to install", "Works on your phone"].map((t) => (
                 <li key={t} style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
                   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                    <circle cx="8" cy="8" r="8" fill="#0A0A0A" />
+                    <circle cx="8" cy="8" r="8" fill="#2434E0" />
                     <path d="M4.5 8.3 L7 10.6 L11.5 5.6" stroke="#FFFFFF" strokeWidth="1.8" fill="none" />
                   </svg>
                   {t}

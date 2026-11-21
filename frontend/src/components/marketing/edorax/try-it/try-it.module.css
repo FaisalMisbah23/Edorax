@@ -1,5 +1,4 @@
-/* Styles for the quiz and drag steps shown inside the hero's lab window. Black and white
-   only, like the window around them. */
+/* Styles for the quiz and drag steps shown inside the hero's lab window. */
 
 .srOnly {
   position: absolute;
@@ -20,7 +19,7 @@
 }
 
 .answer:hover {
-  border-color: #111111 !important;
+  border-color: #2434e0 !important;
 }
 
 .primary {
@@ -32,12 +31,12 @@
   border: 0;
   font-size: 16px;
   font-weight: 700;
-  background: #111111;
-  color: #ffffff;
+  background: #2434e0;
+  color: #f6f7fb;
 }
 
 .primary:hover {
-  background: #333333;
+  background: #1c29b8;
 }
 
 @media (pointer: coarse) {

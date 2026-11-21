@@ -1,5 +1,5 @@
-/* The hero's lab window. Black and white only: white panes, black text, grey rules, and a
-   dark terminal like a real one. */
+/* The hero's lab window in the Edorax brand: paper and white panes, ink text, cobalt for
+   actions and progress, and an ink terminal. */
 
 .srOnly {
   position: absolute;
@@ -14,12 +14,12 @@
 .window {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #d4d4d8;
+  border: 1px solid #DCE0F2;
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 24px 60px rgba(10, 15, 44, 0.12);
   text-align: left;
-  color: #111111;
+  color: #0A0F2C;
   font-size: 16px;
   line-height: 1.5;
 }
@@ -36,7 +36,7 @@
 .window a:focus-visible,
 .window button:focus-visible,
 .window input:focus-visible {
-  outline: 2px solid #111111;
+  outline: 2px solid #FFC933;
   outline-offset: 2px;
 }
 
@@ -45,8 +45,8 @@
   display: flex;
   overflow-x: auto;
   scrollbar-width: none;
-  border-bottom: 1px solid #e4e4e7;
-  background: #f4f4f5;
+  border-bottom: 1px solid #DCE0F2;
+  background: #EEF0FA;
 }
 
 .tabs::-webkit-scrollbar {
@@ -64,20 +64,20 @@
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: #5a5a5a;
+  color: #46507A;
   font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .tab:hover {
-  color: #111111;
+  color: #2434E0;
 }
 
 .tabOn {
-  color: #111111;
+  color: #2434E0;
   background: #ffffff;
-  border-bottom-color: #111111;
+  border-bottom-color: #2434E0;
 }
 
 .tick {
@@ -100,7 +100,7 @@
 
 .loading {
   min-height: 480px;
-  background: #fafafa;
+  background: #F6F7FB;
 }
 
 /* Two panes side by side: task or lesson on the left, the work on the right. */
@@ -119,8 +119,8 @@
 }
 
 .paneTask {
-  background: #fafafa;
-  border-right: 1px solid #e4e4e7;
+  background: #F6F7FB;
+  border-right: 1px solid #DCE0F2;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -136,11 +136,11 @@
 
 .paneLight {
   background: #ffffff;
-  color: #111111;
+  color: #0A0F2C;
 }
 
 .paneLight + .paneLight {
-  border-left: 1px solid #dadada;
+  border-left: 1px solid #DCE0F2;
 }
 
 .paneLight p {
@@ -149,7 +149,7 @@
 
 .single {
   background: #ffffff;
-  color: #111111;
+  color: #0A0F2C;
   min-height: 480px;
   display: flex;
   justify-content: center;
@@ -166,11 +166,11 @@
 .eyebrowDark {
   margin: 0;
   font-size: 14px;
-  color: #5a5a5a;
+  color: #46507A;
 }
 
 .eyebrowDark {
-  color: #5a5a5a;
+  color: #46507A;
   margin-bottom: 6px !important;
 }
 
@@ -199,7 +199,7 @@
 .miniTabOn {
   border: 0;
   background: transparent;
-  color: #5a5a5a;
+  color: #46507A;
   font-size: 14px;
   font-weight: 700;
   padding: 6px 12px;
@@ -207,14 +207,14 @@
 }
 
 .miniTabOn {
-  background: #e4e4e7;
-  color: #111111;
+  background: #DCE0F2;
+  color: #0A0F2C;
 }
 
 .counter {
   font-size: 14px;
   font-weight: 700;
-  color: #111111;
+  color: #0A0F2C;
   font-variant-numeric: tabular-nums;
 }
 
@@ -229,15 +229,15 @@
   flex: 1;
   height: 4px;
   border-radius: 2px;
-  background: #e4e4e7;
+  background: #DCE0F2;
 }
 
 .dashNow {
-  background: #a1a1aa;
+  background: #7A8BFF;
 }
 
 .dashDone {
-  background: #111111;
+  background: #2434E0;
 }
 
 .taskBody {
@@ -253,18 +253,18 @@
   font-size: 19px;
   line-height: 1.35;
   letter-spacing: -0.02em;
-  color: #111111;
+  color: #0A0F2C;
 }
 
 .taskNote {
   margin: 0;
   font-size: 15px;
-  color: #5a5a5a;
+  color: #46507A;
   min-height: 22px;
 }
 
 .taskNote a {
-  color: #111111;
+  color: #0A0F2C;
   font-weight: 700;
 }
 
@@ -276,10 +276,10 @@
 
 .option {
   min-height: 48px;
-  border: 1px solid #d4d4d8;
+  border: 1px solid #DCE0F2;
   border-radius: 10px;
   background: #ffffff;
-  color: #111111;
+  color: #0A0F2C;
   font-size: 16px;
   font-weight: 700;
   display: flex;
@@ -289,18 +289,18 @@
 }
 
 .option:hover {
-  border-color: #111111;
+  border-color: #2434E0;
 }
 
 .optionChosen {
-  border-color: #a1a1aa;
-  background: #f4f4f5;
+  border-color: #7A8BFF;
+  background: #EEF0FA;
 }
 
 .optionAnswer {
-  background: #111111;
-  color: #ffffff;
-  border-color: #111111;
+  background: #2434E0;
+  color: #F6F7FB;
+  border-color: #2434E0;
 }
 
 .optionTag {
@@ -321,7 +321,7 @@
   gap: 6px;
   min-height: 44px;
   padding: 0 20px;
-  border-radius: 999px;
+  border-radius: 0;
   font-size: 15px;
   font-weight: 700;
   text-decoration: none;
@@ -329,24 +329,24 @@
 }
 
 .btnSolid {
-  border: 1px solid #111111;
-  background: #111111;
-  color: #ffffff;
+  border: 1px solid #2434E0;
+  background: #2434E0;
+  color: #F6F7FB;
 }
 
 .btnSolid:hover {
-  background: #333333;
+  background: #1C29B8;
 }
 
 .btnGhost {
   align-self: flex-start;
-  border: 1px solid #a1a1aa;
+  border: 1px solid #7A8BFF;
   background: #ffffff;
-  color: #111111;
+  color: #0A0F2C;
 }
 
 .btnGhost:hover:not(:disabled) {
-  border-color: #111111;
+  border-color: #2434E0;
 }
 
 .btnGhost:disabled {
@@ -354,7 +354,7 @@
 }
 
 .linkLight {
-  color: #111111;
+  color: #0A0F2C;
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
@@ -362,8 +362,8 @@
 
 /* Terminal */
 .terminal {
-  background: #0b0b0c;
-  color: #ececee;
+  background: #0A0F2C;
+  color: #F6F7FB;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -377,7 +377,7 @@
   gap: 12px;
   padding: 0 14px;
   height: 44px;
-  border-bottom: 1px solid #2c2c30;
+  border-bottom: 1px solid #232B5C;
 }
 
 .termTab {
@@ -385,7 +385,7 @@
   font-weight: 700;
   color: #ffffff;
   padding: 6px 12px;
-  background: #1c1c1f;
+  background: #1A2150;
   border-radius: 6px;
 }
 
@@ -395,7 +395,7 @@
   gap: 8px;
   border: 0;
   background: transparent;
-  color: #b4b4bb;
+  color: #C9CFF0;
   font-size: 13px;
   font-weight: 700;
   padding: 8px 4px;
@@ -436,25 +436,25 @@
 }
 
 .line_in {
-  color: #ffffff;
+  color: #F6F7FB;
 }
 
 .line_out {
-  color: #c8c8ce;
+  color: #C9CFF0;
 }
 
 .line_err {
-  color: #9a9aa2;
+  color: #FF9C8F;
   font-style: italic;
 }
 
 .line_ok {
-  color: #ffffff;
+  color: #FFC933;
   font-weight: 700;
 }
 
 .line_sys {
-  color: #8a8a92;
+  color: #7A8BFF;
 }
 
 .termForm {
@@ -464,7 +464,7 @@
 }
 
 .prompt {
-  color: #8a8a92;
+  color: #7A8BFF;
   white-space: nowrap;
 }
 
@@ -481,7 +481,7 @@
 }
 
 .termInput::placeholder {
-  color: #55555c;
+  color: #5A6496;
 }
 
 /* Visual lab */
@@ -497,22 +497,22 @@
   align-items: center;
   gap: 8px 20px;
   padding: 14px 20px;
-  background: #fafafa;
-  border-bottom: 1px solid #e4e4e7;
+  background: #F6F7FB;
+  border-bottom: 1px solid #DCE0F2;
 }
 
 .visualTask {
   margin: 0;
   flex: 1 1 320px;
   font-size: 15px;
-  color: #111111;
+  color: #0A0F2C;
 }
 
 .visualScore {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: #111111;
+  color: #0A0F2C;
 }
 
 .visualScore:empty {
@@ -523,7 +523,7 @@
    Full screen button gives the whole screen. */
 .board {
   flex: none;
-  background: #f4f4f5;
+  background: #EEF0FA;
   padding: 12px;
   height: 640px;
   overflow-y: auto;
@@ -543,8 +543,8 @@
   height: 56px;
   border-radius: 50%;
   border: 0;
-  background: #111111;
-  color: #ffffff;
+  background: #2434E0;
+  color: #F6F7FB;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -557,14 +557,14 @@
 
 .range {
   width: 100%;
-  accent-color: #111111;
+  accent-color: #2434E0;
 }
 
 .playerTimes {
   display: flex;
   justify-content: space-between;
   font-size: 13px;
-  color: #5a5a5a;
+  color: #46507A;
   font-variant-numeric: tabular-nums;
 }
 
@@ -578,18 +578,18 @@
 .speedOn {
   min-width: 52px;
   min-height: 38px;
-  border-radius: 999px;
-  border: 1px solid #d4d4d8;
+  border-radius: 0;
+  border: 1px solid #DCE0F2;
   background: #ffffff;
-  color: #111111;
+  color: #2434E0;
   font-size: 14px;
   font-weight: 700;
 }
 
 .speedOn {
-  background: #111111;
-  color: #ffffff;
-  border-color: #111111;
+  background: #2434E0;
+  color: #F6F7FB;
+  border-color: #2434E0;
 }
 
 .points {
@@ -598,7 +598,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  color: #3f3f46;
+  color: #46507A;
 }
 
 .paneSide .btnSolid {
@@ -609,8 +609,8 @@
   display: flex;
   justify-content: flex-end;
   padding: 12px 16px;
-  border-top: 1px solid #e4e4e7;
-  background: #f4f4f5;
+  border-top: 1px solid #DCE0F2;
+  background: #EEF0FA;
 }
 
 @media (max-width: 860px) {
@@ -621,12 +621,12 @@
 
   .paneTask {
     border-right: 0;
-    border-bottom: 1px solid #e4e4e7;
+    border-bottom: 1px solid #DCE0F2;
   }
 
   .paneLight + .paneLight {
     border-left: 0;
-    border-top: 1px solid #dadada;
+    border-top: 1px solid #DCE0F2;
   }
 
   .termScreen {

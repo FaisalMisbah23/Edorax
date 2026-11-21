@@ -13,12 +13,6 @@
   border-color: #2434E0 !important;
 }
 
-/* The hero is black and white, so its focus ring is black too. */
-.lightHero a:focus-visible,
-.lightHero button:focus-visible {
-  outline-color: #0A0A0A;
-}
-
 @media (max-width: 1024px) {
   .h1 {
     font-size: 52px !important;
