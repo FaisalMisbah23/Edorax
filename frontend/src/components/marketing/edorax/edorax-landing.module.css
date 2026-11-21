@@ -13,12 +13,6 @@
   border-color: #2434E0 !important;
 }
 
-/* The dark hero is black and white, so its focus ring is white too. */
-.dark a:focus-visible,
-.dark button:focus-visible {
-  outline-color: #FFFFFF;
-}
-
 @media (max-width: 1024px) {
   .h1 {
     font-size: 52px !important;

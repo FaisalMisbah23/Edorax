@@ -50,7 +50,7 @@ export function ListenSample({ onSolved }: { onSolved: () => void }) {
 
   return (
     <div className={s.split}>
-      <div className={s.paneDark}>
+      <div className={s.paneTask}>
         <p className={s.eyebrow}>
           {SAMPLE.course}, {SAMPLE.chapter.toLowerCase()}
         </p>
@@ -112,14 +112,14 @@ export function ListenSample({ onSolved }: { onSolved: () => void }) {
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
         />
       </div>
-      <div className={s.paneDarker}>
+      <div className={s.paneSide}>
         <ul className={s.points}>
           <li>Narrated courses you can hear, chapter by chapter.</li>
           <li>Any speed from 0.75x to 4x.</li>
           <li>Small files, about four minutes of narration per megabyte.</li>
           <li>Made for phones and slow connections.</li>
         </ul>
-        <Link href="/catalog" className={s.btnLight}>
+        <Link href="/catalog" className={s.btnSolid}>
           Browse courses
         </Link>
       </div>

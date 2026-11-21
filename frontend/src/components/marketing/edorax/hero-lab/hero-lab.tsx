@@ -14,8 +14,8 @@ const ListenSample = dynamic(() => import("./listen-sample").then((m) => m.Liste
 const VisualLab = dynamic(() => import("./visual-lab").then((m) => m.VisualLab), { ssr: false, loading: Loading });
 
 const TABS = [
-  { id: "shell", label: "Shell lab" },
-  { id: "visual", label: "Visual lab" },
+  { id: "shell", label: "Shell labs" },
+  { id: "visual", label: "Visual labs" },
   { id: "lesson", label: "Lesson + quiz" },
   { id: "blocks", label: "Drag blocks" },
   { id: "listen", label: "Listen" },
@@ -118,7 +118,7 @@ export function HeroLab() {
       </div>
       {solved.has(tab) && next ? (
         <div className={s.nextBar}>
-          <button type="button" className={s.btnLight} onClick={() => open(next.id, true)}>
+          <button type="button" className={s.btnSolid} onClick={() => open(next.id, true)}>
             Next: {next.label}
             <span aria-hidden="true"> {"→"}</span>
           </button>

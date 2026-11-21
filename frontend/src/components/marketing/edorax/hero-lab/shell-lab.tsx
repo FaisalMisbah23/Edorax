@@ -139,7 +139,7 @@ export function ShellLab({ onSolved }: { onSolved: () => void }) {
 
   return (
     <div className={s.split}>
-      <div className={s.paneDark}>
+      <div className={s.paneTask}>
         <div className={s.paneTabs}>
           <div role="tablist" aria-label="Task or hint" className={s.miniTabs}>
             {(["task", "hint"] as const).map((p) => (
@@ -166,7 +166,7 @@ export function ShellLab({ onSolved }: { onSolved: () => void }) {
               <Link href="/labs/shell#download">Edorax desktop app</Link>, with a test that checks the machine after every task.
             </p>
             <div className={s.rowButtons}>
-              <Link href="/labs/shell" className={s.btnLight}>
+              <Link href="/labs/shell" className={s.btnSolid}>
                 See the shell labs
               </Link>
               <button type="button" className={s.btnGhost} onClick={reset}>
@@ -222,7 +222,7 @@ export function ShellLab({ onSolved }: { onSolved: () => void }) {
             </p>
             {stepDone ? (
               <div>
-                <button type="button" className={s.btnLight} onClick={next}>
+                <button type="button" className={s.btnSolid} onClick={next}>
                   {step + 1 < STEPS.length ? "Next" : "Finish"}
                   <span aria-hidden="true"> {"→"}</span>
                 </button>
