@@ -11,6 +11,46 @@
   white-space: nowrap;
 }
 
+/* Dot perches on the top edge of the window, with a speech bubble. */
+.frame {
+  position: relative;
+}
+
+.dotPerch {
+  position: absolute;
+  right: 48px;
+  bottom: calc(100% - 22px);
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.bubble {
+  margin-bottom: 52px;
+  max-width: 260px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 2px solid #0A0F2C;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #0A0F2C;
+  text-align: left;
+}
+
+.dotBob {
+  display: inline-flex;
+  animation: bob 3.2s ease-in-out infinite;
+}
+
+@keyframes bob {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
 .window {
   width: 100%;
   background: #ffffff;
@@ -684,8 +724,28 @@
   }
 }
 
+@media (max-width: 640px) {
+  .dotPerch {
+    right: 12px;
+    gap: 6px;
+  }
+
+  .dotPerch svg {
+    width: 66px;
+    height: auto;
+  }
+
+  .bubble {
+    margin-bottom: 30px;
+    max-width: 190px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .enter {
+  .enter,
+  .dotBob {
     animation: none;
   }
 }
