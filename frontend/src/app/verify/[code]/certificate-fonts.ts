@@ -13,12 +13,15 @@ type Font = { name: string; data: ArrayBuffer; weight: 400 | 700; style: "normal
 
 /** The fonts every certificate template can use. A font that fails to load is left out. */
 export async function loadCertificateFonts(): Promise<Font[]> {
-  const [regular, bold, signature, serif, serifBold] = await Promise.all([
+  const [regular, bold, signature, serif, serifBold, display, body, bodyBold] = await Promise.all([
     readFont("Poppins-Regular.ttf"),
     readFont("Poppins-Bold.ttf"),
     readFont("MrsSaintDelafield-Regular.ttf"),
     readFont("LibreBaskerville-Regular.ttf"),
     readFont("LibreBaskerville-Bold.ttf"),
+    readFont("Unbounded-Bold.woff"),
+    readFont("DMSans-Regular.woff"),
+    readFont("DMSans-Bold.woff"),
   ]);
   const font = (name: string, data: ArrayBuffer | null, weight: 400 | 700): Font[] => (data ? [{ name, data, weight, style: "normal" }] : []);
   return [
@@ -27,5 +30,8 @@ export async function loadCertificateFonts(): Promise<Font[]> {
     ...font("Libre Baskerville", serif, 400),
     ...font("Libre Baskerville", serifBold, 700),
     ...font("Signature", signature, 400),
+    ...font("Unbounded", display, 700),
+    ...font("DM Sans", body, 400),
+    ...font("DM Sans", bodyBold, 700),
   ];
 }

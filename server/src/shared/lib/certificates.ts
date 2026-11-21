@@ -4,14 +4,15 @@ import { z } from "zod";
 // with a `certificate` block in course.yaml; the API issues one per passed enrollment and
 // the public page /verify/<code> shows it to anyone.
 
-/** The certificate designs an instructor can pick. "edorax" is the default and matches the platform look. */
+/** The certificate designs an instructor can pick. "verified" is the default and matches the Edorax brand. */
 export const CERTIFICATE_TEMPLATES = [
-  { id: "edorax", label: "Edorax", description: "Blue and white with a seal. The default." },
+  { id: "verified", label: "Edorax brand", description: "Paper and cobalt, with Dot and a verify panel. The default." },
+  { id: "edorax", label: "Edorax blue", description: "Blue and white with a seal." },
   { id: "classic", label: "Classic", description: "Cream paper, gold double border and serif type." },
   { id: "minimal", label: "Minimal", description: "Clean white page with large type." },
 ] as const;
 export type CertificateTemplateId = (typeof CERTIFICATE_TEMPLATES)[number]["id"];
-export const DEFAULT_CERTIFICATE_TEMPLATE: CertificateTemplateId = "edorax";
+export const DEFAULT_CERTIFICATE_TEMPLATE: CertificateTemplateId = "verified";
 export const CERTIFICATE_TEMPLATE_IDS = CERTIFICATE_TEMPLATES.map((template) => template.id) as [CertificateTemplateId, ...CertificateTemplateId[]];
 const TEMPLATE_IDS = CERTIFICATE_TEMPLATE_IDS;
 
@@ -27,7 +28,7 @@ export const CertificateSettingsSchema = z
     title: z.string().trim().min(1).max(120).optional(),
     /** Short track code used in the public id, for example L2 in DW-L2-7K3F9QXM. Defaults to one made from the course slug. */
     code: z.string().regex(/^[A-Z0-9]{1,6}$/, "Use 1 to 6 capital letters or digits").optional(),
-    /** Which design the certificate uses. Defaults to "edorax". */
+    /** Which design the certificate uses. Defaults to "verified". */
     template: z.enum(TEMPLATE_IDS).optional(),
     /** The programme's organisation, shown on the certificate. LinkedIn's issuer is always Edorax. */
     organization: z.string().trim().min(1).max(120).default("Dev Weekends"),

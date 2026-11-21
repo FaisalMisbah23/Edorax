@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRef, useState, type ReactNode } from "react";
+import { Dot } from "@/components/brand/dot";
 import { ShellLab } from "./shell-lab";
 import s from "./hero-lab.module.css";
 
@@ -13,12 +14,13 @@ const OrderStep = dynamic(() => import("../try-it/order-step").then((m) => m.Ord
 const ListenSample = dynamic(() => import("./listen-sample").then((m) => m.ListenSample), { loading: Loading });
 const VisualLab = dynamic(() => import("./visual-lab").then((m) => m.VisualLab), { ssr: false, loading: Loading });
 
+// Dot sits on the window and says one short thing about each tab.
 const TABS = [
-  { id: "shell", label: "Shell labs" },
-  { id: "visual", label: "Visual labs" },
-  { id: "lesson", label: "Lesson + quiz" },
-  { id: "blocks", label: "Drag blocks" },
-  { id: "listen", label: "Listen" },
+  { id: "shell", label: "Shell labs", mood: "think", line: "Type a command. I check it as you go." },
+  { id: "visual", label: "Visual labs", mood: "wave", line: "Drag a server in, then press Run tests." },
+  { id: "lesson", label: "Lesson + quiz", mood: "happy", line: "Read a little, then prove it." },
+  { id: "blocks", label: "Drag blocks", mood: "wink", line: "Drag them into order." },
+  { id: "listen", label: "Listen", mood: "cheer", line: "Too tired to read? Press play." },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -87,7 +89,15 @@ export function HeroLab() {
       </div>
     );
 
+  const current = TABS[index];
   return (
+    <div className={s.frame}>
+    <div className={s.dotPerch} aria-hidden="true">
+      <span className={s.bubble}>{solved.has(tab) ? "Nice. Try the next one." : current.line}</span>
+      <span className={s.dotBob}>
+        <Dot mood={solved.has(tab) ? "cheer" : current.mood} size={104} />
+      </span>
+    </div>
     <div className={s.window} id="lab">
       <div role="tablist" aria-label="Try a way to learn" className={s.tabs} onKeyDown={onKeyDown}>
         {TABS.map((t) => (
@@ -124,6 +134,7 @@ export function HeroLab() {
           </button>
         </div>
       ) : null}
+    </div>
     </div>
   );
 }
