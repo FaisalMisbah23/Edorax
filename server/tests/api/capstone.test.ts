@@ -191,7 +191,7 @@ describe("capstone checks", () => {
     // platform issuer unless course.yaml names someone (the PR's documented default), in the
     // learner's account name. Reading the state is what the page does, so it is already there.
     const certificate = ready.body.data.certificate;
-    expect(certificate).toMatchObject({ recipientName: "Test Learner", title: "Level 2: Personal Site and Outreach Engine", issuerName: "Edorax", organization: "Edorax", template: "edorax", skills: ["Personal site", "Link tracking"] });
+    expect(certificate).toMatchObject({ recipientName: "Test Learner", title: "Level 2: Personal Site and Outreach Engine", issuerName: "Edorax", organization: "Edorax", template: "verified", skills: ["Personal site", "Link tracking"] });
     expect(certificate.code).toMatch(/^DW-L2-[0-9A-Z]{8}$/);
     expect(certificate.evidence[0]).toMatchObject({ repoUrl: "https://github.com/me/site", percent: 90 });
     expect(certificate.linkedInAddUrl).toContain("startTask=CERTIFICATION_NAME");

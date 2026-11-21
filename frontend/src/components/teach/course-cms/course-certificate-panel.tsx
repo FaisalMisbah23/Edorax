@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Award, Check } from "lucide-react";
 import { updateCourseCertificateTemplate } from "@/server/actions/modules";
-import { CERTIFICATE_TEMPLATES, type CertificateTemplateId } from "@/shared/lib/certificates";
+import { CERTIFICATE_TEMPLATES, DEFAULT_CERTIFICATE_TEMPLATE, type CertificateTemplateId } from "@/shared/lib/certificates";
 import { cn } from "@/lib/utils";
 
 /** Lets the instructor pick the certificate design learners of this course receive. */
@@ -56,7 +56,7 @@ export function CourseCertificatePanel({ courseId, template }: { courseId: strin
               <img src={`/certificate-preview/${option.id}`} alt={`${option.label} design preview`} width={1536} height={1024} loading="lazy" className="block h-auto w-full border-b bg-muted/30" />
               <span className="flex items-start justify-between gap-3 p-3">
                 <span>
-                  <span className="block text-sm font-semibold">{option.label}{option.id === "edorax" ? " (default)" : ""}</span>
+                  <span className="block text-sm font-semibold">{option.label}{option.id === DEFAULT_CERTIFICATE_TEMPLATE ? " (default)" : ""}</span>
                   <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{option.description}</span>
                 </span>
                 {active ? <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden /> : null}
