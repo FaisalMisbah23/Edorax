@@ -12,3 +12,12 @@ export const GREEN = "#16794C";
 export const RED = "#B42318";
 export const HEADING = "var(--font-unbounded), sans-serif";
 export const MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+
+// The hero's lab window is black and white only, so the quiz and drag steps inside it
+// use these greys instead of the cobalt and yellow above.
+export const STRONG = "#111111";
+export const SOFT = "#F1F1F1";
+export const RULE = "#DADADA";
+export const GREY = "#5A5A5A";
+export const LIFT = "#BDBDBD";
+export const WASH = "#F7F7F7";

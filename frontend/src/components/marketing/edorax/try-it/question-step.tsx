@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { COBALT, INK, LINE, PAPER, TINT } from "./brand";
+import { RULE, SOFT, STRONG, WASH } from "./brand";
 import { StepHeading, type StepProps } from "./step-frame";
 import s from "./try-it.module.css";
 
@@ -51,20 +51,20 @@ export function QuestionStep({ onSolved, headingRef }: StepProps) {
                 display: "flex",
                 gap: "14px",
                 alignItems: "center",
-                color: INK,
-                background: isAnswer ? TINT : chosen ? PAPER : "#FFFFFF",
-                border: `2px solid ${isAnswer ? COBALT : chosen ? INK : LINE}`,
+                color: STRONG,
+                background: isAnswer ? SOFT : chosen ? WASH : "#FFFFFF",
+                border: `2px solid ${isAnswer ? STRONG : chosen ? STRONG : RULE}`,
                 cursor: picked ? "default" : "pointer",
               }}
             >
-              <span style={{ fontWeight: 700, color: COBALT }}>{a.key}</span>
+              <span style={{ fontWeight: 700, color: STRONG }}>{a.key}</span>
               <span style={{ flex: 1 }}>{a.label}</span>
-              {isAnswer ? <span style={{ fontSize: "13px", fontWeight: 700, color: COBALT }}>Answer</span> : null}
+              {isAnswer ? <span style={{ fontSize: "13px", fontWeight: 700, color: STRONG }}>Answer</span> : null}
             </button>
           );
         })}
       </div>
-      <p role="status" aria-live="polite" style={{ margin: 0, fontSize: "15px", lineHeight: 1.5, minHeight: "23px", color: INK }}>
+      <p role="status" aria-live="polite" style={{ margin: 0, fontSize: "15px", lineHeight: 1.5, minHeight: "23px", color: STRONG }}>
         {answer?.feedback ?? ""}
       </p>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { COBALT, INK, LINE, MUTED, TINT, YELLOW } from "./brand";
+import { GREY, LIFT, RULE, SOFT, STRONG } from "./brand";
 import { StepHeading, type StepProps } from "./step-frame";
 import s from "./try-it.module.css";
 
@@ -111,7 +111,7 @@ export function OrderStep({ onSolved, headingRef }: StepProps) {
       <StepHeading eyebrow="Computer networking, chapter 3" headingRef={headingRef}>
         Put the trip in order, from Go to the page on your screen.
       </StepHeading>
-      <p id="order-help" style={{ margin: 0, fontSize: "14px", color: MUTED }}>
+      <p id="order-help" style={{ margin: 0, fontSize: "14px", color: GREY }}>
         Drag the blocks into order.<span className={s.keyboardTip}> On a keyboard, press Space on a block, then the arrow keys.</span>
       </p>
       <ol ref={listRef} className={s.orderList} aria-describedby="order-help">
@@ -132,21 +132,21 @@ export function OrderStep({ onSolved, headingRef }: StepProps) {
                 onKeyDown={(e) => onKeyDown(e, id)}
                 onBlur={() => setLifted((l) => (l === id ? null : l))}
                 style={{
-                  background: solved ? TINT : "#FFFFFF",
-                  border: `2px solid ${solved ? COBALT : active ? COBALT : LINE}`,
-                  boxShadow: active ? `4px 4px 0 ${YELLOW}` : "none",
-                  color: INK,
+                  background: solved ? SOFT : "#FFFFFF",
+                  border: `2px solid ${solved ? STRONG : active ? STRONG : RULE}`,
+                  boxShadow: active ? `4px 4px 0 ${LIFT}` : "none",
+                  color: STRONG,
                   cursor: solved ? "default" : dragging === id ? "grabbing" : "grab",
                 }}
               >
-                <span aria-hidden="true" style={{ fontWeight: 700, color: COBALT, minWidth: "16px" }}>{i + 1}</span>
+                <span aria-hidden="true" style={{ fontWeight: 700, color: STRONG, minWidth: "16px" }}>{i + 1}</span>
                 <span style={{ flex: 1 }}>{LABELS[id]}</span>
                 {!solved ? (
                   <svg aria-hidden="true" width="14" height="20" viewBox="0 0 14 20">
                     {[3, 10, 17].map((y) => (
                       <g key={y}>
-                        <circle cx="4" cy={y} r="1.8" fill={MUTED} />
-                        <circle cx="10" cy={y} r="1.8" fill={MUTED} />
+                        <circle cx="4" cy={y} r="1.8" fill={GREY} />
+                        <circle cx="10" cy={y} r="1.8" fill={GREY} />
                       </g>
                     ))}
                   </svg>
@@ -162,7 +162,7 @@ export function OrderStep({ onSolved, headingRef }: StepProps) {
             Check the order
           </button>
         ) : null}
-        <p role="status" aria-live="polite" style={{ margin: 0, flex: "1 1 220px", fontSize: "15px", lineHeight: 1.5, color: solved ? INK : MUTED }}>
+        <p role="status" aria-live="polite" style={{ margin: 0, flex: "1 1 220px", fontSize: "15px", lineHeight: 1.5, color: solved ? STRONG : GREY }}>
           {message}
         </p>
       </div>
