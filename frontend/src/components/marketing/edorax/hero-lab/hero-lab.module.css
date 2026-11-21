@@ -1,4 +1,5 @@
-/* The hero's lab window. Black and white only: near-black panes, white text, grey rules. */
+/* The hero's lab window. Black and white only: white panes, black text, grey rules, and a
+   dark terminal like a real one. */
 
 .srOnly {
   position: absolute;
@@ -12,13 +13,13 @@
 
 .window {
   width: 100%;
-  background: #0b0b0c;
-  border: 1px solid #2c2c30;
+  background: #ffffff;
+  border: 1px solid #d4d4d8;
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.12);
   text-align: left;
-  color: #ececee;
+  color: #111111;
   font-size: 16px;
   line-height: 1.5;
 }
@@ -35,7 +36,7 @@
 .window a:focus-visible,
 .window button:focus-visible,
 .window input:focus-visible {
-  outline: 2px solid #ffffff;
+  outline: 2px solid #111111;
   outline-offset: 2px;
 }
 
@@ -44,8 +45,8 @@
   display: flex;
   overflow-x: auto;
   scrollbar-width: none;
-  border-bottom: 1px solid #2c2c30;
-  background: #060607;
+  border-bottom: 1px solid #e4e4e7;
+  background: #f4f4f5;
 }
 
 .tabs::-webkit-scrollbar {
@@ -63,20 +64,20 @@
   border: 0;
   border-bottom: 2px solid transparent;
   background: transparent;
-  color: #9a9aa2;
+  color: #5a5a5a;
   font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .tab:hover {
-  color: #ffffff;
+  color: #111111;
 }
 
 .tabOn {
-  color: #ffffff;
-  background: #141416;
-  border-bottom-color: #ffffff;
+  color: #111111;
+  background: #ffffff;
+  border-bottom-color: #111111;
 }
 
 .tick {
@@ -99,7 +100,7 @@
 
 .loading {
   min-height: 480px;
-  background: #111113;
+  background: #fafafa;
 }
 
 /* Two panes side by side: task or lesson on the left, the work on the right. */
@@ -109,24 +110,24 @@
   min-height: 480px;
 }
 
-.paneDark,
-.paneDarker,
+.paneTask,
+.paneSide,
 .paneLight {
   padding: 26px 28px;
   box-sizing: border-box;
   min-width: 0;
 }
 
-.paneDark {
-  background: #141416;
-  border-right: 1px solid #2c2c30;
+.paneTask {
+  background: #fafafa;
+  border-right: 1px solid #e4e4e7;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
-.paneDarker {
-  background: #0b0b0c;
+.paneSide {
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -165,7 +166,7 @@
 .eyebrowDark {
   margin: 0;
   font-size: 14px;
-  color: #9a9aa2;
+  color: #5a5a5a;
 }
 
 .eyebrowDark {
@@ -198,7 +199,7 @@
 .miniTabOn {
   border: 0;
   background: transparent;
-  color: #9a9aa2;
+  color: #5a5a5a;
   font-size: 14px;
   font-weight: 700;
   padding: 6px 12px;
@@ -206,14 +207,14 @@
 }
 
 .miniTabOn {
-  background: #26262a;
-  color: #ffffff;
+  background: #e4e4e7;
+  color: #111111;
 }
 
 .counter {
   font-size: 14px;
   font-weight: 700;
-  color: #ffffff;
+  color: #111111;
   font-variant-numeric: tabular-nums;
 }
 
@@ -228,15 +229,15 @@
   flex: 1;
   height: 4px;
   border-radius: 2px;
-  background: #2c2c30;
+  background: #e4e4e7;
 }
 
 .dashNow {
-  background: #6b6b73;
+  background: #a1a1aa;
 }
 
 .dashDone {
-  background: #ffffff;
+  background: #111111;
 }
 
 .taskBody {
@@ -252,18 +253,18 @@
   font-size: 19px;
   line-height: 1.35;
   letter-spacing: -0.02em;
-  color: #ffffff;
+  color: #111111;
 }
 
 .taskNote {
   margin: 0;
   font-size: 15px;
-  color: #b4b4bb;
+  color: #5a5a5a;
   min-height: 22px;
 }
 
 .taskNote a {
-  color: #ffffff;
+  color: #111111;
   font-weight: 700;
 }
 
@@ -275,10 +276,10 @@
 
 .option {
   min-height: 48px;
-  border: 1px solid #3a3a40;
+  border: 1px solid #d4d4d8;
   border-radius: 10px;
-  background: #1c1c1f;
-  color: #ffffff;
+  background: #ffffff;
+  color: #111111;
   font-size: 16px;
   font-weight: 700;
   display: flex;
@@ -288,18 +289,18 @@
 }
 
 .option:hover {
-  border-color: #ffffff;
+  border-color: #111111;
 }
 
 .optionChosen {
-  border-color: #6b6b73;
-  background: #26262a;
+  border-color: #a1a1aa;
+  background: #f4f4f5;
 }
 
 .optionAnswer {
-  background: #ffffff;
-  color: #111111;
-  border-color: #ffffff;
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
 }
 
 .optionTag {
@@ -312,7 +313,7 @@
   gap: 10px;
 }
 
-.btnLight,
+.btnSolid,
 .btnGhost {
   display: inline-flex;
   align-items: center;
@@ -327,25 +328,25 @@
   white-space: nowrap;
 }
 
-.btnLight {
-  border: 1px solid #ffffff;
-  background: #ffffff;
-  color: #111111;
+.btnSolid {
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffffff;
 }
 
-.btnLight:hover {
-  background: #e4e4e7;
+.btnSolid:hover {
+  background: #333333;
 }
 
 .btnGhost {
   align-self: flex-start;
-  border: 1px solid #4a4a50;
-  background: transparent;
-  color: #ffffff;
+  border: 1px solid #a1a1aa;
+  background: #ffffff;
+  color: #111111;
 }
 
 .btnGhost:hover:not(:disabled) {
-  border-color: #ffffff;
+  border-color: #111111;
 }
 
 .btnGhost:disabled {
@@ -353,7 +354,7 @@
 }
 
 .linkLight {
-  color: #ffffff;
+  color: #111111;
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
@@ -362,6 +363,7 @@
 /* Terminal */
 .terminal {
   background: #0b0b0c;
+  color: #ececee;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -397,6 +399,10 @@
   font-size: 13px;
   font-weight: 700;
   padding: 8px 4px;
+}
+
+.terminal button:focus-visible {
+  outline-color: #ffffff;
 }
 
 .termReset:hover {
@@ -491,22 +497,22 @@
   align-items: center;
   gap: 8px 20px;
   padding: 14px 20px;
-  background: #141416;
-  border-bottom: 1px solid #2c2c30;
+  background: #fafafa;
+  border-bottom: 1px solid #e4e4e7;
 }
 
 .visualTask {
   margin: 0;
   flex: 1 1 320px;
   font-size: 15px;
-  color: #ececee;
+  color: #111111;
 }
 
 .visualScore {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: #ffffff;
+  color: #111111;
 }
 
 .visualScore:empty {
@@ -517,7 +523,7 @@
    Full screen button gives the whole screen. */
 .board {
   flex: none;
-  background: #0b0b0c;
+  background: #f4f4f5;
   padding: 12px;
   height: 640px;
   overflow-y: auto;
@@ -537,8 +543,8 @@
   height: 56px;
   border-radius: 50%;
   border: 0;
-  background: #ffffff;
-  color: #111111;
+  background: #111111;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -551,14 +557,14 @@
 
 .range {
   width: 100%;
-  accent-color: #ffffff;
+  accent-color: #111111;
 }
 
 .playerTimes {
   display: flex;
   justify-content: space-between;
   font-size: 13px;
-  color: #9a9aa2;
+  color: #5a5a5a;
   font-variant-numeric: tabular-nums;
 }
 
@@ -573,17 +579,17 @@
   min-width: 52px;
   min-height: 38px;
   border-radius: 999px;
-  border: 1px solid #3a3a40;
-  background: transparent;
-  color: #ececee;
+  border: 1px solid #d4d4d8;
+  background: #ffffff;
+  color: #111111;
   font-size: 14px;
   font-weight: 700;
 }
 
 .speedOn {
-  background: #ffffff;
-  color: #111111;
-  border-color: #ffffff;
+  background: #111111;
+  color: #ffffff;
+  border-color: #111111;
 }
 
 .points {
@@ -592,10 +598,10 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  color: #c8c8ce;
+  color: #3f3f46;
 }
 
-.paneDarker .btnLight {
+.paneSide .btnSolid {
   align-self: flex-start;
 }
 
@@ -603,8 +609,8 @@
   display: flex;
   justify-content: flex-end;
   padding: 12px 16px;
-  border-top: 1px solid #2c2c30;
-  background: #060607;
+  border-top: 1px solid #e4e4e7;
+  background: #f4f4f5;
 }
 
 @media (max-width: 860px) {
@@ -613,9 +619,9 @@
     min-height: 0;
   }
 
-  .paneDark {
+  .paneTask {
     border-right: 0;
-    border-bottom: 1px solid #2c2c30;
+    border-bottom: 1px solid #e4e4e7;
   }
 
   .paneLight + .paneLight {
@@ -655,8 +661,8 @@
     font-size: 14px;
   }
 
-  .paneDark,
-  .paneDarker,
+  .paneTask,
+  .paneSide,
   .paneLight {
     padding: 20px 18px;
   }
@@ -673,7 +679,7 @@
     font-size: 18px;
   }
 
-  .nextBar .btnLight {
+  .nextBar .btnSolid {
     width: 100%;
   }
 }

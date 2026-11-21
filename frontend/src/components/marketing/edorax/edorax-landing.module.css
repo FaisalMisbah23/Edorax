@@ -13,10 +13,10 @@
   border-color: #2434E0 !important;
 }
 
-/* The dark hero is black and white, so its focus ring is white too. */
-.dark a:focus-visible,
-.dark button:focus-visible {
-  outline-color: #FFFFFF;
+/* The hero is black and white, so its focus ring is black too. */
+.lightHero a:focus-visible,
+.lightHero button:focus-visible {
+  outline-color: #0A0A0A;
 }
 
 @media (max-width: 1024px) {
