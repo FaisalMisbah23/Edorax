@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { HeroLab } from "./hero-lab/hero-lab";
+import { HomeAi } from "./home-ai";
+import { StartFreeMenu } from "./start-free-menu";
 import { CatalogSections, CatalogSectionsFallback, Certificates, Faq, FinalCall, Pricing, ShellLabs } from "./home-sections";
 import { Wordmark } from "@/components/brand/wordmark";
 import s from "./edorax-landing.module.css";
@@ -35,13 +37,15 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
             </a>
             <nav aria-label="Main" className={s.nav} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px 28px", fontSize: "16px" }}>
               <a href="#tracks" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>Career tracks</a>
+              <a href="#ai" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>AI</a>
               <a href="#labs" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>Shell labs</a>
-              <a href="#certificates" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>Certificates</a>
-              <a href="#pricing" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>Pricing</a>
+                            <a href="#pricing" className={s.navLink} style={{ color: "#0A0F2C", textDecoration: "none", padding: "12px 0" }}>Pricing</a>
               <CoursesNavLink />
               <LabsNavLink />
               <AccountLink dashboardHref={dashboardHref} />
-              <Link href="/signup" className={`${s.navCta} ${s.hideSm}`} style={{ background: "#2434E0", color: "#F6F7FB", textDecoration: "none", fontWeight: "700", padding: "12px 22px" }}>Start free</Link>
+              <span className={s.hideSm}>
+                <StartFreeMenu size="small" />
+              </span>
             </nav>
           </div>
         </header>
@@ -52,7 +56,7 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
             </h1>
             <p className={s.heroLead} style={{ margin: "22px auto 0", fontSize: "20px", color: "#46507A", maxWidth: "700px", textWrap: "balance" }}>Real shell labs, a system design board you can break, and courses you can read or hear. Try one right here before you pay a thing.</p>
             <div className={s.heroCtas} style={{ marginTop: "32px", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "14px" }}>
-              <Link href="/signup" style={{ background: "#2434E0", color: "#F6F7FB", textDecoration: "none", fontWeight: "700", padding: "15px 30px" }}>Start free <span aria-hidden="true">&rarr;</span></Link>
+              <StartFreeMenu />
               <a href="#tracks" style={{ color: "#0A0F2C", textDecoration: "none", fontWeight: "700", padding: "13px 28px", border: "2px solid #0A0F2C" }}>Find your track</a>
             </div>
             <ul className={s.ticks} aria-label="What you get" style={{ listStyle: "none", margin: "24px 0 0", padding: "0", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "8px 24px", fontSize: "15px", color: "#46507A" }}>
@@ -75,6 +79,7 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
       <Suspense fallback={<CatalogSectionsFallback />}>
         <CatalogSections />
       </Suspense>
+      <HomeAi />
       <ShellLabs />
       <Certificates />
       <Pricing />
@@ -88,6 +93,7 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
           <nav aria-label="Footer" style={{ display: "flex", flexWrap: "wrap", gap: "4px 28px", fontSize: "15px" }}>
             <a href="#tracks" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Career tracks</a>
             <a href="#courses" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Top courses</a>
+            <a href="#ai" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>AI</a>
             <a href="#labs" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Shell labs</a>
             <a href="#certificates" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Certificates</a>
             <a href="#pricing" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Pricing</a>
