@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HeroLab } from "./hero-lab/hero-lab";
 import { HomeAi } from "./home-ai";
+import { HomeDemos } from "./home-demos";
 import { StartFreeMenu } from "./start-free-menu";
 import { CatalogSections, CatalogSectionsFallback, Certificates, Faq, FinalCall, Pricing, ShellLabs } from "./home-sections";
 import { Wordmark } from "@/components/brand/wordmark";
@@ -79,6 +80,7 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
       <Suspense fallback={<CatalogSectionsFallback />}>
         <CatalogSections />
       </Suspense>
+      <HomeDemos />
       <HomeAi />
       <ShellLabs />
       <Certificates />
