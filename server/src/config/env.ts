@@ -97,6 +97,19 @@ const schema = z.object({
   LEARNER_QA_DAILY_LIMIT: z.coerce.number().int().min(1).max(500).default(80),
   /** Questions the whole platform may answer per UTC day, the cap on the Anthropic bill. */
   LEARNER_QA_GLOBAL_DAILY_LIMIT: z.coerce.number().int().min(1).max(100_000).default(500),
+  /**
+   * The home page's live AI demo (services/ai/home-demo): preset questions only, answers cached,
+   * a daily cap on model calls and a saved answer on any problem. On whenever ANTHROPIC_API_KEY is
+   * set; HOME_AI_DEMO_ENABLED=false turns it off and the page then shows the saved answers.
+   */
+  HOME_AI_DEMO_ENABLED: z
+    .string()
+    .optional()
+    .transform((value) => value !== "false"),
+  /** Model calls the demo may make per UTC day, across all visitors. */
+  HOME_AI_DEMO_DAILY_LIMIT: z.coerce.number().int().min(0).max(5_000).default(100),
+  /** How long one generated answer is reused for every visitor who picks the same question. */
+  HOME_AI_DEMO_CACHE_MINUTES: z.coerce.number().int().min(1).max(10_080).default(60),
 
   /**
    * Capstone checker (docs/16-capstone-checker-and-certificates.mdx): automated checks plus an AI
@@ -233,6 +246,8 @@ export const rateLimitsEnabled = !(env.DISABLE_RATE_LIMITS && !isProduction);
 export const isTest = env.NODE_ENV === "test";
 /** Chapter questions need both the switch and a key; either missing hides the feature. */
 export const learnerQaAvailable = env.LEARNER_QA_ENABLED && Boolean(env.ANTHROPIC_API_KEY);
+
+export const homeAiDemoAvailable = env.HOME_AI_DEMO_ENABLED && Boolean(env.ANTHROPIC_API_KEY);
 /** Capstone AI checks need both the switch and the key; automated checks never run without them either. */
 export const capstoneCheckAvailable = env.CAPSTONE_CHECK_ENABLED && Boolean(env.ANTHROPIC_API_KEY);
 /** Paid course Polar checkout needs the org token and the webhook secret. */
