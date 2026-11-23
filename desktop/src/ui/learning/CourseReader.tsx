@@ -33,6 +33,7 @@ import {
 } from '@buildment/learning-ui/components/learn/variant-theme';
 import { lessonHeadings } from './lesson-headings';
 import { LessonLoading } from './LessonLoading';
+import { ReaderHighlights } from './ReaderHighlights';
 
 export function CourseReader(props: Parameters<typeof CourseReaderBody>[0]) {
   return (
@@ -45,6 +46,8 @@ function CourseReaderBody({
   courseSlug,
   courseTitle,
   initialChapter,
+  focusHighlightId,
+  onOpenHighlights,
   onBack,
   onSignedOut,
   session,
@@ -52,6 +55,8 @@ function CourseReaderBody({
   courseSlug: string;
   courseTitle: string;
   initialChapter?: string;
+  focusHighlightId?: string;
+  onOpenHighlights: () => void;
   onBack: () => void;
   onSignedOut: () => void;
   session: Session;
@@ -118,6 +123,7 @@ function CourseReaderBody({
   }
   const generation = useRef(0);
   const heading = useRef<HTMLHeadingElement>(null);
+  const articleRef = useRef<HTMLElement>(null);
 
   function fail(result: { code: string; message: string }) {
     setError(result.message);
@@ -332,7 +338,7 @@ function CourseReaderBody({
                 className={`${ide.open && (ide.focused || smallWindow) ? 'hidden' : ''} min-w-0 flex-1 overflow-y-auto`}
                 key={lesson.chapter.id}
               >
-                <article className="mx-auto w-full min-w-0 max-w-[860px] px-7 py-10 lg:px-12 lg:py-14">
+                <article ref={articleRef} className="mx-auto w-full min-w-0 max-w-[860px] px-7 py-10 lg:px-12 lg:py-14">
                   <p className="mb-3 text-xs text-muted-foreground">
                     Lesson {lesson.chapter.lessonLabel}
                     {lesson.chapter.estimatedMinutes
@@ -471,6 +477,19 @@ function CourseReaderBody({
                     )
                   )}
                 </article>
+                {!lesson.locked &&
+                  lesson.content &&
+                  lesson.chapter.readerMode !== 'QUIZ' &&
+                  !(lesson.content.predictGate && !lesson.content.predictRevealed) && (
+                    <ReaderHighlights
+                      key={lesson.chapter.id}
+                      chapterId={lesson.chapter.id}
+                      articleRef={articleRef}
+                      renderKey={lesson.document}
+                      focusHighlightId={focusHighlightId}
+                      onOpenLibrary={onOpenHighlights}
+                    />
+                  )}
               </div>
               {showHeadings && !ide.open && (
                 <ChapterToc
