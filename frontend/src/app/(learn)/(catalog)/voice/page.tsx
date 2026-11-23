@@ -127,7 +127,8 @@ export default async function VoicePage({ searchParams }: { searchParams: Search
         </ul>
       </nav>
 
-      <div className="mt-6">
+      {/* data-nosnippet: a sample call, never the text Google quotes for the page. */}
+      <div className="mt-6" data-nosnippet="">
         <TutorVoicePreview name={tutor.label} caption={tutor.caption} board={tutor.board} />
       </div>
 
@@ -135,6 +136,7 @@ export default async function VoicePage({ searchParams }: { searchParams: Search
         <summary className="flex min-h-11 cursor-pointer list-none items-center text-lg font-bold outline-none focus-visible:outline-3 focus-visible:outline-brand-yellow [&::-webkit-details-marker]:hidden">
           Read this call
         </summary>
+        <div data-nosnippet="">
         <ol className="mt-3 max-w-2xl space-y-2" aria-label={`Sample call with the ${tutor.label} tutor`}>
           {tutor.call.map((line, i) => (
             <li key={i} className="text-base">
@@ -143,6 +145,7 @@ export default async function VoicePage({ searchParams }: { searchParams: Search
             </li>
           ))}
         </ol>
+        </div>
       </details>
 
       <ComingSoonPanel title="On-call tutors are on the way" action={{ href: "/audiobooks", label: "Listen to a course" }}>

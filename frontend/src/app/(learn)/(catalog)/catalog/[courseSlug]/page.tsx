@@ -4,6 +4,7 @@ import type { CatalogCourseDetail } from "@/shared/api/catalog";
 import { getSessionUser } from "@/server/auth/guards";
 import { cn } from "@/lib/utils";
 import { SITE_SHARE_IMAGE, SITE_URL } from "@/lib/site";
+import { fitDescription } from "@/lib/seo";
 import { serverApiFetch, serverApiFetchOrNotFound } from "@/lib/api-server";
 import { selfEnrollInCourseAction } from "@/server/actions/enroll";
 import { CourseCover } from "@/components/learn/course-cover";
@@ -29,10 +30,17 @@ async function loadReviews(courseSlug: string): Promise<CourseReviewsView | null
   }
 }
 
+/** A 120 to 160 character description from the course data, for search results and share previews. */
+function courseMetaDescription(course: CatalogCourseDetail): string {
+  const size = course.estimatedHours ? `${course.chapterCount} short chapters, about ${course.estimatedHours} hours.` : `${course.chapterCount} short chapters.`;
+  const price = course.pricingType === "PAID" ? "Read, play, listen and prove it on Edorax." : "Free on Edorax: read, play, listen and prove it.";
+  return fitDescription(course.description ?? course.projectGoal, [size, price, "Built for phones and slow connections."]);
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ courseSlug: string }> }): Promise<Metadata> {
   const { courseSlug } = await params;
   const course = await loadCourse(courseSlug);
-  const description = course.description ? course.description.slice(0, 300) : undefined;
+  const description = courseMetaDescription(course);
   return {
     title: course.title,
     description,

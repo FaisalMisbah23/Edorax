@@ -232,7 +232,8 @@ export function HomeAi() {
             </button>
           ))}
         </div>
-        <div className={s.panel} role="tabpanel">
+        {/* data-nosnippet: example lessons and chats, never the text Google quotes for the page. */}
+        <div className={s.panel} role="tabpanel" data-nosnippet="">
           {tab === "tutor" ? <Tutor /> : tab === "capstone" ? <Capstone /> : <Interview />}
         </div>
       </div>

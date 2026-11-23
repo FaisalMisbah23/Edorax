@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
+import { NOINDEX } from "@/lib/seo";
 import { AuthMessage } from "@/components/auth/auth-message";
+
+// Account and checkout pages stay out of search results (and so out of the sitelinks).
+export const metadata: Metadata = { title: "Check your email", robots: NOINDEX };
 
 export default function VerifyRequestPage() {
   return (

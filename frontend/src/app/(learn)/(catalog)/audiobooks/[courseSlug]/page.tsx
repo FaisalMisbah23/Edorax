@@ -7,6 +7,7 @@ import { loadAudiobook } from "@/lib/audiobook-library";
 import { categoryLabel, formatBookLength } from "@/lib/audiobooks";
 import { BookCover } from "@/components/audiobooks/book-cover";
 import { BookResume, TrackList } from "@/components/audiobooks/book-detail-client";
+import { fitDescription } from "@/lib/seo";
 
 type Params = { params: Promise<{ courseSlug: string }> };
 
@@ -16,7 +17,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   if (!book) return { title: "Audiobook not found" };
   return {
     title: `${book.title}, the audiobook`,
-    description: `${book.tracks.length} chapters, ${formatBookLength(book.totalMinutes)}, by ${book.author}.${book.description ? ` ${book.description.slice(0, 200)}` : ""}`,
+    description: fitDescription(book.description, [
+      `${book.tracks.length} chapters, ${formatBookLength(book.totalMinutes)}.`,
+      "Listen on Edorax with a player that keeps your place.",
+    ]),
     alternates: { canonical: `/audiobooks/${book.slug}` },
     openGraph: { title: `${book.title}, the audiobook`, url: `/audiobooks/${book.slug}`, images: [SITE_SHARE_IMAGE] },
   };

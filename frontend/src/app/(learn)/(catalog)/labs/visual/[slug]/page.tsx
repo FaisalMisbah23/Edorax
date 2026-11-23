@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Lab } from "@buildment/learning-ui/labs/Lab";
 import { SITE_SHARE_IMAGE } from "@/lib/site";
+import { fitDescription } from "@/lib/seo";
 import { isLabSlug } from "@/shared/lab/slugs";
 import { visualLabSummary } from "@/lib/visual-labs";
 
@@ -15,7 +16,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   if (!lab) return { title: "Lab not found" };
   return {
     title: lab.title,
-    description: lab.purpose,
+    description: fitDescription(lab.purpose, [
+      slug.startsWith("hld-") ? "A system design lab on Edorax that runs in your browser." : "An interactive lab on Edorax that runs in your browser.",
+      "Change it, break it and watch what happens.",
+    ]),
     alternates: { canonical: `/labs/visual/${slug}` },
     openGraph: { title: `${lab.title} | Edorax labs`, url: `/labs/visual/${slug}`, images: [SITE_SHARE_IMAGE] },
   };
@@ -34,7 +38,10 @@ export default async function VisualLabPage({ params }: { params: Params }) {
         <ArrowLeft className="size-4" aria-hidden />
         All visual labs
       </Link>
-      <Lab key={slug} slug={slug} />
+      {/* data-nosnippet: the board's labels and readouts; the meta description says what the lab is. */}
+      <div data-nosnippet="">
+        <Lab key={slug} slug={slug} />
+      </div>
     </div>
   );
 }

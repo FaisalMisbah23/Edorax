@@ -6,7 +6,7 @@ import { FilterChips, pickFilter } from "@/components/areas/filter-chips";
 
 export const metadata: Metadata = {
   title: "Puzzles",
-  description: "A new puzzle every day, built on what you learn. The same puzzle for everyone, and a daily leaderboard to climb.",
+  description: "A new puzzle every day, built on what you learn in Edorax courses. Everyone gets the same puzzle, and there is a daily leaderboard to climb.",
   alternates: { canonical: "/puzzles" },
   openGraph: { title: "Daily puzzles on Edorax", url: "/puzzles", images: [SITE_SHARE_IMAGE] },
 };
@@ -73,7 +73,7 @@ export default async function PuzzlesPage({ searchParams }: { searchParams: Sear
           <p className="mt-2 text-xl tracking-[-0.02em]">{kind.goal}</p>
           <p className="mt-4 border-l-4 border-brand-yellow bg-secondary/60 px-4 py-3 text-base">
             <span className="font-bold">Example: </span>
-            {kind.example}
+            <span data-nosnippet="">{kind.example}</span>
           </p>
         </div>
         <dl className="divide-y divide-border border border-border bg-card">

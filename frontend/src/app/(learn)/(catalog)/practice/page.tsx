@@ -6,7 +6,7 @@ import { FilterChips, pickFilter } from "@/components/areas/filter-chips";
 
 export const metadata: Metadata = {
   title: "Bite-sized practice",
-  description: "Master one subject five minutes a day: today's question, quick quizzes, quick reads and a review queue.",
+  description: "Master one subject five minutes a day on Edorax: today's question, quick quizzes, quick reads and a review queue that brings back what you missed.",
   alternates: { canonical: "/practice" },
   openGraph: { title: "Bite-sized practice on Edorax", url: "/practice", images: [SITE_SHARE_IMAGE] },
 };
@@ -80,7 +80,8 @@ export default async function PracticePage({ searchParams }: { searchParams: Sea
       </div>
 
       <section aria-label={`${subject.label} practice`} className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="border border-border bg-card p-5 sm:p-6">
+        {/* data-nosnippet: a sample question and its options, never the text Google quotes for the page. */}
+        <div className="border border-border bg-card p-5 sm:p-6" data-nosnippet="">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-sm font-bold uppercase tracking-wider text-primary">{subject.label} · today&apos;s question</span>
             <span className="text-sm text-muted-foreground">{subject.note} Preview, not interactive yet.</span>
