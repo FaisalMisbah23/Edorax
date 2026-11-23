@@ -88,6 +88,7 @@ export function ChapterReaderShell({
   streakMilestone = null,
   headingNotes = {},
   highlights = [],
+  focusHighlightId = null,
   predictGate = false,
   predictRevealed = true,
   promptCourseRating = false,
@@ -122,6 +123,8 @@ export function ChapterReaderShell({
   streakMilestone?: StreakMilestone | null;
   headingNotes?: Record<string, string>;
   highlights?: ReaderHighlight[];
+  /** Set when the learner opened the chapter from a link to one highlight. */
+  focusHighlightId?: string | null;
   predictGate?: boolean;
   predictRevealed?: boolean;
   promptCourseRating?: boolean;
@@ -508,7 +511,7 @@ export function ChapterReaderShell({
                 </ChapterLinkProvider>
 
                 {readerMode !== "QUIZ" ? (
-                  <ChapterHighlights chapterId={chapterId} initialHighlights={highlights} articleRef={articleRef} focusMode={focusMode} />
+                  <ChapterHighlights chapterId={chapterId} initialHighlights={highlights} articleRef={articleRef} focusMode={focusMode} focusHighlightId={focusHighlightId} />
                 ) : null}
 
                 {readerMode !== "QUIZ" ? <AskChapterPanel /> : null}
