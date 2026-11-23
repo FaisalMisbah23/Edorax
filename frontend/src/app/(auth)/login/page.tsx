@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { NOINDEX } from "@/lib/seo";
 import Link from "next/link";
 import { AuthCard, AuthPageShell } from "@/components/auth/auth-page-shell";
 import { LoginCardTabs } from "@/components/auth/login-card-tabs";
@@ -8,6 +10,9 @@ import { loginErrorMessage } from "@/lib/auth-errors";
 import { getSessionUser } from "@/server/auth/guards";
 import { homeRouteForRole } from "@/server/auth/access-rules";
 import { redirect } from "next/navigation";
+
+// Account and checkout pages stay out of search results (and so out of the sitelinks).
+export const metadata: Metadata = { title: "Sign in", robots: NOINDEX };
 
 export default async function LoginPage({
   searchParams,

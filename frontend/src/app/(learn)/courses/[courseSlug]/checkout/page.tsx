@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { NOINDEX } from "@/lib/seo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Checkout } from "@/shared/api/catalog";
@@ -12,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { CourseCover } from "@/components/learn/course-cover";
 import { CheckoutPaidPending } from "@/components/learn/checkout-paid-pending";
+
+// Account and checkout pages stay out of search results (and so out of the sitelinks).
+export const metadata: Metadata = { title: "Checkout", robots: NOINDEX };
 
 function couponErrorMessage(code: string | undefined) {
   if (code === "COUPON_EXHAUSTED") return "This code has no redemptions remaining.";

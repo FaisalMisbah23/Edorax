@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { NOINDEX } from "@/lib/seo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,6 +10,9 @@ import type { AcceptInviteResult, InvitePublicView } from "@/shared/api/invites"
 import { getSessionUser } from "@/server/auth/guards";
 import { ApiError } from "@/lib/api-client";
 import { serverApiFetch } from "@/lib/api-server";
+
+// Account and checkout pages stay out of search results (and so out of the sitelinks).
+export const metadata: Metadata = { title: "Accept your invite", robots: NOINDEX };
 
 export default async function InviteAcceptPage({
   params,
