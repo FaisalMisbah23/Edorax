@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { HTML_LIMITED_BOT_UA_RE } from "next/dist/shared/lib/router/utils/html-bots";
 
 // The API runs as a separate service (see docs/phases/backend-split.mdx). Browser
 // code keeps calling same-origin paths; Next.js proxies them to API_URL and forwards
@@ -8,6 +9,10 @@ const apiUrl = (process.env.API_URL ?? "http://localhost:4000").replace(/\/$/, "
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@buildment/learning-ui'],
+  // Next streams page titles and descriptions into the body unless the visitor is on this list, and
+  // its default list leaves out Googlebot. Course pages (which load data first) then had no title or
+  // description in <head> for Google. Search crawlers get them in <head>, like the other pages.
+  htmlLimitedBots: new RegExp(`Googlebot|${HTML_LIMITED_BOT_UA_RE.source}`, "i"),
   // Self-contained server for the Docker image (frontend/Dockerfile); no effect on `next dev`.
   output: process.env.NETLIFY ? undefined : "standalone",
   // This folder is the whole app (the API's contract code is copied into src/shared), so
