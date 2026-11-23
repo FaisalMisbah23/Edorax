@@ -55,19 +55,13 @@ export default async function AudiobookPage({ params }: Params) {
             <span className="font-bold">{book.author}</span>
           </p>
           <p className="mt-1 text-base tabular-nums text-muted-foreground">
-            {formatBookLength(book.totalMinutes)} · {book.parts.length} {book.parts.length === 1 ? "part" : "parts"} · {book.tracks.length} chapters
+            {formatBookLength(book.totalMinutes)} · {book.parts.length > 1 ? `${book.parts.length} parts · ` : ""}
+            {book.tracks.length} {book.tracks.length === 1 ? "chapter" : "chapters"}
           </p>
 
           <BookResume book={book} />
 
           {book.description ? <p className="mt-8 max-w-2xl text-base leading-relaxed text-muted-foreground">{book.description}</p> : null}
-          <p className="mt-3 text-base">
-            <Link href={`/catalog/${book.slug}`} className="rounded-sm font-bold text-primary underline-offset-4 outline-none hover:underline focus-visible:outline-3 focus-visible:outline-brand-yellow">
-              Read the course
-            </Link>
-            <span className="text-muted-foreground">: the same chapters with diagrams, labs and quizzes.</span>
-          </p>
-
           <h2 className="mt-10 text-2xl tracking-[-0.02em]">Chapters</h2>
           <div className="mt-4">
             <TrackList book={book} />
