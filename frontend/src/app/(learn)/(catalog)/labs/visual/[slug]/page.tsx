@@ -38,7 +38,10 @@ export default async function VisualLabPage({ params }: { params: Params }) {
         <ArrowLeft className="size-4" aria-hidden />
         All visual labs
       </Link>
-      <Lab key={slug} slug={slug} />
+      {/* data-nosnippet: the board's labels and readouts; the meta description says what the lab is. */}
+      <div data-nosnippet="">
+        <Lab key={slug} slug={slug} />
+      </div>
     </div>
   );
 }

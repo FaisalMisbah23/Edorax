@@ -90,8 +90,9 @@ export function HeroLab() {
     );
 
   const current = TABS[index];
+  // data-nosnippet: the lab window is a demo (quiz options, a mock shell), never the text Google quotes.
   return (
-    <div className={s.frame}>
+    <div className={s.frame} data-nosnippet="">
     <div className={s.dotPerch} aria-hidden="true">
       <span className={s.bubble}>{solved.has(tab) ? "Nice. Try the next one." : current.line}</span>
       <span className={s.dotBob}>
