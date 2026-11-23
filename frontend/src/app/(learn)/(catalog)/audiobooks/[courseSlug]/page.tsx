@@ -5,7 +5,6 @@ import { ArrowLeft } from "lucide-react";
 import { SITE_SHARE_IMAGE } from "@/lib/site";
 import { loadAudiobook } from "@/lib/audiobook-library";
 import { categoryLabel, formatBookLength } from "@/lib/audiobooks";
-import { AreaTabs } from "@/components/areas/area-tabs";
 import { BookCover } from "@/components/audiobooks/book-cover";
 import { BookResume, TrackList } from "@/components/audiobooks/book-detail-client";
 
@@ -30,10 +29,9 @@ export default async function AudiobookPage({ params }: Params) {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
-      <AreaTabs />
       <Link
         href="/audiobooks"
-        className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-sm text-base font-bold text-primary outline-none hover:underline focus-visible:outline-3 focus-visible:outline-brand-yellow"
+        className="inline-flex min-h-11 items-center gap-2 rounded-sm text-base font-bold text-primary outline-none hover:underline focus-visible:outline-3 focus-visible:outline-brand-yellow"
       >
         <ArrowLeft aria-hidden className="size-4" />
         All audiobooks
