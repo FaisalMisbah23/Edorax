@@ -12,7 +12,7 @@ import { Dot } from "@/components/brand/dot";
 
 export const metadata: Metadata = {
   title: "Audiobooks",
-  description: "Audiobooks on Edorax: chapters as tracks, a player that follows you around the site, and your place kept in every book.",
+  description: "Audiobooks on Edorax: chapters as tracks, a player that follows you around the site, and your place kept in every book you start.",
   alternates: { canonical: "/audiobooks" },
   openGraph: { title: "Audiobooks on Edorax", url: "/audiobooks", images: [SITE_SHARE_IMAGE] },
 };

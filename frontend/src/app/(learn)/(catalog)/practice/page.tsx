@@ -6,7 +6,7 @@ import { FilterChips, pickFilter } from "@/components/areas/filter-chips";
 
 export const metadata: Metadata = {
   title: "Bite-sized practice",
-  description: "Master one subject five minutes a day: today's question, quick quizzes, quick reads and a review queue.",
+  description: "Master one subject five minutes a day on Edorax: today's question, quick quizzes, quick reads and a review queue that brings back what you missed.",
   alternates: { canonical: "/practice" },
   openGraph: { title: "Bite-sized practice on Edorax", url: "/practice", images: [SITE_SHARE_IMAGE] },
 };

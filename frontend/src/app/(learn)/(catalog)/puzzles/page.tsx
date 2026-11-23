@@ -6,7 +6,7 @@ import { FilterChips, pickFilter } from "@/components/areas/filter-chips";
 
 export const metadata: Metadata = {
   title: "Puzzles",
-  description: "A new puzzle every day, built on what you learn. The same puzzle for everyone, and a daily leaderboard to climb.",
+  description: "A new puzzle every day, built on what you learn in Edorax courses. Everyone gets the same puzzle, and there is a daily leaderboard to climb.",
   alternates: { canonical: "/puzzles" },
   openGraph: { title: "Daily puzzles on Edorax", url: "/puzzles", images: [SITE_SHARE_IMAGE] },
 };
