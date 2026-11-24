@@ -261,7 +261,7 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
 
   if (props.variant === "mentee") {
     return (
-      <section className="flex h-[min(42rem,80dvh)] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+      <section className="flex max-h-[min(42rem,80dvh)] min-h-[18rem] flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm lg:h-[min(42rem,80dvh)]">
         <ChatCanvas center={!hasMessages} aria-live="polite">
           {timelineBlock}
         </ChatCanvas>
@@ -290,7 +290,7 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
 
   return (
     <div className="grid min-w-0 items-stretch gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-      <section className="flex h-[min(46rem,calc(100dvh-4rem))] min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-md">
+      <section className="flex max-h-[min(46rem,calc(100dvh-4rem))] min-h-[18rem] min-w-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-md lg:h-[min(46rem,calc(100dvh-4rem))] lg:min-h-[28rem]">
         <ChatHeader
           avatar={
             <ChatAvatar
@@ -349,7 +349,7 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
         menteeEmail={props.aside.menteeEmail}
         menteeId={props.aside.menteeId}
         viewerId={props.viewerId}
-        className="h-[min(46rem,calc(100dvh-4rem))] min-h-0 overflow-y-visible lg:self-start lg:[@media(min-height:780px)]:sticky lg:[@media(min-height:780px)]:top-8"
+        className="min-h-0 overflow-y-visible lg:h-[min(46rem,calc(100dvh-4rem))] lg:self-start lg:[@media(min-height:780px)]:sticky lg:[@media(min-height:780px)]:top-8"
         courseTitle={props.aside.courseTitle}
         lessonTitle={props.aside.lessonTitle}
         status={props.status}
