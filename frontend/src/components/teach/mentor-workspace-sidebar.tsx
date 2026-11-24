@@ -230,32 +230,24 @@ export function MentorWorkspaceSidebar({
             >
               <Menu className="size-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[min(21rem,calc(100vw-2rem))] p-1.5">
+            <DropdownMenuContent align="end" className="max-h-[calc(100dvh-5rem)] w-[min(21rem,calc(100vw-2rem))] overflow-y-auto p-1.5">
+              {/* On a phone the daily work comes first: learners, answers and questions across all courses. */}
+              <MobileItems label="All courses" items={workflowItems} router={router} />
+              <DropdownMenuSeparator />
               <MobileItems label="Workspace" items={workspaceItems} router={router} />
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuLabel>Course context</DropdownMenuLabel>
-                {courses.length > 0 ? (
-                  courses.map((course) => (
-                    <DropdownMenuItem
-                      key={course.id}
-                      className={cn("py-2", course.id === selectedCourse?.id && "bg-accent font-medium")}
-                      onClick={() => chooseCourse(course)}
-                    >
-                      <span className="min-w-0 flex-1 truncate">{course.title}</span>
-                      <span className="text-[10px] capitalize text-muted-foreground">
-                        {course.status.toLowerCase()}
-                      </span>
-                    </DropdownMenuItem>
-                  ))
+                <DropdownMenuLabel>Course tools</DropdownMenuLabel>
+                {selectedCourse ? (
+                  <DropdownMenuItem className="py-2" onClick={() => router.push("/courses")}>
+                    <span className="min-w-0 flex-1 truncate font-medium">{selectedCourse.title}</span>
+                    <span className="text-[11px] text-primary">Change</span>
+                  </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem onClick={() => router.push("/courses")}>Create your first course</DropdownMenuItem>
                 )}
               </DropdownMenuGroup>
-              <DropdownMenuSeparator />
               <MobileItems items={[...courseItems, ...insightItems]} router={router} />
-              <DropdownMenuSeparator />
-              <MobileItems items={workflowItems} router={router} />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
