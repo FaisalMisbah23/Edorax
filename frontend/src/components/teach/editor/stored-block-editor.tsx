@@ -71,7 +71,7 @@ function StoredBlockForm({ mdastNode, descriptor }: JsxEditorProps) {
     }
   };
   return <EditorBlockFrame title={label(descriptor.name ?? "Block")} summary={values.prompt} detail={dirty ? "Edited" : undefined} dirty={dirty} onSave={apply} onRemove={remove}>
-    <EditorFields advanced={["language", "mode", "filename", "solution", "explanation", "hints", "allowRetry", "minWords", "maxWords", "sampleAnswer", "rubric", "allowSpeechInput", "speechPrimary", "allowUrl", "urlLabel", "urlRequired", "urlHint", "context"]} revealSettings={Boolean(error)}>
+    <EditorFields advanced={["language", "mode", "filename", "solution", "explanation", "hints", "allowRetry", "minWords", "maxWords", "sampleAnswer", "rubric", "autoGrade", "personalize", "personalizeFrom", "personalizeInstructions", "allowSpeechInput", "speechPrimary", "allowUrl", "urlLabel", "urlRequired", "urlHint", "context"]} revealSettings={Boolean(error)}>
       {descriptor.props.filter(p => p.name !== "id").map(prop => <div key={prop.name} data-field={prop.name} className={["prompt", "starterCode", "solution", "options", "tests", "rubric"].includes(prop.name) ? "space-y-2 sm:col-span-2" : "space-y-2"}>
         <Label htmlFor={formId + prop.name}>{label(prop.name)}</Label>
         {prop.name === "submissionMode" ? <select id={formId + prop.name} className="h-9 w-full rounded-lg border bg-background px-2 text-sm" value={values[prop.name] || "text"} onChange={event => { setValues(v => ({ ...v, [prop.name]: event.target.value })); setDirty(true); }}>

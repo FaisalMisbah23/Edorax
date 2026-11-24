@@ -39,6 +39,7 @@ router.post("/:chapterId/integrity", ...learner, validateParams(chapterParams), 
 router.post("/:chapterId/complete", ...learner, validateParams(chapterParams), chapters.complete);
 router.put("/:chapterId/checklist/:itemId", ...learner, validate({ params: checklistItemParams, body: checklistItemBody }), chapters.putChecklistItem);
 router.put("/:chapterId/learning-log", ...learner, validate({ params: chapterParams, body: learningLogBody }), chapters.putLearningLog);
+router.get("/:chapterId/earlier-answers", ...learner, validateParams(chapterParams), chapters.getEarlierAnswers);
 router.put("/:chapterId/notes/:headingId", ...learner, validate({ params: headingNoteParams, body: headingNoteBody }), chapters.putHeadingNote);
 
 // Learner highlights on a chapter (private annotations). Update and delete are by highlight id only: /api/v1/learner/highlights/:highlightId.

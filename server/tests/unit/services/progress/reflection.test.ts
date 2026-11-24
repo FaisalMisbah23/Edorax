@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractReflectionRequirements, reflectionSatisfied } from "../../../../src/services/progress/reflection.js";
+import { extractLearningLogQuestions, extractReflectionRequirements, reflectionSatisfied } from "../../../../src/services/progress/reflection.js";
 import { parseLearningLog } from "../../../../src/shared/lib/learning-log.js";
 
 describe("extractReflectionRequirements", () => {
@@ -43,5 +43,24 @@ describe("reflectionSatisfied", () => {
       answers: { "q-1": { text: "Because the route is locked.", updatedAt: "2026-01-01T00:00:00.000Z" } },
       checklist: { "box-1": { checked: true, updatedAt: "2026-01-01T00:00:00.000Z" } },
     }))).toBe(true);
+  });
+});
+
+describe("extractLearningLogQuestions", () => {
+  it("returns each question id with its title in reading order", () => {
+    const source = `
+## Learning log
+
+1. **What changed?** Describe the decision.
+2. **What would you try next?**
+`;
+    const questions = extractLearningLogQuestions(source);
+    expect(questions.map((q) => q.title)).toEqual(["What changed?", "What would you try next?"]);
+    expect(new Set(questions.map((q) => q.id)).size).toBe(2);
+  });
+
+  it("reads authored LearningLog props and ignores chapters without one", () => {
+    expect(extractLearningLogQuestions(`<LearningLog questions={[{"id":"q-1","title":"Why?"}]} />`)).toEqual([{ id: "q-1", title: "Why?" }]);
+    expect(extractLearningLogQuestions("# Just prose")).toEqual([]);
   });
 });

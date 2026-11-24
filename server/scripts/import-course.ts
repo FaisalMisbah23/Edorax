@@ -809,6 +809,9 @@ function transformOpenQuestionFences(body: string, pushBlock: (b: PendingBlock) 
       hintAfterAttempts?: number;
       maxAttempts?: number;
       reviewChapters?: string[];
+      personalize?: boolean;
+      personalizeFrom?: string[];
+      personalizeInstructions?: string;
     };
     try {
       parsed = loadYaml(yamlText) as typeof parsed;
@@ -831,6 +834,13 @@ function transformOpenQuestionFences(body: string, pushBlock: (b: PendingBlock) 
         hintAfterAttempts: parsed.hintAfterAttempts,
         maxAttempts: parsed.maxAttempts,
         reviewChapterSlugs: parsed.reviewChapters,
+        ...(parsed.personalize === true ? { personalize: true } : {}),
+        ...(typeof parsed.personalizeInstructions === "string" && parsed.personalizeInstructions.trim()
+          ? { personalizeInstructions: parsed.personalizeInstructions.trim() }
+          : {}),
+        ...(Array.isArray(parsed.personalizeFrom) && parsed.personalizeFrom.length > 0
+          ? { personalizeFrom: parsed.personalizeFrom.map(String) }
+          : {}),
         allowSpeechInput: parsed.allowSpeechInput ?? false,
         speechPrimary: parsed.speechPrimary ?? false,
         submissionMode: parsed.submissionMode ?? "text",

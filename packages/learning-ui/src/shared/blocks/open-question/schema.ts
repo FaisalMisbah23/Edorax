@@ -37,6 +37,16 @@ export const OpenQuestionConfigSchema = z.object({
   maxAttempts: z.number().int().min(1).max(10).optional().default(DEFAULT_OPEN_QUESTION_MAX_ATTEMPTS),
   /** Chapter slugs offered after a failed attempt so the learner can review source material. */
   reviewChapterSlugs: z.array(z.string().trim().min(1).max(160)).max(5).optional().default([]),
+  /**
+   * Let the model rewrite `prompt` around the learner's own earlier answers. It runs on the
+   * learner's AI key and only when they have one with room left; otherwise the learner sees
+   * `prompt` as written, so the authored prompt must stand on its own.
+   */
+  personalize: z.boolean().optional().default(false),
+  /** Chapter slugs whose answers feed the rewrite. Empty means every earlier chapter. */
+  personalizeFrom: z.array(z.string().trim().min(1).max(160)).max(10).optional().default([]),
+  /** Instructor guidance for the rewrite, e.g. "Name the learner's chosen product and keep it to two sentences." Server-only. */
+  personalizeInstructions: z.string().trim().max(1000).optional(),
   rubric: z.string().optional(), // mentor-only, never sent to the client
   sampleAnswer: z.string().optional(), // mentor-only / LLM reference — never sent to the client
 });
@@ -47,7 +57,7 @@ export type OpenQuestionConfig = z.infer<typeof OpenQuestionConfigSchema>;
 // src/mdx/sanitize.ts and docs/09-security.mdx.
 export type SanitizedOpenQuestionConfig = Omit<
   OpenQuestionConfig,
-  "rubric" | "sampleAnswer" | "hints"
+  "rubric" | "sampleAnswer" | "hints" | "personalizeInstructions"
 >;
 
 /** True when this open question is graded instantly with the learner's OpenRouter key. */

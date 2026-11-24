@@ -23,6 +23,7 @@ import type { ReaderHighlight } from "@/shared/api/reader";
 import type { SyllabusModule } from "@/components/learn/course-syllabus";
 import { AskHelpDialog } from "@/components/help/ask-help-dialog";
 import { ReportIssueDialog } from "@/components/help/report-issue-dialog";
+import { EarlierAnswersButton, EarlierAnswersProvider } from "@/components/learn/earlier-answers";
 import { StudyClock } from "@/components/learn/study-time-chip";
 import { useStudySession } from "@/lib/use-study-session";
 import { useMascot } from "@/lib/engagement/use-mascot";
@@ -440,15 +441,19 @@ export function ChapterReaderShell({
               )}
             >
               {/* ~70 characters per line at 18px: long chapters stay comfortable to read. */}
+              <EarlierAnswersProvider chapterId={chapterId}>
               <div className="mx-auto max-w-[40rem]">
                 <header className={cn("mb-10", readerMode === "QUIZ" && "sr-only")}>
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-mono text-xs tabular-nums text-muted-foreground">{lessonLabel}</p>
-                    <ReportIssueDialog
-                      courseId={courseId}
-                      chapterId={chapterId}
-                      chapterTitle={chapterTitle}
-                    />
+                    <div className="flex items-center gap-1">
+                      {prev ? <EarlierAnswersButton /> : null}
+                      <ReportIssueDialog
+                        courseId={courseId}
+                        chapterId={chapterId}
+                        chapterTitle={chapterTitle}
+                      />
+                    </div>
                   </div>
                   <h1 className="mt-2 text-[1.75rem] font-bold leading-tight tracking-tight text-foreground text-balance sm:text-[2.125rem]">
                     {chapterTitle}
@@ -582,6 +587,7 @@ export function ChapterReaderShell({
                   </div>
                 </div>
               </div>
+              </EarlierAnswersProvider>
             </main>
 
             <ChapterToc

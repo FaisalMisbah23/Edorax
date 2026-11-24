@@ -46,6 +46,8 @@ export async function OpenQuestionComponent({
       hintAfterAttempts: 3,
       maxAttempts: 3,
       reviewChapterSlugs: [],
+      personalize: false,
+      personalizeFrom: [],
     };
 
     return (
@@ -69,6 +71,7 @@ export async function OpenQuestionComponent({
           config={state.config}
           initialState={state.initialState}
           ai={state.ai}
+          personalized={state.personalized}
           groupPosition={state.group.position}
           questionIndex={state.group.index}
           questionTotal={state.group.total}

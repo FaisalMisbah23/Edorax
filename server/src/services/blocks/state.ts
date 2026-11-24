@@ -20,6 +20,7 @@ import type { Block } from "../../generated/prisma/index.js";
 import { findEnrollmentForBlockState, requireBlockSubmissionAccess } from "../enrollment/api-learn-access.js";
 import { loadAiInterviewInitialState } from "../ai/interview/service.js";
 import { getAiCredentialStatus } from "../ai/credentials.js";
+import { personalizePrompt } from "../ai/personalized-prompt/service.js";
 import { NotFoundError } from "../../utils/errors.js";
 import { sanitizeBlockConfig } from "../../utils/sanitize-block-config.js";
 import type { SessionUser } from "../../types/auth.js";
@@ -45,6 +46,7 @@ export async function loadBlockState(blockId: string, user: SessionUser | undefi
         select: {
           id: true,
           archivedAt: true,
+          order: true,
           course: { select: { id: true, familySlug: true, variantFamily: true, autoGradeOpenQuestions: true, pricingType: true, mentorId: true } },
         },
       },
@@ -65,10 +67,27 @@ export async function loadBlockState(blockId: string, user: SessionUser | undefi
     }
   }
   if (enrollment && !(await releaseContainsChapter(course.id, enrollment, course.familySlug, block.chapter.id))) throw new NotFoundError("Block not found");
-  return withTokens(
+  const state = withTokens(
     await blockStateFor(block, user, { autoGradeOpenQuestions: course.autoGradeOpenQuestions }),
     contentTokenValues(resolveCourseFamily(course.familySlug, course.variantFamily), enrollment?.variantSlug),
   );
+  if (state.type !== "OPEN_QUESTION" || !state.config.personalize || !user || !enrollment) return state;
+
+  // Written from the learner's earlier answers when they have AI room; otherwise the authored prompt stays.
+  const personalized = await personalizePrompt({
+    userId: user.id,
+    blockId,
+    courseId: course.id,
+    chapterOrder: block.chapter.order,
+    enrollmentId: enrollment.id,
+    variantSlug: enrollment.variantSlug ?? null,
+    defaultPrompt: state.config.prompt,
+    personalizeFrom: state.config.personalizeFrom ?? [],
+    instructions: str((block.config as { personalizeInstructions?: unknown } | null)?.personalizeInstructions) || undefined,
+    hasSubmitted: Boolean(state.initialState),
+  });
+  if (!personalized) return state;
+  return { ...state, config: { ...state.config, prompt: personalized.prompt }, personalized: { basedOn: personalized.basedOn } };
 }
 
 /** Resolve placeholders in what the author wrote (config and explanations), never in the learner's own answer. */

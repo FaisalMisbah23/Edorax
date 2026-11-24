@@ -47,6 +47,11 @@ export type OpenQuestionBlockState = {
    * open questions. `configured` is false when the server cannot store keys.
    */
   ai?: { configured: boolean; hasKey: boolean };
+  /**
+   * Present when `config.prompt` was rewritten from the learner's earlier answers.
+   * `basedOn` names the chapters those answers came from.
+   */
+  personalized?: { basedOn: Array<{ chapterSlug: string; chapterTitle: string }> };
   initialState: {
     status: ResponseStatus;
     attempt: number;

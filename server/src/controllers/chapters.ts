@@ -3,6 +3,7 @@ import { noContent, ok } from "../utils/responses.js";
 import { submitChapterQuiz } from "../services/chapters/quiz-submit.js";
 import { markChapterComplete } from "../services/progress/chapter-completion.js";
 import { saveChecklistItem, saveLearningLogAnswers } from "../services/progress/learning-log.js";
+import { listEarlierAnswers } from "../services/progress/earlier-answers.js";
 import { saveHeadingNote } from "../services/chapters/heading-notes.js";
 import {
   listChapterHighlights,
@@ -40,6 +41,11 @@ export async function putChecklistItem(req: Request, res: Response) {
 export async function putLearningLog(req: Request, res: Response) {
   const { answers } = req.body as { answers: Record<string, string> };
   ok(res, await saveLearningLogAnswers(req.user!, { chapterId: req.params.chapterId as string, answers }));
+}
+
+// GET /api/v1/chapters/:chapterId/earlier-answers
+export async function getEarlierAnswers(req: Request, res: Response) {
+  ok(res, await listEarlierAnswers(req.user!, req.params.chapterId as string));
 }
 
 // PUT /api/v1/chapters/:chapterId/notes/:headingId

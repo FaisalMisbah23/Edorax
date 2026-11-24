@@ -73,6 +73,36 @@ export function extractReflectionRequirements(source: string): ReflectionRequire
   return { checklistIds, questionIds };
 }
 
+/** Learning-log questions (id and title) in reading order, using the same transform as the reader. */
+export function extractLearningLogQuestions(source: string): Array<{ id: string; title: string }> {
+  let tree: ReturnType<ReturnType<typeof unified>["parse"]>;
+  try {
+    const processor = unified().use(remarkParse).use(remarkMdx).use(remarkGfm).use(remarkLearningLog);
+    tree = processor.runSync(processor.parse(source));
+  } catch {
+    return [];
+  }
+  const questions: Array<{ id: string; title: string }> = [];
+  visit(tree, (node) => {
+    if (!node || typeof node !== "object" || !("type" in node)) return;
+    const element = node as { type?: string; name?: string; attributes?: JsxAttribute[] };
+    if (element.type !== "mdxJsxFlowElement" || element.name !== "LearningLog") return;
+    const raw = expressionSource(element.attributes?.find((attribute) => attribute.name === "questions"));
+    if (!raw) return;
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      for (const item of parsed) {
+        const { id, title } = (item ?? {}) as { id?: unknown; title?: unknown };
+        if (typeof id === "string" && id && typeof title === "string" && title) questions.push({ id, title });
+      }
+    } catch {
+      // A malformed list is skipped; the rest of the chapter still reads.
+    }
+  });
+  return questions;
+}
+
 export function reflectionSatisfied(requirements: ReflectionRequirements, log: LearningLogData): boolean {
   for (const id of requirements.checklistIds) {
     if (log.checklist?.[id]?.checked !== true) return false;

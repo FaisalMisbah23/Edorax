@@ -132,6 +132,13 @@ Default path is human review. Quiz `type: short` fences may opt into instant BYO
 - Config: `minWords`, `maxWords?`, `rubric` (mentor-only), `sampleAnswer?` (server-only),
   `autoGrade` (`mentor` default | `llm`), `hints[]` (server-only until wrong-attempt threshold),
   `hintAfterAttempts` (default `3`).
+- Personalization: `personalize` (default `false`) rewrites `prompt` from the learner's own earlier
+  answers (learning log and earlier open questions). `personalizeFrom[]` limits it to chapter slugs,
+  `personalizeInstructions` (server-only) is the instructor's guidance to the model. It runs on the
+  learner's own AI key, only when they have one and are under `PERSONALIZED_PROMPT_DAILY_LIMIT`
+  (default 30 per UTC day); otherwise, or on any AI error, the authored `prompt` is shown. The
+  wording is stored in `PersonalizedPrompt` and kept once the learner has answered. Grading and
+  mentor review use the authored prompt.
 - Mentor path completion: **submitted.** Not blocked on mentor review — review arrives
   asynchronously via the **mentor review queue** — see [`05-review-queue.mdx`](05-review-queue.mdx).
 - LLM path (`autoGrade: llm`): grades with the learner's OpenRouter key. Wrong tries 1–2 return

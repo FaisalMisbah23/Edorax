@@ -98,6 +98,12 @@ const schema = z.object({
   /** Questions the whole platform may answer per UTC day, the cap on the Anthropic bill. */
   LEARNER_QA_GLOBAL_DAILY_LIMIT: z.coerce.number().int().min(1).max(100_000).default(500),
   /**
+   * Open questions written from a learner's earlier answers (`personalize: true`) use the
+   * learner's own AI key. This caps how many prompts one learner can have written per UTC
+   * day; past the cap, or without a key, the learner sees the authored question.
+   */
+  PERSONALIZED_PROMPT_DAILY_LIMIT: z.coerce.number().int().min(1).max(500).default(30),
+  /**
    * The home page's live AI demo (services/ai/home-demo): preset questions only, answers cached,
    * a daily cap on model calls and a saved answer on any problem. On whenever ANTHROPIC_API_KEY is
    * set; HOME_AI_DEMO_ENABLED=false turns it off and the page then shows the saved answers.
