@@ -7,12 +7,13 @@ import type { AiCredentialStatus } from "@/shared/api/ai";
 import { AiKeySettingsView, type AiKeyBusy } from "./ai-key-settings-view";
 
 const PATH = "/api/v1/learner/ai-credential";
+const PROVIDER_NAMES: Record<AiCredentialStatus["provider"], string> = { OPENROUTER: "OpenRouter", GEMINI: "Gemini", ANTHROPIC: "Anthropic" };
 
 export function AiKeySettings({ initial }: { initial: AiCredentialStatus }) {
   const [status, setStatus] = useState(initial);
   const [keyDraft, setKeyDraft] = useState("");
   const [modelDraft, setModelDraft] = useState(initial.model ?? "");
-  const [providerDraft, setProviderDraft] = useState<"OPENROUTER" | "GEMINI">(initial.provider);
+  const [providerDraft, setProviderDraft] = useState<AiCredentialStatus["provider"]>(initial.provider);
   const [replacing, setReplacing] = useState(false);
   const [busy, setBusy] = useState<AiKeyBusy>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export function AiKeySettings({ initial }: { initial: AiCredentialStatus }) {
   const save = () =>
     run("saving", async () => {
       const next = await apiFetch<AiCredentialStatus>(PATH, { method: "PUT", json: { provider: providerDraft, apiKey: keyDraft.trim(), model: modelDraft.trim() || null } });
-      // The key leaves this component the moment OpenRouter accepts it.
+      // The key leaves this component the moment the provider accepts it.
       setKeyDraft("");
       setReplacing(false);
       setStatus(next);
@@ -45,7 +46,7 @@ export function AiKeySettings({ initial }: { initial: AiCredentialStatus }) {
   const test = () =>
     run("testing", async () => {
       setStatus(await apiFetch<AiCredentialStatus>(`${PATH}/test`, { method: "POST" }));
-      return `${status.provider === "GEMINI" ? "Gemini" : "OpenRouter"} accepted your key.`;
+      return `${PROVIDER_NAMES[status.provider]} accepted your key.`;
     });
 
   const saveModel = () =>

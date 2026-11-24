@@ -16,7 +16,7 @@ type ReviewFormProps = {
   /** Prefill, for example from a capstone AI check the mentor confirms or overrides. */
   initialFeedback?: string;
   initialScore?: number | null;
-  /** The OpenRouter draft only applies to open questions. */
+  /** The AI draft only applies to open questions. */
   aiDraft?: boolean;
   /** Replaces the default line under the heading. */
   note?: string;
@@ -75,7 +75,7 @@ export function ReviewForm({ responseId, maxScore, action, initialFeedback = "",
       {aiDraft ? <p className="mt-3 rounded-lg border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
         When you click <span className="font-medium text-foreground">Draft with AI</span>, this
         answer, its question, the mentor-only rubric/reference answer, and recent feedback are sent
-        to OpenRouter. Verify the result before using it.
+        to your AI provider (OpenRouter or Anthropic). Verify the result before using it.
       </p> : null}
 
       {error ? (
