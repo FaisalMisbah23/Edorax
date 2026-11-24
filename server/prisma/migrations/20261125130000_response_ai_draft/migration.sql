@@ -1,0 +1,3 @@
+ALTER TABLE "Response" ADD COLUMN "aiDraft" JSONB,
+ADD COLUMN "aiDraftModel" TEXT,
+ADD COLUMN "aiDraftAt" TIMESTAMP(3);

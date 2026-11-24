@@ -136,6 +136,18 @@ const schema = z.object({
   CAPSTONE_LEARNER_DAILY_LIMIT: z.coerce.number().int().min(1).max(50).default(3),
   /** AI grades the whole platform may run per UTC day, the cap on the Anthropic bill. */
   CAPSTONE_GLOBAL_DAILY_LIMIT: z.coerce.number().int().min(1).max(10_000).default(150),
+  /**
+   * Automatic first-pass reviews: every pending open answer gets an AI draft (feedback,
+   * verdict, score) on the platform's ANTHROPIC_API_KEY, and the mentor approves or edits it.
+   * Nothing reaches the learner until a mentor sends it. AI_REVIEW_AUTO_DRAFT=false turns it off.
+   */
+  AI_REVIEW_AUTO_DRAFT: z
+    .string()
+    .optional()
+    .transform((value) => value !== "false"),
+  AI_REVIEW_MODEL: z.string().trim().min(1).default("claude-haiku-5-5"),
+  /** Drafts the whole platform may make per UTC day, the cap on the Anthropic bill. */
+  AI_REVIEW_DAILY_LIMIT: z.coerce.number().int().min(1).max(20_000).default(1_000),
   /** Optional fine-grained GitHub token, public read only. Without it the API allows 60 calls an hour, about 12 checks. */
   GITHUB_TOKEN: optionalString,
   /** Edorax's LinkedIn company id for Add to profile; without it LinkedIn gets the name "Edorax" as text. */
@@ -258,3 +270,6 @@ export const homeAiDemoAvailable = env.HOME_AI_DEMO_ENABLED && Boolean(env.ANTHR
 export const capstoneCheckAvailable = env.CAPSTONE_CHECK_ENABLED && Boolean(env.ANTHROPIC_API_KEY);
 /** Paid course Polar checkout needs the org token and the webhook secret. */
 export const polarPaymentsConfigured = Boolean(env.POLAR_ACCESS_TOKEN && env.POLAR_WEBHOOK_SECRET);
+
+/** Automatic AI first-pass reviews for open answers, on the platform key. */
+export const aiReviewAutoDraftAvailable = env.AI_REVIEW_AUTO_DRAFT && Boolean(env.ANTHROPIC_API_KEY);

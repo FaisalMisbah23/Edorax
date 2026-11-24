@@ -1366,6 +1366,10 @@ model Response {
   submittedAt  DateTime       @default(now())
   review       Review?
   capstoneCheck CapstoneCheck?
+  /** Platform AI first-pass review (open questions): the mentor approves, edits or rejects it. */
+  aiDraft      Json?
+  aiDraftModel String?
+  aiDraftAt    DateTime?
 
   @@index([blockId, userId, attempt])
   @@index([enrollmentId])

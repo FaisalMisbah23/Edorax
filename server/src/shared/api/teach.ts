@@ -547,21 +547,38 @@ export type CourseActivityView = {
 // ---------------------------------------------------------------------------
 // Review queue
 
-export type ReviewQueueItem = {
+/** Where an answer sits and how its learner is doing, so the mentor can jump straight there. */
+export type ReviewContext = {
+  courseSlug: string;
+  moduleTitle: string | null;
+  /** Opens the chapter in the course preview. */
+  chapterHref: string;
+  /** The learner's evaluation page for this course. */
+  learnerHref: string;
+  learnerProgress: { percentComplete: number; chaptersCompleted: number; status: string } | null;
+};
+
+export type ReviewQueueItem = ReviewContext & {
   id: string;
   attempt: number;
   submittedAt: string;
   learnerLabel: string;
   courseTitle: string;
   chapterTitle: string;
+  blockType: string;
+  maxScore: number;
+  /** The automatic AI first pass, when it is ready. */
+  aiDraft: AiReviewDraft | null;
 };
 
 export type ReviewQueueView = {
   courses: Array<{ id: string; title: string }>;
   items: ReviewQueueItem[];
+  /** True when every open answer gets an automatic AI draft on the platform key. */
+  autoDraft: boolean;
 };
 
-export type ReviewDetailView = {
+export type ReviewDetailView = ReviewContext & {
   id: string;
   status: ResponseStatus;
   attempt: number;
@@ -580,6 +597,10 @@ export type ReviewDetailView = {
   integrity: IntegrityAttemptSummary[];
   /** Capstone checks: the check under review and the learner's other checks on this block, newest first. */
   capstone: { title: string; current: CapstoneMentorView | null; history: CapstoneMentorView[] } | null;
+  /** The automatic AI first pass for an open answer, prefilled in the review form. */
+  aiDraft: AiReviewDraftResult | null;
+  /** True when Draft with AI runs on the platform key, so the mentor needs no key of their own. */
+  platformDraft: boolean;
 };
 
 export type AiReviewDraft = {
