@@ -5,7 +5,7 @@ CREATE TABLE "PersonalizedPrompt" (
     "blockId" TEXT NOT NULL,
     "prompt" TEXT NOT NULL,
     "sourceHash" VARCHAR(64) NOT NULL,
-    "basedOn" JSONB NOT NULL DEFAULT '[]',
+    "references" JSONB NOT NULL DEFAULT '[]',
     "generatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "PersonalizedPrompt_pkey" PRIMARY KEY ("id")

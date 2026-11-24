@@ -2,8 +2,11 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card";
-import { History, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { ArrowUpRight, History, Sparkles } from "lucide-react";
+import type { PersonalizedReference } from "@/shared/api/blocks";
+import { splitAnswerReferences } from "@/shared/lib/answer-references";
 import type { EarlierAnswersChapter } from "@/shared/api/chapters";
 import { loadEarlierAnswers } from "@/server/actions/earlier-answers";
 
@@ -107,38 +110,94 @@ export function EarlierAnswersButton() {
   );
 }
 
+const markClass =
+  "inline cursor-help rounded-[4px] bg-brand-yellow/20 px-1 py-px font-semibold text-foreground underline decoration-brand-yellow decoration-2 underline-offset-2 transition-colors outline-none hover:bg-brand-yellow/35 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow data-popup-open:bg-brand-yellow/35";
+
 /**
- * Shown under a question that was written from the learner's earlier answers. Each chapter
- * name is a hover card with the answers the question drew on.
+ * Words in a question that point back to something the learner wrote. Highlighted like a
+ * marker pen; hover, focus or a click opens a card with the question, the full answer and a
+ * link to the chapter. The card is a popover so it works with touch and the keyboard.
  */
-export function PersonalizedNote({ basedOn }: { basedOn: Array<{ chapterSlug: string; chapterTitle: string }> }) {
-  const context = useEarlierAnswers();
-  const chapters = context?.chapters ?? [];
+export function AnswerReference({ reference, children, className }: { reference: PersonalizedReference; children: ReactNode; className?: string }) {
+  const params = useParams<{ courseSlug?: string }>();
+  const href = params?.courseSlug ? `/courses/${params.courseSlug}/${reference.chapterSlug}` : null;
   return (
-    <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
-      <Sparkles className="size-3 shrink-0" aria-hidden />
-      <span>Written from your earlier answers in</span>
-      {basedOn.map((source, index) => {
-        const match = chapters.filter((chapter) => chapter.chapterSlug === source.chapterSlug);
-        return (
-          <PreviewCardPrimitive.Root key={source.chapterSlug} onOpenChange={(open) => open && context?.ensureLoaded()}>
-            <PreviewCardPrimitive.Trigger
-              render={<button type="button" />}
-              className="rounded font-medium text-foreground underline decoration-dotted underline-offset-2 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
-            >
-              {source.chapterTitle}
-              {index < basedOn.length - 1 ? "," : ""}
-            </PreviewCardPrimitive.Trigger>
-            <PreviewCardPrimitive.Portal>
-              <PreviewCardPrimitive.Positioner side="top" sideOffset={6} collisionPadding={16} className="isolate z-50 outline-none">
-                <PreviewCardPrimitive.Popup className={`${popupClass} max-h-72 w-[min(24rem,calc(100vw-2rem))] overflow-y-auto`}>
-                  <AnswerList chapters={match} emptyText={statusText(context?.status ?? "idle")} />
-                </PreviewCardPrimitive.Popup>
-              </PreviewCardPrimitive.Positioner>
-            </PreviewCardPrimitive.Portal>
-          </PreviewCardPrimitive.Root>
+    <PopoverPrimitive.Root>
+      <PopoverPrimitive.Trigger openOnHover delay={120} closeDelay={150} className={`${markClass} ${className ?? ""}`}>
+        {children}
+      </PopoverPrimitive.Trigger>
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Positioner side="top" align="start" sideOffset={8} collisionPadding={16} className="isolate z-50 outline-none">
+          <PopoverPrimitive.Popup className={`${popupClass} w-[min(22rem,calc(100vw-2rem))]`}>
+            <PopoverPrimitive.Title className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              You wrote in {reference.chapterTitle}
+            </PopoverPrimitive.Title>
+            <p className="mt-2 text-xs text-muted-foreground">{reference.question}</p>
+            <blockquote className="mt-1.5 max-h-48 overflow-y-auto whitespace-pre-wrap border-l-2 border-brand-yellow pl-3 text-sm leading-6 text-foreground">
+              {reference.answer}
+            </blockquote>
+            {href ? (
+              <Link href={href} className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-foreground underline underline-offset-2 hover:text-primary">
+                Open that chapter <ArrowUpRight className="size-3" aria-hidden />
+              </Link>
+            ) : null}
+          </PopoverPrimitive.Popup>
+        </PopoverPrimitive.Positioner>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
+  );
+}
+
+/** The rewritten question with every [[a1|words]] marker turned into a highlighted reference. */
+export function PersonalizedPromptText({ prompt, references }: { prompt: string; references: PersonalizedReference[] }) {
+  const byKey = new Map(references.map((reference) => [reference.key, reference]));
+  return (
+    <>
+      {splitAnswerReferences(prompt).map((segment, index) => {
+        if (segment.type === "text") return <span key={index}>{segment.text}</span>;
+        const reference = byKey.get(segment.key);
+        return reference ? (
+          <AnswerReference key={index} reference={reference}>
+            {segment.text}
+          </AnswerReference>
+        ) : (
+          <span key={index}>{segment.text}</span>
         );
       })}
-    </p>
+    </>
+  );
+}
+
+function shorten(text: string, max: number): string {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+}
+
+/**
+ * Under a personalized question. When the wording was rewritten it explains the highlights;
+ * when the authored question is shown it offers the learner's related earlier answers as chips.
+ */
+export function PersonalizedNote({ rewritten, references }: { rewritten: boolean; references: PersonalizedReference[] }) {
+  if (references.length === 0) return null;
+  if (rewritten) {
+    return (
+      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Sparkles className="size-3 shrink-0" aria-hidden />
+        Written from your earlier answers. Hover or tap a highlighted phrase to see what you wrote.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5">
+        <History className="size-3 shrink-0" aria-hidden />
+        Your earlier answers that connect here:
+      </span>
+      {references.map((reference) => (
+        <AnswerReference key={reference.key} reference={reference} className="max-w-[16rem] truncate align-middle text-xs font-medium">
+          {shorten(reference.answer, 40)}
+        </AnswerReference>
+      ))}
+    </div>
   );
 }

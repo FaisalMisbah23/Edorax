@@ -1659,8 +1659,8 @@ model PersonalizedPrompt {
   prompt      String   @db.Text
   /// Hash of the earlier answers the prompt was written from; a new answer means a new prompt.
   sourceHash  String   @db.VarChar(64)
-  /// [{ chapterSlug, chapterTitle }] for the "Based on" chips.
-  basedOn     Json     @default("[]")
+  /// The earlier answers the prompt points to: [{ key, chapterSlug, chapterTitle, question, answer }].
+  references  Json     @default("[]")
   generatedAt DateTime @default(now())
 
   @@unique([userId, blockId])

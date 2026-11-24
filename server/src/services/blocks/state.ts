@@ -87,7 +87,11 @@ export async function loadBlockState(blockId: string, user: SessionUser | undefi
     hasSubmitted: Boolean(state.initialState),
   });
   if (!personalized) return state;
-  return { ...state, config: { ...state.config, prompt: personalized.prompt }, personalized: { basedOn: personalized.basedOn } };
+  return {
+    ...state,
+    config: personalized.prompt ? { ...state.config, prompt: personalized.prompt } : state.config,
+    personalized: { rewritten: personalized.prompt !== null, references: personalized.references },
+  };
 }
 
 /** Resolve placeholders in what the author wrote (config and explanations), never in the learner's own answer. */

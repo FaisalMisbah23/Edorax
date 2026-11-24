@@ -53,6 +53,7 @@ export function OpenQuestionClient({
   initialState,
   ai,
   personalizedNote,
+  promptNode,
   onRespond,
   onComplete,
   onFeedback,
@@ -67,6 +68,8 @@ export function OpenQuestionClient({
   ai?: OpenQuestionAiStatus | null;
   /** Shown under the prompt when it was written from the learner's earlier answers. */
   personalizedNote?: ReactNode;
+  /** Replaces the plain prompt text, e.g. to highlight references to the learner's earlier answers. */
+  promptNode?: ReactNode;
   onRespond?: (payload: {
     type: "OPEN_QUESTION";
     text: string;
@@ -259,7 +262,7 @@ export function OpenQuestionClient({
             </div>
 
             <p className="mt-2 text-[15px] font-medium leading-snug text-foreground sm:text-base">
-              {config.prompt}
+              {promptNode ?? config.prompt}
             </p>
             {personalizedNote ? <div className="mt-2">{personalizedNote}</div> : null}
 
