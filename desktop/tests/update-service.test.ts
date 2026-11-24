@@ -226,9 +226,14 @@ test('focus checks at most once per 10 minutes', async () => {
     },
     { now: () => clock },
   );
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+  // Wait for the expected number of calls instead of a fixed delay, so a busy CI runner cannot fail the test.
+  const until = async (expected: number) => {
+    for (let i = 0; i < 100 && calls < expected; i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  };
+  // A call that must NOT happen: give it a moment, then check.
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
   service.onFocus();
-  await settle();
+  await until(1);
   assert.equal(calls, 1);
   clock += FOCUS_CHECK_GAP_MS - 1;
   service.onFocus();
@@ -236,8 +241,10 @@ test('focus checks at most once per 10 minutes', async () => {
   assert.equal(calls, 1, 'too soon');
   clock += 1;
   service.onFocus();
-  await settle();
+  await until(2);
   assert.equal(calls, 2);
+  // The focus check must finish first: a check already in flight is shared, not repeated.
+  await settle();
   // "Check again" ignores the gap.
   await service.check();
   assert.equal(calls, 3);
