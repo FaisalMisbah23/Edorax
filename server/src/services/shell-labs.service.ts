@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { prisma } from "../db/prisma.js";
 import type { Prisma } from "../generated/prisma/index.js";
 import { BadRequestError } from "../utils/errors.js";
+import { toPublicShellLab, type PublicShellLab } from "./shell-labs-public.js";
 
 // Shell labs live in the private content repository and reach the database through
 // `pnpm labs:publish`. The desktop app reads them from the API and runs the checks
@@ -139,6 +140,13 @@ export async function shellLabsWithVersion(): Promise<{ version: string; labs: R
     select: { slug: true, contentHash: true, data: true },
   });
   return { version: versionOf(rows), labs: rows.map((row) => row.data as Record<string, unknown>) };
+}
+
+// ---- Public view: what the website may show before anyone signs in ----
+
+/** Every active lab in index order, public fields only. */
+export async function listPublicShellLabs(): Promise<PublicShellLab[]> {
+  return (await listActiveShellLabs()).map(toPublicShellLab);
 }
 
 // ---- Progress: the steps a learner has passed, per lab ----

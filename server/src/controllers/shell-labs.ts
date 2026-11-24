@@ -2,6 +2,12 @@ import type { Request, Response } from "express";
 import { ok } from "../utils/responses.js";
 import * as shellLabs from "../services/shell-labs.service.js";
 
+// GET /api/v1/shell-labs/public — the catalogue for the website: no sign-in, no checks or solutions
+export async function listPublic(_req: Request, res: Response) {
+  res.set("Cache-Control", "public, max-age=60");
+  ok(res, { labs: await shellLabs.listPublicShellLabs() });
+}
+
 // GET /api/v1/shell-labs/version — cheap check the desktop app runs before downloading
 export async function version(_req: Request, res: Response) {
   ok(res, await shellLabs.shellLabsSummary());
