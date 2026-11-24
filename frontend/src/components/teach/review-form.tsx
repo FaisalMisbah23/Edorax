@@ -18,6 +18,11 @@ type ReviewFormProps = {
   initialScore?: number | null;
   /** The AI draft only applies to open questions. */
   aiDraft?: boolean;
+  /** The automatic first pass, prefilled so the mentor only checks and sends it. */
+  initialDraft?: AiReviewDraft | null;
+  initialModel?: string | null;
+  /** Drafts run on the platform's Claude, so the mentor needs no key of their own. */
+  platformDraft?: boolean;
   /** Replaces the default line under the heading. */
   note?: string;
 };
@@ -26,11 +31,23 @@ function verdictLabel(verdict: AiReviewDraft["suggestedVerdict"]) {
   return verdict === "APPROVED" ? "Approve" : "Needs revision";
 }
 
-export function ReviewForm({ responseId, maxScore, action, initialFeedback = "", initialScore = null, aiDraft = true, note }: ReviewFormProps) {
-  const [feedback, setFeedback] = useState(initialFeedback);
-  const [score, setScore] = useState(initialScore === null ? "" : String(initialScore));
-  const [draft, setDraft] = useState<AiReviewDraft | null>(null);
-  const [model, setModel] = useState<string | null>(null);
+export function ReviewForm({
+  responseId,
+  maxScore,
+  action,
+  initialFeedback = "",
+  initialScore = null,
+  aiDraft = true,
+  note,
+  initialDraft = null,
+  initialModel = null,
+  platformDraft = false,
+}: ReviewFormProps) {
+  const [feedback, setFeedback] = useState(initialDraft?.feedback ?? initialFeedback);
+  const startScore = initialDraft ? initialDraft.suggestedScore : initialScore;
+  const [score, setScore] = useState(startScore === null ? "" : String(startScore));
+  const [draft, setDraft] = useState<AiReviewDraft | null>(initialDraft);
+  const [model, setModel] = useState<string | null>(initialModel);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, startGenerating] = useTransition();
 
@@ -73,9 +90,19 @@ export function ReviewForm({ responseId, maxScore, action, initialFeedback = "",
       </div>
 
       {aiDraft ? <p className="mt-3 rounded-lg border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-        When you click <span className="font-medium text-foreground">Draft with AI</span>, this
-        answer, its question, the mentor-only rubric/reference answer, and recent feedback are sent
-        to your AI provider (OpenRouter or Anthropic). Verify the result before using it.
+        {platformDraft ? (
+          <>
+            Claude drafts a first review of every answer automatically, using the question, rubric,
+            reference answer and recent feedback. Nothing reaches the learner until you send it. Check
+            the draft, edit it if needed, then approve or send it back.
+          </>
+        ) : (
+          <>
+            When you click <span className="font-medium text-foreground">Draft with AI</span>, this
+            answer, its question, the mentor-only rubric/reference answer, and recent feedback are sent
+            to your AI provider (OpenRouter or Anthropic). Verify the result before using it.
+          </>
+        )}
       </p> : null}
 
       {error ? (
