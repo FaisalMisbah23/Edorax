@@ -155,14 +155,6 @@ export function MentorWorkspaceSidebar({
       active: Boolean(routeCourseSlug) && pathname.endsWith("/settings"),
       disabled: !selectedCourse,
     },
-    {
-      label: "Learners",
-      href: courseBase ? `${courseBase}/mentees` : "/courses",
-      icon: Users,
-      active: Boolean(routeCourseSlug) && pathname.includes("/mentees"),
-      count: selectedCourse?.learnerCount,
-      disabled: !selectedCourse,
-    },
   ];
   const insightItems: NavItem[] = [
     {
@@ -180,20 +172,30 @@ export function MentorWorkspaceSidebar({
       disabled: !selectedCourse,
     },
   ];
+  // Cross-course lists open on all courses; each page has its own course filter.
+  const total = (pick: (course: MentorSidebarCourse) => number | undefined) =>
+    courses.reduce((sum, course) => sum + (pick(course) ?? 0), 0);
   const workflowItems: NavItem[] = [
     {
+      label: "Learners",
+      href: "/learners",
+      icon: Users,
+      active: pathname.startsWith("/learners") || (Boolean(routeCourseSlug) && pathname.includes("/mentees")),
+      count: total((course) => course.learnerCount),
+    },
+    {
       label: "Answers to check",
-      href: selectedCourse ? `/review?courseId=${selectedCourse.id}` : "/review",
+      href: "/review",
       icon: MessageSquareText,
       active: pathname.startsWith("/review"),
-      count: selectedCourse?.pendingReviews,
+      count: total((course) => course.pendingReviews),
     },
     {
       label: helpUiCopy.mentorNav,
-      href: selectedCourse ? `/help?courseId=${selectedCourse.id}` : "/help",
+      href: "/help",
       icon: CircleHelp,
       active: pathname.startsWith("/help"),
-      count: selectedCourse?.openHelpRequests,
+      count: total((course) => course.openHelpRequests),
     },
   ];
 
