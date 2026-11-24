@@ -442,7 +442,14 @@ export function ChapterReaderShell({
               {/* ~70 characters per line at 18px: long chapters stay comfortable to read. */}
               <div className="mx-auto max-w-[40rem]">
                 <header className={cn("mb-10", readerMode === "QUIZ" && "sr-only")}>
-                  <p className="font-mono text-xs tabular-nums text-muted-foreground">{lessonLabel}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-mono text-xs tabular-nums text-muted-foreground">{lessonLabel}</p>
+                    <ReportIssueDialog
+                      courseId={courseId}
+                      chapterId={chapterId}
+                      chapterTitle={chapterTitle}
+                    />
+                  </div>
                   <h1 className="mt-2 text-[1.75rem] font-bold leading-tight tracking-tight text-foreground text-balance sm:text-[2.125rem]">
                     {chapterTitle}
                   </h1>
