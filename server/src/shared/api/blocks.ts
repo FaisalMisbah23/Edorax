@@ -38,6 +38,16 @@ export type CodeBlockState = {
   initialState: { source: string; isCorrect: boolean | null } | null;
 };
 
+/** One earlier answer a personalized question can point back to. */
+export type PersonalizedReference = {
+  /** "a1", "a2"... matches the [[a1|words]] markers in the rewritten prompt. */
+  key: string;
+  chapterSlug: string;
+  chapterTitle: string;
+  question: string;
+  answer: string;
+};
+
 export type OpenQuestionBlockState = {
   type: "OPEN_QUESTION";
   config: SanitizedOpenQuestionConfig;
@@ -47,6 +57,13 @@ export type OpenQuestionBlockState = {
    * open questions. `configured` is false when the server cannot store keys.
    */
   ai?: { configured: boolean; hasKey: boolean };
+  /**
+   * Present on a `personalize` question when the learner has earlier answers.
+   * `rewritten` is true when `config.prompt` was written around them and marks each
+   * reference as [[a1|words]]; false when the authored prompt is shown and the
+   * references are only offered beside it.
+   */
+  personalized?: { rewritten: boolean; references: PersonalizedReference[] };
   initialState: {
     status: ResponseStatus;
     attempt: number;

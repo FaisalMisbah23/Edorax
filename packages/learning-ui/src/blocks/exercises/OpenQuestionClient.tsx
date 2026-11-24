@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { BookOpen, CheckCircle2, Clock3, KeyRound, Lightbulb, Link2, PenLine, RotateCcw, SendHorizontal, XCircle } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -51,6 +52,8 @@ export function OpenQuestionClient({
   questionTotal,
   initialState,
   ai,
+  personalizedNote,
+  promptNode,
   onRespond,
   onComplete,
   onFeedback,
@@ -63,6 +66,10 @@ export function OpenQuestionClient({
   questionTotal: number;
   initialState?: OpenQuestionInitialState | null;
   ai?: OpenQuestionAiStatus | null;
+  /** Shown under the prompt when it was written from the learner's earlier answers. */
+  personalizedNote?: ReactNode;
+  /** Replaces the plain prompt text, e.g. to highlight references to the learner's earlier answers. */
+  promptNode?: ReactNode;
   onRespond?: (payload: {
     type: "OPEN_QUESTION";
     text: string;
@@ -255,8 +262,9 @@ export function OpenQuestionClient({
             </div>
 
             <p className="mt-2 text-[15px] font-medium leading-snug text-foreground sm:text-base">
-              {config.prompt}
+              {promptNode ?? config.prompt}
             </p>
+            {personalizedNote ? <div className="mt-2">{personalizedNote}</div> : null}
 
             {aiUnavailable ? (
               <div className="mt-4 rounded-lg border border-brand-yellow bg-brand-yellow/15 px-4 py-3 text-sm text-foreground">

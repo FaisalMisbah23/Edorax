@@ -7,6 +7,10 @@ export const openQuestionEditorDescriptor: JsxComponentDescriptor = {
   props: [
     { name: "id", type: "string" },
     { name: "rubric", type: "string" },
+    { name: "autoGrade", type: "string" },
+    { name: "personalize", type: "expression" },
+    { name: "personalizeFrom", type: "expression" },
+    { name: "personalizeInstructions", type: "string" },
     { name: "speechPrimary", type: "expression" },
     { name: "prompt", type: "string" },
     { name: "minWords", type: "number" },

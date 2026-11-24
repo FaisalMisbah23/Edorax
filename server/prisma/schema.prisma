@@ -334,6 +334,7 @@ model User {
   aiCredential                  AiCredential?
   aiInterviewSessions           AiInterviewSession[]
   learnerQuestions              LearnerQuestion[]
+  personalizedPrompts           PersonalizedPrompt[]
   capstoneChecks                CapstoneCheck[]
   shellLabProgress              ShellLabProgress[]
   certificates                  Certificate[]
@@ -726,6 +727,7 @@ model Block {
   stats      BlockStats?
   aiInterviewSessions AiInterviewSession[]
   capstoneChecks CapstoneCheck[]
+  personalizedPrompts PersonalizedPrompt[]
 
   @@index([chapterId, order])
 }
@@ -1643,6 +1645,26 @@ model LearnerQuestion {
 
   @@index([createdAt])
   @@index([userId, createdAt])
+}
+
+/// A learner's own wording of an open question that opted into `personalize`, written by
+/// the model from their earlier answers. One row per learner and block; it stays put once
+/// the learner has answered, so the question they see never changes under them.
+model PersonalizedPrompt {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blockId     String
+  block       Block    @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  prompt      String   @db.Text
+  /// Hash of the earlier answers the prompt was written from; a new answer means a new prompt.
+  sourceHash  String   @db.VarChar(64)
+  /// The earlier answers the prompt points to: [{ key, chapterSlug, chapterTitle, question, answer }].
+  references  Json     @default("[]")
+  generatedAt DateTime @default(now())
+
+  @@unique([userId, blockId])
+  @@index([userId, generatedAt])
 }
 
 enum CapstoneCheckStatus {
