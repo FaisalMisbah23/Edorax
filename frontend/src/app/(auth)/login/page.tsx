@@ -3,6 +3,8 @@ import { NOINDEX } from "@/lib/seo";
 import Link from "next/link";
 import { AuthCard, AuthPageShell } from "@/components/auth/auth-page-shell";
 import { LoginCardTabs } from "@/components/auth/login-card-tabs";
+import { GoogleSignIn } from "@/components/auth/google-sign-in";
+import { loadAuthProviders } from "@/lib/auth-providers-server";
 import { TestAccountPicker } from "@/components/auth/test-account-picker";
 import { devTestAccounts } from "@/server/auth/dev-test-accounts";
 import { safeRedirectTo } from "@/shared/lib/safe-redirect";
@@ -37,12 +39,13 @@ export default async function LoginPage({
       ? `Email verified${params.email ? ` for ${params.email}` : ""}. Sign in to continue.`
       : null;
   const testAccounts = devTestAccounts();
+  const providers = await loadAuthProviders();
 
   return (
     <AuthPageShell>
       <AuthCard
         title="Sign in"
-        description="Use your email and password, or get a link by email."
+        description={providers.google ? "Use Google, your email and password, or get a link by email." : "Use your email and password, or get a link by email."}
         mood="wave"
         line="Welcome back."
       >
@@ -57,6 +60,7 @@ export default async function LoginPage({
           </p>
         ) : null}
 
+        {providers.google ? <GoogleSignIn redirectTo={redirectTo} /> : null}
         <LoginCardTabs
           redirectTo={redirectTo}
           defaultEmail={params.email}

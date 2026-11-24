@@ -11,6 +11,21 @@ import { completeAccountSetup as saveAccountSetup } from "../services/auth/accou
 import { signup as createAccount } from "../services/auth/signup.js";
 import { consumeMagicLink, requestMagicLink as sendMagicLink } from "../services/auth/magic-link.js";
 import { serializeSessionUser } from "../services/auth/session.js";
+import { googleConfig, signInWithGoogle } from "../services/auth/google.js";
+import {
+  GOOGLE_FLOW_COOKIE,
+  GOOGLE_FLOW_MAX_AGE_MS,
+  GOOGLE_FLOW_PATH,
+  GoogleSignInError,
+  authorizeUrl,
+  decodeFlow,
+  encodeFlow,
+  exchangeCode,
+  newFlow,
+  readIdToken,
+} from "../services/auth/google-oauth.js";
+import { isProduction } from "../config/env.js";
+import { logger } from "../utils/logger.js";
 import { safeRedirectTo } from "../shared/lib/safe-redirect.js";
 import type { AccountSetupBody, LoginBody, SignupBody } from "../validations/auth.js";
 
@@ -107,4 +122,45 @@ export async function devLogin(req: Request, res: Response) {
   const session = await createDevLoginSession({ email, redirectTo });
   setSessionCookie(res, session.sessionToken, session.expires);
   res.redirect(session.redirectTo);
+}
+
+// GET /api/v1/auth/providers — which sign-in buttons the pages show.
+export function providers(_req: Request, res: Response) {
+  ok(res, { google: googleConfig() !== null });
+}
+
+const FLOW_COOKIE_OPTIONS = { httpOnly: true, sameSite: "lax" as const, secure: isProduction, path: GOOGLE_FLOW_PATH };
+
+// GET /api/v1/auth/google?redirectTo= — sends the browser to Google. Sign in and sign up are the same step.
+export function startGoogle(req: Request, res: Response) {
+  const config = googleConfig();
+  if (!config) return res.redirect("/login?error=google-unavailable");
+  const flow = newFlow(safeRedirectTo(req.query.redirectTo as string | undefined));
+  res.cookie(GOOGLE_FLOW_COOKIE, encodeFlow(flow), { ...FLOW_COOKIE_OPTIONS, maxAge: GOOGLE_FLOW_MAX_AGE_MS });
+  res.redirect(authorizeUrl(config, flow));
+}
+
+// GET /api/v1/auth/google/callback — Google sends the browser back here with a one-time code.
+export async function finishGoogle(req: Request, res: Response) {
+  const flow = decodeFlow((req.cookies as Record<string, string> | undefined)?.[GOOGLE_FLOW_COOKIE]);
+  res.clearCookie(GOOGLE_FLOW_COOKIE, FLOW_COOKIE_OPTIONS);
+
+  const config = googleConfig();
+  if (!config) return res.redirect("/login?error=google-unavailable");
+  const { code, state, error } = req.query as { code?: string; state?: string; error?: string };
+  if (error) return res.redirect("/login?error=google-denied");
+  if (!flow || !code || state !== flow.state) return res.redirect("/login?error=google-invalid");
+
+  let result: Awaited<ReturnType<typeof signInWithGoogle>>;
+  try {
+    const profile = readIdToken(await exchangeCode(config, code, flow.verifier), config, flow.nonce);
+    result = await signInWithGoogle(profile, flow.redirectTo);
+  } catch (caught) {
+    if (!(caught instanceof GoogleSignInError)) throw caught;
+    logger.warn({ message: caught.message }, "[auth] google sign-in failed");
+    return res.redirect("/login?error=google-failed");
+  }
+  if (!result.ok) return res.redirect(`/login?error=google-${result.reason}`);
+  setSessionCookie(res, result.session.sessionToken, result.session.expires);
+  res.redirect(result.redirectTo);
 }

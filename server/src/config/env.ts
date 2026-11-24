@@ -40,6 +40,14 @@ const schema = z.object({
   CORS_ORIGINS: commaList,
 
   AUTH_RESEND_KEY: optionalString,
+
+  /**
+   * Sign in with Google. Both must be set to turn it on; the API boots without them and the
+   * button stays hidden. In Google Cloud, add `${APP_URL}/api/v1/auth/google/callback` as an
+   * authorized redirect URI of the OAuth client.
+   */
+  GOOGLE_CLIENT_ID: optionalString,
+  GOOGLE_CLIENT_SECRET: optionalString,
   EMAIL_FROM: z.string().default("buildment <onboarding@resend.dev>"),
   ADMIN_NOTIFY_EMAIL: commaList,
 
