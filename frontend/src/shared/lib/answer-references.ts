@@ -3,7 +3,7 @@
 // as [[a1|their words]]. "a1" names one earlier answer; the reader turns the span into a
 // highlighted reference with a card showing the full answer. Text without markers is plain.
 
-const MARKER = /\[\[(a\d{1,2})\|([^\]\[\n]{1,200})\]\]/g;
+const MARKER = /\[\[(a\d{1,2})\|([^\][\n]{1,200})\]\]/g;
 
 export type PromptSegment = { type: "text"; text: string } | { type: "ref"; key: string; text: string };
 
