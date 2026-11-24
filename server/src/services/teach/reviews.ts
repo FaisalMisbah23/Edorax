@@ -14,6 +14,8 @@ import { xpKeys } from "../../shared/gamification/xp.js";
 import type { SubmitReviewBody } from "../../validations/teach.js";
 import { mentoredCoursesWhere, requireCourseById } from "./access.js";
 import { generateReviewDraft } from "./ai/review-draft.js";
+import { ensureAutoDraft, queueAutoDrafts, readStoredDraft } from "./ai/auto-draft.js";
+import { aiReviewAutoDraftAvailable } from "../../config/env.js";
 import { loadAiKeyForUse } from "../ai/credentials.js";
 import { AiError, type AiProviderName } from "../ai/openrouter.js";
 import { CapstoneCheckConfigSchema } from "../../shared/blocks/capstone-check/schema.js";
@@ -42,9 +44,16 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string):
           orderBy: { submittedAt: "asc" },
           include: {
             user: { select: { name: true, email: true } },
-            block: { select: { chapter: { select: { title: true, course: { select: { title: true } } } } } },
+            block: {
+              select: {
+                type: true,
+                points: true,
+                chapter: { select: { id: true, title: true, module: { select: { title: true } }, course: { select: { slug: true, title: true } } } },
+              },
+            },
           },
         });
+  const progress = await loadLearnerProgress(pending.map((response) => response.enrollmentId));
 
   pending.sort((a, b) => {
     const aResub = a.attempt > 1 ? 0 : 1;
@@ -53,16 +62,48 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string):
     return a.submittedAt.getTime() - b.submittedAt.getTime();
   });
 
+  const items = pending.map((response) => ({
+    id: response.id,
+    attempt: response.attempt,
+    submittedAt: response.submittedAt.toISOString(),
+    learnerLabel: response.user.name ?? response.user.email,
+    courseTitle: response.block.chapter.course.title,
+    chapterTitle: response.block.chapter.title,
+    blockType: response.block.type,
+    maxScore: response.block.points,
+    aiDraft: readStoredDraft(response.aiDraft, response.aiDraftModel)?.draft ?? null,
+    ...reviewContext(response.block.chapter, response.enrollmentId, progress),
+  }));
+  // Open answers without a draft yet get one in the background, oldest first.
+  queueAutoDrafts(items.filter((item) => item.blockType === "OPEN_QUESTION" && !item.aiDraft).map((item) => item.id));
+
+  return { courses, items, autoDraft: aiReviewAutoDraftAvailable };
+}
+
+type LearnerProgress = NonNullable<ReviewDetailView["learnerProgress"]>;
+
+async function loadLearnerProgress(enrollmentIds: string[]): Promise<Map<string, LearnerProgress>> {
+  const ids = [...new Set(enrollmentIds)];
+  if (!ids.length) return new Map();
+  const rows = await prisma.enrollment.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, percentComplete: true, chaptersCompleted: true, status: true },
+  });
+  return new Map(rows.map((row) => [row.id, { percentComplete: row.percentComplete, chaptersCompleted: row.chaptersCompleted, status: row.status }]));
+}
+
+function reviewContext(
+  chapter: { id: string; module: { title: string } | null; course: { slug: string } },
+  enrollmentId: string,
+  progress: Map<string, LearnerProgress>
+) {
+  const slug = chapter.course.slug;
   return {
-    courses,
-    items: pending.map((response) => ({
-      id: response.id,
-      attempt: response.attempt,
-      submittedAt: response.submittedAt.toISOString(),
-      learnerLabel: response.user.name ?? response.user.email,
-      courseTitle: response.block.chapter.course.title,
-      chapterTitle: response.block.chapter.title,
-    })),
+    courseSlug: slug,
+    moduleTitle: chapter.module?.title ?? null,
+    chapterHref: `/courses/${encodeURIComponent(slug)}/preview?chapter=${encodeURIComponent(chapter.id)}`,
+    learnerHref: `/courses/${encodeURIComponent(slug)}/mentees/${encodeURIComponent(enrollmentId)}`,
+    learnerProgress: progress.get(enrollmentId) ?? null,
   };
 }
 
@@ -72,7 +113,7 @@ async function requireReviewableResponse(user: SessionUser, responseId: string) 
     include: {
       user: { select: { id: true, name: true, email: true } },
       block: {
-        include: { chapter: { select: { id: true, title: true, course: { select: { id: true, slug: true, title: true } } } } },
+        include: { chapter: { select: { id: true, title: true, module: { select: { title: true } }, course: { select: { id: true, slug: true, title: true } } } } },
       },
       review: { select: { score: true, verdict: true } },
     },
@@ -86,14 +127,20 @@ async function requireReviewableResponse(user: SessionUser, responseId: string) 
 export async function loadReviewDetail(user: SessionUser, responseId: string): Promise<ReviewDetailView> {
   const response = await requireReviewableResponse(user, responseId);
 
-  const [history, integrity] = await Promise.all([
+  const [history, integrity, progress] = await Promise.all([
     prisma.response.findMany({
       where: { blockId: response.blockId, userId: response.userId, review: { isNot: null } },
       orderBy: { attempt: "asc" },
       select: { id: true, attempt: true, review: { select: { verdict: true, feedback: true, reviewer: { select: { name: true } } } } },
     }),
     loadIntegritySummaries(response.enrollmentId, response.block.chapter.id),
+    loadLearnerProgress([response.enrollmentId]),
   ]);
+  // The first pass is usually ready from the queue; if not, make it now (a few seconds on Haiku).
+  const aiDraft =
+    response.status === "PENDING_REVIEW" && response.block.type === "OPEN_QUESTION"
+      ? (readStoredDraft(response.aiDraft, response.aiDraftModel) ?? (await ensureAutoDraft(response.id)))
+      : null;
 
   const config = OpenQuestionConfigSchema.safeParse(response.block.config);
   const capstone = response.block.type === "CAPSTONE_CHECK" ? await loadCapstoneReview(response.blockId, response.userId, response.id, response.block.config) : null;
@@ -134,6 +181,9 @@ export async function loadReviewDetail(user: SessionUser, responseId: string): P
     ),
     integrity,
     capstone,
+    aiDraft,
+    platformDraft: aiReviewAutoDraftAvailable,
+    ...reviewContext(response.block.chapter, response.enrollmentId, progress),
   };
 }
 
@@ -200,6 +250,13 @@ export async function generateAiReviewDraft(user: SessionUser, responseId: strin
     throw new UnprocessableError("This submission could not be prepared for AI review.", TEACH_ERROR_CODES.AI_DRAFT_UNSUPPORTED);
   }
 
+  // With automatic drafts on, "Draft again" runs on the platform key: the mentor needs no key.
+  if (aiReviewAutoDraftAvailable) {
+    const fresh = await ensureAutoDraft(response.id, { force: true });
+    if (fresh) return fresh;
+    throw new UnprocessableError("AI drafting is temporarily unavailable. Try again in a moment.", TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);
+  }
+
   // The reviewing instructor's own OpenRouter or Anthropic key pays for the draft.
   let instructorKey: { provider: AiProviderName; apiKey: string; model: string };
   try {
@@ -255,4 +312,18 @@ export async function generateAiReviewDraft(user: SessionUser, responseId: strin
         : "AI drafting is temporarily unavailable. Try again in a moment.";
     throw new UnprocessableError(safeMessage, TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);
   }
+}
+
+/** Send the saved AI draft as the review, unchanged: the mentor's one-tap approval of the first pass. */
+export async function acceptAiDraft(user: SessionUser, responseId: string): Promise<void> {
+  const response = await requireReviewableResponse(user, responseId);
+  const stored = readStoredDraft(response.aiDraft, response.aiDraftModel);
+  if (!stored) {
+    throw new UnprocessableError("There is no AI draft for this answer yet. Open it to review by hand.", TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);
+  }
+  await submitReview(user, responseId, {
+    verdict: stored.draft.suggestedVerdict,
+    feedback: stored.draft.feedback,
+    score: Math.min(stored.draft.suggestedScore, response.block.points),
+  });
 }

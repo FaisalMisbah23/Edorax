@@ -141,6 +141,7 @@ router.get("/review", validate({ query: reviewQueueQuery }), teach.getReviewQueu
 router.get("/review/:responseId", validateParams(responseIdParams), teach.getReviewDetail);
 router.post("/review/:responseId", validate({ params: responseIdParams, body: submitReviewBody }), teach.submitReview);
 router.post("/review/:responseId/ai-draft", validateParams(responseIdParams), teach.generateAiReviewDraft);
+router.post("/review/:responseId/accept-ai-draft", validateParams(responseIdParams), teach.acceptAiDraft);
 
 router.get("/integrity/attempts/:attemptId", validateParams(attemptParams), integrity.attemptDetail);
 

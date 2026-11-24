@@ -7,6 +7,7 @@ import { submitReview } from "@/server/actions/reviews";
 import { ReviewForm } from "@/components/teach/review-form";
 import { QuizIntegrity } from "@/components/teach/evaluation/quiz-integrity";
 import { CapstoneReport, capstoneDraftFeedback } from "@/components/teach/evaluation/capstone-report";
+import { ReviewContextLinks } from "@/components/teach/review-context-links";
 
 export default async function ReviewDetailPage({
   params,
@@ -49,14 +50,19 @@ export default async function ReviewDetailPage({
       </Link>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            {course.title} › {response.chapterTitle}
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">
+            {course.title}
+            {response.moduleTitle ? ` › ${response.moduleTitle}` : ""}
+          </p>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            {response.chapterTitle}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {response.learner.name ?? response.learner.email} · attempt {response.attempt} ·{" "}
             submitted {new Date(response.submittedAt).toLocaleString()}
           </p>
+          <ReviewContextLinks item={response} className="mt-3" />
         </div>
         {response.status === "PENDING_REVIEW" && (
           <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
@@ -152,7 +158,12 @@ export default async function ReviewDetailPage({
                     initialScore: capstonePercent === null ? null : Math.round((capstonePercent / 100) * response.block.points),
                     note: "Prefilled from the AI check. Approve to confirm it, or change the feedback, score or verdict to override it. Only an approval counts toward the certificate.",
                   }
-                : {})}
+                : {
+                    initialDraft: response.aiDraft?.draft ?? null,
+                    initialModel: response.aiDraft?.model ?? null,
+                    platformDraft: response.platformDraft,
+                    ...(response.aiDraft ? { note: "Prefilled from Claude's first pass. Check it, edit if needed, then approve or send it back." } : {}),
+                  })}
             />
           )}
         </section>
