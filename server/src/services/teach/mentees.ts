@@ -1,4 +1,4 @@
-import type { CourseMenteesView, MenteeAttentionKind, MenteeEvaluation } from "../../shared/api/teach.js";
+import type { AllMenteesView, CourseMenteesView, MenteeAttentionKind, MenteeEvaluation, MenteeRosterItem } from "../../shared/api/teach.js";
 import { resolveCourseFamily, summarizeLearnerTrack } from "../../shared/lib/course-tracks.js";
 import { readReleaseContent, variantForRelease } from "../courses/releases.js";
 import { helpUiCopy } from "../../shared/lib/help-ui-copy.js";
@@ -7,7 +7,7 @@ import { NotFoundError } from "../../utils/errors.js";
 import type { SessionUser } from "../../types/auth.js";
 import { inviteAcceptUrl } from "../email/send.js";
 import { CONFIRMED_ENROLLMENT_WHERE } from "../enrollment/lifecycle.js";
-import { requireCourseBySlug } from "./access.js";
+import { mentoredCoursesWhere, requireCourseBySlug } from "./access.js";
 import { loadMenteeEvaluation } from "./evaluation/load-mentee-evaluation.js";
 import { activityState, average, formatLastActive, progressState } from "./helpers.js";
 
@@ -159,15 +159,53 @@ export async function loadCourseMentees(user: SessionUser, courseSlug: string): 
     ),
     mentees,
     attentionMentees: mentees.filter((mentee) => mentee.attention.length > 0),
-    summary: {
-      total: mentees.length,
-      active: mentees.filter((mentee) => mentee.activityState === "recent").length,
-      averageCompletion: average(mentees.map((mentee) => mentee.percentComplete)),
-      completed: mentees.filter((mentee) => mentee.progressState === "completed").length,
-      pendingReviews: mentees.reduce((sum, mentee) => sum + mentee.pendingReviews, 0),
-      openHelpRequests: mentees.reduce((sum, mentee) => sum + mentee.openHelpRequests, 0),
-      inactive: mentees.filter((mentee) => mentee.activityState === "inactive" && mentee.status === "IN_PROGRESS").length,
-    },
+    summary: summarize(mentees),
+  };
+}
+
+function summarize(mentees: MenteeRosterItem[]): CourseMenteesView["summary"] {
+  return {
+    total: mentees.length,
+    active: mentees.filter((mentee) => mentee.activityState === "recent").length,
+    averageCompletion: average(mentees.map((mentee) => mentee.percentComplete)),
+    completed: mentees.filter((mentee) => mentee.progressState === "completed").length,
+    pendingReviews: mentees.reduce((sum, mentee) => sum + mentee.pendingReviews, 0),
+    openHelpRequests: mentees.reduce((sum, mentee) => sum + mentee.openHelpRequests, 0),
+    inactive: mentees.filter((mentee) => mentee.activityState === "inactive" && mentee.status === "IN_PROGRESS").length,
+  };
+}
+
+const ALL_COURSES_BATCH = 4;
+
+/**
+ * Every learner across the courses this instructor runs, newest activity first.
+ * Reuses the per-course roster so the rows, flags and access rules stay identical.
+ */
+export async function loadAllMentees(user: SessionUser, courseId?: string | null): Promise<AllMenteesView> {
+  const courses = await prisma.course.findMany({
+    where: mentoredCoursesWhere(user),
+    orderBy: { title: "asc" },
+    select: { id: true, slug: true, title: true },
+  });
+  const selected = courseId ? courses.filter((course) => course.id === courseId) : courses;
+
+  const mentees: MenteeRosterItem[] = [];
+  for (let start = 0; start < selected.length; start += ALL_COURSES_BATCH) {
+    const batch = selected.slice(start, start + ALL_COURSES_BATCH);
+    const views = await Promise.all(batch.map((course) => loadCourseMentees(user, course.slug)));
+    views.forEach((view, index) => {
+      const course = batch[index]!;
+      for (const mentee of view.mentees) mentees.push({ ...mentee, course: { id: course.id, slug: course.slug, title: course.title } });
+    });
+  }
+  mentees.sort((a, b) => (b.lastActiveAt ?? "").localeCompare(a.lastActiveAt ?? ""));
+
+  return {
+    courses,
+    courseId: courseId && selected.length ? courseId : null,
+    mentees,
+    attentionMentees: mentees.filter((mentee) => mentee.attention.length > 0),
+    summary: summarize(mentees),
   };
 }
 

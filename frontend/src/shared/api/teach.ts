@@ -271,6 +271,8 @@ export type MenteeRosterItem = {
   evaluationHref: string;
   /** Variant and specialisation for a course in a family; null otherwise. */
   track: LearnerTrackSummary | null;
+  /** Set on the all-courses roster, so each row names its course. */
+  course?: { id: string; slug: string; title: string };
 };
 
 export type PendingInviteView = { id: string; email: string; createdAt: string };
@@ -290,6 +292,16 @@ export type CourseMenteesView = {
     openHelpRequests: number;
     inactive: number;
   };
+};
+
+/** GET /api/v1/teach/mentees: every learner across the courses this instructor runs. */
+export type AllMenteesView = {
+  courses: Array<{ id: string; slug: string; title: string }>;
+  /** The course filter in effect, or null for all courses. */
+  courseId: string | null;
+  mentees: MenteeRosterItem[];
+  attentionMentees: MenteeRosterItem[];
+  summary: CourseMenteesView["summary"];
 };
 
 export type AssignByEmailsResult = {
