@@ -1,20 +1,24 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { env } from "../../config/env.js";
 import { AppError } from "../../utils/errors.js";
 
-// Calls OpenRouter with a learner's own key. Every failure becomes an AiError
-// with a stable code and a message written for the learner. Messages never
-// include the key, the request body or the provider's raw reply, and no
-// error carries a `cause`, so nothing secret can reach a response or a log.
+// Calls the learner's own AI provider (OpenRouter, Gemini or Anthropic) with
+// their own key. Every failure becomes an AiError with a stable code and a
+// message written for the learner. Messages never include the key, the
+// request body or the provider's raw reply, and no error carries a `cause`,
+// so nothing secret can reach a response or a log.
 
 export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
 export const DEFAULT_INTERVIEW_MODEL = "google/gemini-2.5-flash";
 export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
-export type AiProviderName = "OPENROUTER" | "GEMINI";
+export const DEFAULT_ANTHROPIC_MODEL = "claude-haiku-5-5";
+export type AiProviderName = "OPENROUTER" | "GEMINI" | "ANTHROPIC";
 
 export function defaultInterviewModel(provider: AiProviderName = "OPENROUTER"): string {
   if (provider === "GEMINI") return DEFAULT_GEMINI_MODEL;
+  if (provider === "ANTHROPIC") return DEFAULT_ANTHROPIC_MODEL;
   return env.OPENROUTER_INTERVIEW_MODEL ?? DEFAULT_INTERVIEW_MODEL;
 }
 
@@ -33,7 +37,7 @@ const AI_ERRORS: Record<AiErrorCode, { status: number; message: string }> = {
   AI_NOT_CONFIGURED: { status: 503, message: "AI interviews are not set up on this server." },
   AI_KEY_REQUIRED: { status: 409, message: "Add your AI provider key in settings to start an AI interview." },
   AI_KEY_INVALID: { status: 422, message: "Your AI provider did not accept this key. Check that you copied the whole key, or create a new one." },
-  AI_OUT_OF_CREDIT: { status: 402, message: "Your OpenRouter key is out of credit. Add credit on openrouter.ai or pick a free model." },
+  AI_OUT_OF_CREDIT: { status: 402, message: "Your AI provider key is out of credit. Add credit with your provider or pick a free model." },
   AI_RATE_LIMITED: { status: 429, message: "Your AI provider is rate limiting the key. Wait a minute and try again." },
   AI_PROVIDER_TIMEOUT: { status: 504, message: "Your AI provider took too long to answer. Please try again." },
   AI_PROVIDER_ERROR: { status: 502, message: "Your AI provider could not answer right now. Please try again in a moment." },
@@ -112,10 +116,83 @@ async function send(fetchImpl: FetchImpl, url: string, init: RequestInit, timeou
 
 const RETRYABLE: ReadonlySet<AiErrorCode> = new Set(["AI_PROVIDER_TIMEOUT", "AI_PROVIDER_ERROR"]);
 
+// ---- Anthropic (Claude) ----------------------------------------------------------
+
+function anthropicClient(apiKey: string, options: { fetchImpl?: FetchImpl; timeoutMs: number }): Anthropic {
+  // Retries are ours (see createChatCompletion), so the SDK makes one attempt.
+  return new Anthropic({ apiKey, maxRetries: 0, timeout: options.timeoutMs, ...(options.fetchImpl ? { fetch: options.fetchImpl } : {}) });
+}
+
+/** Map an Anthropic SDK error onto one of our codes, without keeping the original. */
+export function errorForAnthropic(error: unknown): AiError {
+  if (error instanceof Anthropic.APIConnectionTimeoutError) return new AiError("AI_PROVIDER_TIMEOUT");
+  if (error instanceof Anthropic.APIConnectionError) return new AiError("AI_PROVIDER_ERROR");
+  if (error instanceof Anthropic.APIError && typeof error.status === "number") {
+    // A key with no balance left comes back as a 400 that names the credit balance.
+    if (error.status === 400 && /credit balance/i.test(error.message)) return new AiError("AI_OUT_OF_CREDIT");
+    return errorForStatus(error.status);
+  }
+  return new AiError("AI_PROVIDER_ERROR");
+}
+
+// Structured outputs accept a subset of JSON Schema: no numeric or length bounds,
+// no maxItems. Callers still validate the reply with their own zod schema.
+const UNSUPPORTED_SCHEMA_KEYS = new Set(["maxItems", "minimum", "maximum", "minLength", "maxLength", "exclusiveMinimum", "exclusiveMaximum"]);
+
+export function toAnthropicSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(toAnthropicSchema);
+  if (!schema || typeof schema !== "object") return schema;
+  return Object.fromEntries(
+    Object.entries(schema as Record<string, unknown>)
+      .filter(([key]) => !UNSUPPORTED_SCHEMA_KEYS.has(key))
+      .map(([key, value]) => [key, toAnthropicSchema(value)])
+  );
+}
+
+async function anthropicCompletion(request: ChatRequest): Promise<string> {
+  const client = anthropicClient(request.apiKey, { fetchImpl: request.fetchImpl, timeoutMs: request.timeoutMs ?? 30_000 });
+  const system = request.messages.filter((message) => message.role === "system").map((message) => message.content).join("\n\n");
+  const turns = request.messages.flatMap((message) =>
+    message.role === "system" ? [] : [{ role: message.role, content: message.content } as Anthropic.MessageParam]
+  );
+  const jsonSchema = (request.responseFormat?.json_schema as { schema?: unknown } | undefined)?.schema;
+
+  let message: Anthropic.Message;
+  try {
+    message = await client.messages.create({
+      model: request.model,
+      // Thinking tokens count toward max_tokens on current Claude models, so leave room.
+      max_tokens: Math.max(request.maxTokens, 4096),
+      ...(system ? { system } : {}),
+      messages: turns,
+      output_config: {
+        effort: "low",
+        ...(jsonSchema ? { format: { type: "json_schema" as const, schema: toAnthropicSchema(jsonSchema) as Record<string, unknown> } } : {}),
+      },
+    });
+  } catch (error) {
+    throw errorForAnthropic(error);
+  }
+  if (message.stop_reason === "refusal") throw new AiError("AI_BAD_OUTPUT");
+  const content = message.content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("").trim();
+  if (!content) throw new AiError("AI_PROVIDER_ERROR");
+  return content;
+}
+
+/** Validate an Anthropic key with GET /v1/models, which costs nothing and sends no learner content. */
+export async function checkAnthropicKey(apiKey: string, options: { fetchImpl?: FetchImpl; timeoutMs?: number } = {}): Promise<void> {
+  try {
+    await anthropicClient(apiKey, { fetchImpl: options.fetchImpl, timeoutMs: options.timeoutMs ?? 10_000 }).models.list({ limit: 1 });
+  } catch (error) {
+    throw errorForAnthropic(error);
+  }
+}
+
 /** One chat completion. Timeouts and 5xx answers are retried once; key, credit and rate errors are not. */
 export async function createChatCompletion(request: ChatRequest): Promise<string> {
   const fetchImpl = request.fetchImpl ?? fetch;
   const provider = request.provider ?? "OPENROUTER";
+  if (provider === "ANTHROPIC") return withRetry(() => anthropicCompletion(request));
   const body = JSON.stringify({
     model: request.model,
     messages: request.messages,
@@ -126,20 +203,27 @@ export async function createChatCompletion(request: ChatRequest): Promise<string
       : {}),
   });
 
+  return withRetry(async () => {
+    const response = await send(
+      fetchImpl,
+      `${provider === "GEMINI" ? GEMINI_BASE_URL : OPENROUTER_BASE_URL}/chat/completions`,
+      { method: "POST", headers: headers(request.apiKey, provider), body },
+      request.timeoutMs ?? 30_000
+    );
+    if (!response.ok) throw errorForStatus(response.status);
+    const parsed = chatResponseSchema.safeParse(await response.json().catch(() => null));
+    const content = parsed.success ? parsed.data.choices[0]!.message.content?.trim() : "";
+    if (!content) throw new AiError("AI_PROVIDER_ERROR");
+    return content;
+  });
+}
+
+/** Two attempts at most: only timeouts and provider errors are retried. */
+async function withRetry(attemptOnce: () => Promise<string>): Promise<string> {
   let lastError: AiError = new AiError("AI_PROVIDER_ERROR");
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const response = await send(
-        fetchImpl,
-        `${provider === "GEMINI" ? GEMINI_BASE_URL : OPENROUTER_BASE_URL}/chat/completions`,
-        { method: "POST", headers: headers(request.apiKey, provider), body },
-        request.timeoutMs ?? 30_000
-      );
-      if (!response.ok) throw errorForStatus(response.status);
-      const parsed = chatResponseSchema.safeParse(await response.json().catch(() => null));
-      const content = parsed.success ? parsed.data.choices[0]!.message.content?.trim() : "";
-      if (!content) throw new AiError("AI_PROVIDER_ERROR");
-      return content;
+      return await attemptOnce();
     } catch (error) {
       if (!(error instanceof AiError)) throw new AiError("AI_PROVIDER_ERROR");
       lastError = error;

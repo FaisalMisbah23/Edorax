@@ -15,7 +15,7 @@ import type { SubmitReviewBody } from "../../validations/teach.js";
 import { mentoredCoursesWhere, requireCourseById } from "./access.js";
 import { generateReviewDraft } from "./ai/review-draft.js";
 import { loadAiKeyForUse } from "../ai/credentials.js";
-import { AiError } from "../ai/openrouter.js";
+import { AiError, type AiProviderName } from "../ai/openrouter.js";
 import { CapstoneCheckConfigSchema } from "../../shared/blocks/capstone-check/schema.js";
 import { toMentorView } from "../capstone/service.js";
 
@@ -200,21 +200,21 @@ export async function generateAiReviewDraft(user: SessionUser, responseId: strin
     throw new UnprocessableError("This submission could not be prepared for AI review.", TEACH_ERROR_CODES.AI_DRAFT_UNSUPPORTED);
   }
 
-  // The reviewing instructor's own OpenRouter key pays for the draft.
-  let instructorKey: { provider: string; apiKey: string; model: string };
+  // The reviewing instructor's own OpenRouter or Anthropic key pays for the draft.
+  let instructorKey: { provider: AiProviderName; apiKey: string; model: string };
   try {
     instructorKey = await loadAiKeyForUse(user.id);
   } catch (error) {
     if (error instanceof AiError && error.code === "AI_KEY_REQUIRED") {
-      throw new UnprocessableError("Add your OpenRouter key in Settings to use AI drafting.", TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);
+      throw new UnprocessableError("Add your OpenRouter or Anthropic (Claude) key in Settings to use AI drafting.", TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);
     }
     if (error instanceof AiError && error.code === "AI_KEY_INVALID") {
       throw new UnprocessableError(error.message, TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);
     }
     throw new UnprocessableError("AI drafting is temporarily unavailable. Try again in a moment.", TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);
   }
-  if (instructorKey.provider !== "OPENROUTER") {
-    throw new UnprocessableError("AI drafting needs an OpenRouter key. Switch your key in Settings.", TEACH_ERROR_CODES.AI_DRAFT_UNSUPPORTED);
+  if (instructorKey.provider === "GEMINI") {
+    throw new UnprocessableError("AI drafting needs an OpenRouter or Anthropic (Claude) key. Switch your key in Settings.", TEACH_ERROR_CODES.AI_DRAFT_UNSUPPORTED);
   }
 
   const priorResponses = await prisma.response.findMany({
@@ -237,7 +237,7 @@ export async function generateAiReviewDraft(user: SessionUser, responseId: strin
       answer: answerParts.filter(Boolean).join("\n\n"),
       previousFeedback: priorResponses.flatMap((item) => (item.review?.feedback ? [item.review.feedback] : [])),
       maxScore: response.block.points,
-    }, { apiKey: instructorKey.apiKey, model: instructorKey.model });
+    }, { provider: instructorKey.provider, apiKey: instructorKey.apiKey, model: instructorKey.model });
     return {
       model: result.model,
       draft: { ...result.draft, suggestedScore: Math.min(result.draft.suggestedScore, response.block.points) },
@@ -246,7 +246,11 @@ export async function generateAiReviewDraft(user: SessionUser, responseId: strin
     // Configuration and upstream failures are safe to show; anything else stays generic.
     const message = error instanceof Error ? error.message : "";
     const safeMessage =
-      message.includes("Add your OpenRouter key") || message.startsWith("OpenRouter could not generate") || message.startsWith("OpenRouter returned an unreadable")
+      message.includes("Add your AI key") ||
+      message.startsWith("OpenRouter could not generate") ||
+      message.startsWith("OpenRouter returned an unreadable") ||
+      message.startsWith("Claude could not generate") ||
+      message.startsWith("Claude returned an unreadable")
         ? message
         : "AI drafting is temporarily unavailable. Try again in a moment.";
     throw new UnprocessableError(safeMessage, TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);

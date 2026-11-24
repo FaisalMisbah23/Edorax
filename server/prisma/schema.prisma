@@ -219,6 +219,7 @@ enum StudySessionStatus {
 enum AiProvider {
   OPENROUTER
   GEMINI
+  ANTHROPIC
 }
 
 enum AiInterviewStatus {

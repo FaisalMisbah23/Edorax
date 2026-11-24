@@ -59,7 +59,7 @@ export default async function InstructorProfilePage() {
               <div className="rounded-xl border bg-card p-6 shadow-sm">
                 <h2 className="text-lg font-semibold">AI drafting key</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Drafts for mentor reviews use your own OpenRouter key, so the cost stays with your account.
+                  Drafts for mentor reviews use your own OpenRouter or Anthropic (Claude) key, so the cost stays with your account.
                 </p>
                 <div className="mt-4">
                   <AiKeySettings initial={aiStatus} />

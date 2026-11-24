@@ -4,6 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { AiCredentialStatus } from "@/shared/api/ai";
 
+type Provider = AiCredentialStatus["provider"];
+
+// defaultModel mirrors the server defaults, shown before a key for that provider is saved.
+const PROVIDERS: Record<Provider, { name: string; short: string; placeholder: string; howTo: string; defaultModel: string }> = {
+  OPENROUTER: { name: "OpenRouter", short: "OpenRouter", placeholder: "sk-or-v1-...", howTo: "Create one at openrouter.ai/keys.", defaultModel: "google/gemini-2.5-flash" },
+  GEMINI: { name: "Google Gemini", short: "Gemini", placeholder: "AIza...", howTo: "Create one in Google AI Studio.", defaultModel: "gemini-2.5-flash" },
+  ANTHROPIC: { name: "Anthropic (Claude)", short: "Anthropic", placeholder: "sk-ant-...", howTo: "Create one at console.anthropic.com under API keys.", defaultModel: "claude-haiku-5-5" },
+};
+
 // The "AI interviews" settings card, drawn from props only so it can be tested
 // without a browser. The key itself is only ever typed into the box here and
 // sent once; the server answers with its last four characters.
@@ -14,7 +23,7 @@ export type AiKeySettingsViewProps = {
   status: AiCredentialStatus;
   keyDraft: string;
   modelDraft: string;
-  providerDraft?: "OPENROUTER" | "GEMINI";
+  providerDraft?: Provider;
   /** True while the learner is pasting a replacement for a saved key. */
   replacing: boolean;
   busy: AiKeyBusy;
@@ -22,7 +31,7 @@ export type AiKeySettingsViewProps = {
   error: string | null;
   onKeyChange: (value: string) => void;
   onModelChange: (value: string) => void;
-  onProviderChange?: (value: "OPENROUTER" | "GEMINI") => void;
+  onProviderChange?: (value: Provider) => void;
   onSave: () => void;
   onTest: () => void;
   onSaveModel: () => void;
@@ -30,8 +39,8 @@ export type AiKeySettingsViewProps = {
   onReplace: (replacing: boolean) => void;
 };
 
-function Notes({ provider }: { provider: "OPENROUTER" | "GEMINI" }) {
-  const name = provider === "GEMINI" ? "Google Gemini" : "OpenRouter";
+function Notes({ provider }: { provider: Provider }) {
+  const name = PROVIDERS[provider].name;
   return (
     <div className="space-y-2 rounded-lg border bg-muted/40 p-3 text-sm leading-6 text-muted-foreground">
       <p>
@@ -54,7 +63,8 @@ export function AiKeySettingsView(props: AiKeySettingsViewProps) {
   const showKeyInput = !status.hasKey || props.replacing;
   const idle = busy === null;
   const provider = props.providerDraft ?? status.provider;
-  const providerName = provider === "GEMINI" ? "Gemini" : "OpenRouter";
+  const providerName = PROVIDERS[provider].short;
+  const defaultModel = provider === status.provider ? status.defaultModel : PROVIDERS[provider].defaultModel;
 
   return (
     <section id="ai-interviews" aria-labelledby="ai-interviews-title" className="scroll-mt-24 space-y-4 rounded-xl border bg-card p-4 sm:p-6">
@@ -81,12 +91,13 @@ export function AiKeySettingsView(props: AiKeySettingsViewProps) {
               <select
                 id="ai-provider"
                 value={provider}
-                onChange={(event) => props.onProviderChange?.(event.target.value as "OPENROUTER" | "GEMINI")}
+                onChange={(event) => props.onProviderChange?.(event.target.value as Provider)}
                 disabled={!idle}
                 className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="OPENROUTER">OpenRouter</option>
                 <option value="GEMINI">Google Gemini</option>
+                <option value="ANTHROPIC">Anthropic (Claude)</option>
               </select>
             </div>
           ) : null}
@@ -108,7 +119,7 @@ export function AiKeySettingsView(props: AiKeySettingsViewProps) {
                 type="password"
                 value={props.keyDraft}
                 onChange={(event) => props.onKeyChange(event.target.value)}
-                placeholder={provider === "GEMINI" ? "AIza..." : "sk-or-v1-..."}
+                placeholder={PROVIDERS[provider].placeholder}
                 autoComplete="off"
                 spellCheck={false}
                 maxLength={300}
@@ -117,7 +128,7 @@ export function AiKeySettingsView(props: AiKeySettingsViewProps) {
                 className="h-10 font-mono text-base"
               />
               <p className="text-xs text-muted-foreground">
-                {provider === "GEMINI" ? "Create one in Google AI Studio." : "Create one at openrouter.ai/keys."} We verify it before saving.
+                {PROVIDERS[provider].howTo} We verify it before saving.
               </p>
             </div>
           ) : null}
@@ -128,7 +139,7 @@ export function AiKeySettingsView(props: AiKeySettingsViewProps) {
               id="openrouter-model"
               value={props.modelDraft}
               onChange={(event) => props.onModelChange(event.target.value)}
-              placeholder={status.defaultModel}
+              placeholder={defaultModel}
               autoComplete="off"
               spellCheck={false}
               maxLength={120}
@@ -136,7 +147,7 @@ export function AiKeySettingsView(props: AiKeySettingsViewProps) {
               className="h-10 text-base"
             />
             <p className="text-xs text-muted-foreground">
-              Leave empty to use {status.defaultModel}. Enter a model id supported by {providerName}.
+              Leave empty to use {defaultModel}. Enter a model id supported by {providerName}.
             </p>
           </div>
 

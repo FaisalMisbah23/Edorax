@@ -11,7 +11,7 @@ const model = z
   .transform((value) => (value === "" ? null : value));
 
 export const aiCredentialSaveBody = z.object({
-  provider: z.enum(["OPENROUTER", "GEMINI"]).default("OPENROUTER"),
+  provider: z.enum(["OPENROUTER", "GEMINI", "ANTHROPIC"]).default("OPENROUTER"),
   apiKey: z
     .string({ error: "Paste your AI provider key." })
     .trim()

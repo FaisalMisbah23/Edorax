@@ -107,3 +107,13 @@ describe("AI key settings", () => {
     expect(html).toContain("OpenRouter did not accept this key.");
   });
 });
+
+describe("AI key settings with Anthropic", () => {
+  it("offers Anthropic (Claude) and shows its key format and default model", () => {
+    const html = render({}, { providerDraft: "ANTHROPIC" });
+    expect(html).toContain('<option value="ANTHROPIC" selected="">Anthropic (Claude)</option>');
+    expect(html).toContain('placeholder="sk-ant-..."');
+    expect(html).toContain("console.anthropic.com");
+    expect(html).toContain("Leave empty to use claude-haiku-5-5");
+  });
+});

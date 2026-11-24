@@ -23,7 +23,7 @@ import { lockEnrollmentVariant, recomputeChapterProgress, recordBlockStats } fro
 import { env } from "../../../config/env.js";
 import { parseEncryptionKey } from "../credential-crypto.js";
 import { loadAiKeyForUse } from "../credentials.js";
-import { AiError, createChatCompletion, defaultInterviewModel } from "../openrouter.js";
+import { AiError, createChatCompletion, defaultInterviewModel, type AiProviderName } from "../openrouter.js";
 import {
   buildFeedbackMessages,
   buildInterviewMessages,
@@ -277,7 +277,7 @@ function normaliseFeedback(raw: unknown, config: AiInterviewConfig, transcript: 
 }
 
 async function requestFeedback(
-  provider: "OPENROUTER" | "GEMINI",
+  provider: AiProviderName,
   apiKey: string,
   model: string,
   config: AiInterviewConfig,
