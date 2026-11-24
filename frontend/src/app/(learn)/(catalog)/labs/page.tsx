@@ -4,6 +4,8 @@ import { SITE_SHARE_IMAGE } from "@/lib/site";
 import { LAB_KINDS, areaById } from "@/lib/learn-areas";
 import { visualLabGroups } from "@/lib/visual-labs";
 import { loadGuidedTracks } from "@/lib/guided-labs-server";
+import { loadShellLabs } from "@/lib/shell-labs-server";
+import { shellLabMeta } from "@/lib/shell-labs";
 import { LAB_KIND_ICON } from "@/components/areas/area-icon";
 import { AreaHero, AreaPage, CardGrid, InfoCard, StepList } from "@/components/areas/area-page";
 import { FilterChips, pickFilter } from "@/components/areas/filter-chips";
@@ -22,6 +24,7 @@ export default async function LabsPage({ searchParams }: { searchParams: SearchP
   const groups = visualLabGroups();
   const guided = await loadGuidedTracks();
   const guidedOpen = guided.filter((t) => t.open).length;
+  const shellLabs = await loadShellLabs();
   const query = await searchParams;
   const kind = pickFilter(query.kind, LAB_KINDS.map((k) => k.id));
   const topic = kind === "guided" || kind === "shell" ? null : pickFilter(query.topic, groups.map((g) => g.id));
@@ -52,7 +55,7 @@ export default async function LabsPage({ searchParams }: { searchParams: SearchP
           params={params}
           options={[
             { value: null, label: "All" },
-            ...LAB_KINDS.map((k) => ({ value: k.id, label: k.name.replace(/ labs$/, ""), count: k.status !== "live" ? undefined : k.id === "guided" ? guidedOpen : total, soon: k.status !== "live" })),
+            ...LAB_KINDS.map((k) => ({ value: k.id, label: k.name.replace(/ labs$/, ""), count: k.status !== "live" ? undefined : k.id === "guided" ? guidedOpen : k.id === "shell" ? shellLabs.length : total, soon: k.status !== "live" })),
           ]}
         />
         {kind === null || kind === "visual" ? (
@@ -109,6 +112,33 @@ export default async function LabsPage({ searchParams }: { searchParams: SearchP
                 />
               ))}
             </CardGrid>
+          </div>
+        </section>
+      ) : null}
+
+      {kind === null || kind === "shell" ? (
+        <section aria-labelledby="labs-shell" className="mt-10">
+          <h2 id="labs-shell" className="text-xl tracking-[-0.02em]">
+            Shell labs
+          </h2>
+          <p className="mt-1 max-w-3xl text-base text-muted-foreground">
+            Real machines and a real terminal. You can open any lab here and see what it asks. To work on a lab, you need the free Edorax desktop app.{" "}
+            <Link href="/labs/shell#download" className="font-bold text-primary underline-offset-4 hover:underline">
+              Get the desktop app
+            </Link>
+          </p>
+          <div className="mt-4">
+            {shellLabs.length > 0 ? (
+              <CardGrid>
+                {shellLabs.map((lab) => (
+                  <InfoCard key={lab.slug} title={lab.title} body={lab.summary} href={`/labs/shell/${lab.slug}`} cta="Open lab" meta={shellLabMeta(lab)} />
+                ))}
+              </CardGrid>
+            ) : (
+              <p className="border border-dashed border-border bg-card p-5 text-base text-muted-foreground">
+                The shell labs could not be loaded right now. Try again in a minute.
+              </p>
+            )}
           </div>
         </section>
       ) : null}

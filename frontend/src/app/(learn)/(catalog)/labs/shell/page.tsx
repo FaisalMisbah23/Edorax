@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRight, Container, FolderOpen, LogIn, MonitorDown, Terminal } from "lucide-react";
+import { Container, FolderOpen, LogIn, MonitorDown, Terminal } from "lucide-react";
 import { SITE_SHARE_IMAGE } from "@/lib/site";
+import { DesktopDownloadButtons } from "@/components/areas/desktop-download";
+import { loadDesktopDownloads } from "@/lib/shell-labs-server";
 import { AreaHero, AreaPage, AreaSection, CardGrid, InfoCard } from "@/components/areas/area-page";
 
 export const metadata: Metadata = {
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
   openGraph: { title: "Shell labs on Edorax", url: "/labs/shell", images: [SITE_SHARE_IMAGE] },
 };
 
-export default function ShellLabsPage() {
+export default async function ShellLabsPage() {
+  const downloads = await loadDesktopDownloads();
   return (
     <AreaPage>
       <AreaHero
@@ -79,13 +81,7 @@ export default function ShellLabsPage() {
               not built yet.
             </p>
           </div>
-          <Link
-            href="https://github.com/devweekends/Edorax/releases"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md border-2 border-primary px-5 text-base font-bold text-primary outline-none transition-colors hover:bg-secondary focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
-          >
-            Download the app
-            <ArrowRight className="size-4" aria-hidden />
-          </Link>
+          <DesktopDownloadButtons className="shrink-0" options={downloads} />
         </div>
       </AreaSection>
     </AreaPage>

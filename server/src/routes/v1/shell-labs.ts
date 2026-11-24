@@ -7,6 +7,9 @@ import { requireVerified } from "../../middlewares/require-verified.js";
 // lab (checks and solutions) is sent, as the bundled files were before.
 const router = Router();
 
+// Public: names, summaries and step goals only, so the website can list the labs before sign-in.
+router.get("/public", shellLabs.listPublic);
+
 router.use(authenticate, requireVerified);
 
 router.get("/version", shellLabs.version);
