@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { AiError, checkOpenRouterKey, createChatCompletion } from "../../../../src/services/ai/openrouter.js";
+import { AiError, checkAnthropicKey, checkOpenRouterKey, createChatCompletion, toAnthropicSchema } from "../../../../src/services/ai/openrouter.js";
 
 const apiKey = "sk-or-v1-secret-value-for-tests-0000";
 
@@ -83,5 +83,60 @@ describe("createChatCompletion", () => {
   it("treats an empty reply as a provider error", async () => {
     const error = await caught(createChatCompletion({ ...base, fetchImpl: async () => reply("   ") }));
     expect(error.code).toBe("AI_PROVIDER_ERROR");
+  });
+});
+
+describe("Anthropic provider", () => {
+  const anthropicKey = "sk-ant-api03-secret-value-for-tests";
+
+  it("checks a key with GET /v1/models", async () => {
+    const fetchImpl = vi.fn(async () => json(200, { data: [], has_more: false, first_id: null, last_id: null }));
+    await expect(checkAnthropicKey(anthropicKey, { fetchImpl })).resolves.toBeUndefined();
+    const [url] = fetchImpl.mock.calls[0] as unknown as [string];
+    expect(String(url)).toContain("https://api.anthropic.com/v1/models");
+  });
+
+  it.each([
+    [401, "AI_KEY_INVALID"],
+    [429, "AI_RATE_LIMITED"],
+    [500, "AI_PROVIDER_ERROR"],
+  ])("maps HTTP %i to %s without the key", async (status, code) => {
+    const error = await caught(
+      checkAnthropicKey(anthropicKey, { fetchImpl: async () => json(status, { type: "error", error: { type: "x", message: `bad ${anthropicKey}` } }) })
+    );
+    expect(error.code).toBe(code);
+    expect(error.message).not.toContain(anthropicKey);
+    expect(error.cause).toBeUndefined();
+  });
+
+  it("reports a low credit balance as out of credit", async () => {
+    const error = await caught(
+      checkAnthropicKey(anthropicKey, {
+        fetchImpl: async () => json(400, { type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API." } }),
+      })
+    );
+    expect(error.code).toBe("AI_OUT_OF_CREDIT");
+  });
+
+  it("strips schema keywords structured outputs does not accept", () => {
+    expect(toAnthropicSchema({ type: "array", maxItems: 4, items: { type: "integer", minimum: 0 } })).toEqual({ type: "array", items: { type: "integer" } });
+  });
+
+  it("returns the text reply for a chat completion", async () => {
+    const fetchImpl = vi.fn(async () =>
+      json(200, {
+        id: "msg_1",
+        type: "message",
+        role: "assistant",
+        model: "claude-haiku-5-5",
+        content: [{ type: "text", text: "  Why?  " }],
+        stop_reason: "end_turn",
+        stop_sequence: null,
+        usage: { input_tokens: 1, output_tokens: 1 },
+      })
+    );
+    await expect(
+      createChatCompletion({ provider: "ANTHROPIC", apiKey: anthropicKey, model: "claude-haiku-5-5", messages: [{ role: "user", content: "Hi" }], maxTokens: 50, fetchImpl })
+    ).resolves.toBe("Why?");
   });
 });

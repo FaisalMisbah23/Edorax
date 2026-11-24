@@ -3,13 +3,20 @@ import { env } from "../../config/env.js";
 import { prisma } from "../../db/prisma.js";
 import { NotFoundError } from "../../utils/errors.js";
 import { decryptSecret, encryptSecret, parseEncryptionKey } from "./credential-crypto.js";
-import { AiError, checkGeminiKey, checkOpenRouterKey, defaultInterviewModel, type AiProviderName } from "./openrouter.js";
+import { AiError, checkAnthropicKey, checkGeminiKey, checkOpenRouterKey, defaultInterviewModel, type AiProviderName } from "./openrouter.js";
 
-// One OpenRouter key per learner, stored as AES-256-GCM ciphertext. Status
-// responses expose only the last four characters; the plaintext exists in
-// memory only while a request to OpenRouter is being made.
+// One AI provider key per learner (OpenRouter, Gemini or Anthropic), stored as
+// AES-256-GCM ciphertext. Status responses expose only the last four
+// characters; the plaintext exists in memory only while a request is made.
 
 type Deps = { encryptionKey?: Buffer | null; fetchImpl?: typeof fetch };
+
+/** One cheap request that checks the key with its own provider, without spending credit. */
+async function checkKey(provider: AiProviderName, apiKey: string, deps: Deps): Promise<void> {
+  if (provider === "GEMINI") await checkGeminiKey(apiKey, { fetchImpl: deps.fetchImpl });
+  else if (provider === "ANTHROPIC") await checkAnthropicKey(apiKey, { fetchImpl: deps.fetchImpl });
+  else await checkOpenRouterKey(apiKey, { fetchImpl: deps.fetchImpl });
+}
 
 function serverKey(deps: Deps): Buffer | null {
   return deps.encryptionKey !== undefined ? deps.encryptionKey : parseEncryptionKey(env.AI_KEY_ENCRYPTION_KEY);
@@ -43,7 +50,7 @@ export async function getAiCredentialStatus(userId: string, deps: Deps = {}): Pr
   return toStatus(serverKey(deps) !== null, row);
 }
 
-/** Check the key with OpenRouter, then store it encrypted. Replaces any earlier key. */
+/** Check the key with its provider, then store it encrypted. Replaces any earlier key. */
 export async function saveAiCredential(
   userId: string,
   input: { provider: AiProviderName; apiKey: string; model?: string | null },
@@ -51,8 +58,7 @@ export async function saveAiCredential(
 ): Promise<AiCredentialStatus> {
   const key = requireServerKey(deps);
   const apiKey = input.apiKey.trim();
-  if (input.provider === "GEMINI") await checkGeminiKey(apiKey, { fetchImpl: deps.fetchImpl });
-  else await checkOpenRouterKey(apiKey, { fetchImpl: deps.fetchImpl });
+  await checkKey(input.provider, apiKey, deps);
   const encrypted = encryptSecret(apiKey, key, userId);
   const data = { ...encrypted, provider: input.provider, lastFour: apiKey.slice(-4), model: input.model ?? null };
   const row = await prisma.aiCredential.upsert({
@@ -92,10 +98,9 @@ export async function loadAiKeyForUse(userId: string, deps: Deps = {}): Promise<
   return { provider: row.provider, apiKey, model: row.model ?? defaultInterviewModel(row.provider) };
 }
 
-/** Re-check the stored key with OpenRouter (the settings "Test" button). */
+/** Re-check the stored key with its provider (the settings "Test" button). */
 export async function testAiCredential(userId: string, deps: Deps = {}): Promise<AiCredentialStatus> {
   const { provider, apiKey } = await loadAiKeyForUse(userId, deps);
-  if (provider === "GEMINI") await checkGeminiKey(apiKey, { fetchImpl: deps.fetchImpl });
-  else await checkOpenRouterKey(apiKey, { fetchImpl: deps.fetchImpl });
+  await checkKey(provider, apiKey, deps);
   return getAiCredentialStatus(userId, deps);
 }
