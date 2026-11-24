@@ -124,6 +124,7 @@ router.put("/chapters/:chapterId/draft", validate({ params: chapterIdParams, bod
 router.post("/chapters/:chapterId/publish", validateParams(chapterIdParams), teach.publishChapter);
 router.delete("/chapters/:chapterId", validate({ params: chapterIdParams, body: removeChapterBody }), teach.removeChapter);
 
+router.get("/mentees", teach.listAllMentees);
 router.get("/courses/:courseSlug/mentees", validateParams(courseSlugParams), teach.listMentees);
 router.get("/courses/:courseSlug/mentees/:enrollmentId", validateParams(menteeParams), teach.getMenteeEvaluation);
 router.post("/courses/:courseId/invites/assign", validate({ params: courseIdParams, body: assignByEmailsBody }), teach.assignByEmails);
