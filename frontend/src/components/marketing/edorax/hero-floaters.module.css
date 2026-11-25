@@ -1,0 +1,311 @@
+/* The floating cards beside the hero headline. Shown only where the margins have room. */
+.layer {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .layer {
+    display: block;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+}
+
+/* A slot places and tilts one card, and fades it in. The card inside it does the floating,
+   so the two movements never fight over the same transform. */
+.slot {
+  position: absolute;
+  width: 208px;
+  text-align: left;
+  opacity: 0;
+  animation: arrive 0.7s cubic-bezier(0.2, 0.85, 0.25, 1) forwards;
+}
+
+/* Measured from the middle of the page. From 1280px the cards sit under the line of the
+   headline, beside the text and buttons (about 700px wide), which leaves them room. */
+.leftTop {
+  top: 144px;
+  right: calc(50% + 400px);
+  --tilt: -5deg;
+  animation-delay: 0.15s;
+}
+
+.leftBottom {
+  top: 288px;
+  right: calc(50% + 364px);
+  --tilt: 3deg;
+  animation-delay: 0.45s;
+}
+
+.rightTop {
+  top: 140px;
+  left: calc(50% + 400px);
+  --tilt: 4deg;
+  animation-delay: 0.3s;
+}
+
+/* Kept clear of Dot and the speech bubble, which sit above the lab window on this side. */
+.rightBottom {
+  top: 256px;
+  left: calc(50% + 368px);
+  --tilt: -3deg;
+  animation-delay: 0.6s;
+}
+
+/* From 1500px the margins are wide enough for the upper cards to sit beside the headline
+   itself (about 930px wide), so the four spread out. */
+@media (min-width: 1500px) {
+  .slot {
+    width: 228px;
+  }
+
+  .leftTop {
+    top: 40px;
+    right: calc(50% + 500px);
+  }
+
+  .leftBottom {
+    top: 226px;
+    right: calc(50% + 440px);
+  }
+
+  .rightTop {
+    top: 30px;
+    left: calc(50% + 500px);
+  }
+
+  .rightBottom {
+    top: 204px;
+    left: calc(50% + 450px);
+  }
+}
+
+.card {
+  padding: 12px 14px 13px;
+  background: #ffffff;
+  border: 1px solid #dce0f2;
+  border-radius: 10px;
+  box-shadow: 0 18px 36px -18px rgba(10, 15, 44, 0.35), 0 2px 6px rgba(10, 15, 44, 0.06);
+  color: #0a0f2c;
+  font-size: 13px;
+  line-height: 1.4;
+  transform: rotate(var(--tilt));
+  animation: float 7s ease-in-out infinite alternate;
+}
+
+.leftBottom .card {
+  animation-duration: 8.5s;
+  animation-delay: -2s;
+}
+
+.rightTop .card {
+  animation-duration: 9s;
+  animation-delay: -4s;
+}
+
+.rightBottom .card {
+  animation-duration: 7.5s;
+  animation-delay: -1s;
+}
+
+.card p {
+  margin: 0;
+}
+
+.dark {
+  background: #0a0f2c;
+  border-color: #0a0f2c;
+  color: #f6f7fb;
+}
+
+.hint {
+  border-left: 4px solid #ffc933;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2434e0;
+}
+
+.dark .label {
+  color: #a9b4ff;
+}
+
+.dotBlue {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2434e0;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+
+.prompt {
+  color: #7fe3b0;
+}
+
+.dim {
+  color: #b9c0e6;
+}
+
+.title {
+  display: block;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+
+.body {
+  color: #2a3158;
+}
+
+.needGot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 8px;
+  border: 1px solid #dce0f2;
+  border-radius: 6px;
+  background: #f6f7fb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.needGot span {
+  padding: 6px 8px;
+}
+
+.needGot span + span {
+  border-left: 1px solid #dce0f2;
+}
+
+.needGot small {
+  display: block;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6b7399;
+}
+
+.needGot b {
+  color: #12805c;
+}
+
+.pass {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px !important;
+  font-size: 12px;
+  font-weight: 700;
+  color: #12805c;
+}
+
+.dark .pass {
+  color: #7fe3b0;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.play {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #2434e0;
+  color: #f6f7fb;
+}
+
+.playerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.track {
+  display: block;
+  height: 4px;
+  margin-top: 7px;
+  border-radius: 2px;
+  background: #dce0f2;
+  overflow: hidden;
+}
+
+.trackFill {
+  display: block;
+  width: 38%;
+  height: 100%;
+  background: #2434e0;
+  transform-origin: left;
+  animation: listen 14s linear infinite;
+}
+
+.speed {
+  flex: none;
+  padding: 3px 6px;
+  border: 1px solid #dce0f2;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2434e0;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes float {
+  from {
+    transform: translateY(0) rotate(var(--tilt));
+  }
+
+  to {
+    transform: translateY(-9px) rotate(calc(var(--tilt) * 0.6));
+  }
+}
+
+@keyframes listen {
+  from {
+    width: 8%;
+  }
+
+  to {
+    width: 92%;
+  }
+}
+
+/* No movement for people who ask for less of it: the cards are simply there. */
+@media (prefers-reduced-motion: reduce) {
+  .slot {
+    opacity: 1;
+    animation: none;
+  }
+
+  .card,
+  .trackFill {
+    animation: none;
+  }
+}
