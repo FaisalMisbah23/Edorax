@@ -46,12 +46,12 @@ async function renderContent(course: CourseForAnnouncement, draft: AnnouncementD
   const url = `${appBaseUrl()}${draft.ctaPath}`;
   const html = await renderEmailTemplate("notify-learner-course-announcement", {
     name: name ?? "there",
-    message: draft.message,
+    // Each paragraph is escaped here, so the template prints it as is.
+    paragraphs: draft.message.split(/\n{2,}/).map((part) => escapeHtml(part).replace(/\n/g, "<br>")),
     steps: draft.steps,
     images: absoluteImages(draft.images),
     ctaLabel: draft.ctaLabel,
     url,
-    escapeHtml,
   });
   const steps = draft.steps.length ? `\n\nHow to try it:\n${draft.steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}` : "";
   const text = `Hi ${name ?? "there"},\n\n${draft.message}${steps}\n\n${draft.ctaLabel}: ${url}\n\nTried it? Tell us what you think, with the Give feedback button in the course or by writing back to your instructor.`;

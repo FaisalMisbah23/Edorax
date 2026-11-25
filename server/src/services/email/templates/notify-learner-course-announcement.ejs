@@ -1,6 +1,6 @@
 <%- include('dot', { mood: 'cheer' }) %>
 <p>Hi <%= name %>,</p>
-<% message.split(/\n{2,}/).forEach((part) => { %><p style="margin:0 0 12px;"><%- escapeHtml(part).replace(/\n/g, '<br>') %></p>
+<% paragraphs.forEach((paragraph) => { %><p style="margin:0 0 12px;"><%- paragraph %></p>
 <% }) %>
 <% if (steps.length > 0) { %>
 <p style="margin:16px 0 6px;"><strong>How to try it</strong></p>
