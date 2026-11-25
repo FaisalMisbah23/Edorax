@@ -300,7 +300,10 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
   const [selected, setSelected] = useState<string | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [paletteCollapsed, setPaletteCollapsed] = useState(false);
-  const [testsCollapsed, setTestsCollapsed] = useState(false);
+  // true: the tests panel is shown. false: closed to its tab. null: not chosen yet (a wide board shows it, a narrower one shows the tab).
+  const [testsOpen, setTestsOpen] = useState<boolean | null>(null);
+  // True while the components list is folded only to make room for the tests (see showTests).
+  const foldedForTests = useRef(false);
   const [componentsOpen, setComponentsOpen] = useState(false);
   const [challengeOpen, setChallengeOpen] = useState(isFullscreen && !solutionMode);
   const [resultsOpen, setResultsOpen] = useState(false);
@@ -358,6 +361,14 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
       setChallengeOpen(false);
       setComponentsOpen(false);
     }
+    // The panel sits differently in full screen, so start each side from its own default.
+    if (isFullscreen !== previousFullscreen.current) {
+      setTestsOpen(null);
+      if (foldedForTests.current) {
+        foldedForTests.current = false;
+        setPaletteCollapsed(false);
+      }
+    }
     previousFullscreen.current = isFullscreen;
   }, [isFullscreen, readOnly]);
 
@@ -385,6 +396,8 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
     setChallengeOpen(false);
     setComponentsOpen(false);
     setPreviewId(null);
+    // Bring the tests into view so the checks can be watched as each scenario plays.
+    showTests(true);
     const key = designKey;
     if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
       setRanKey(key);
@@ -591,6 +604,43 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
     return () => clearTimeout(t);
   }, [fitView, isFullscreen]);
 
+  // Board widths in px that match the @4xl (56rem) and @6xl (72rem) container steps the layout uses.
+  const boardWidth = () => rootRef.current?.clientWidth ?? 0;
+  const MEDIUM = 896;
+  const WIDE = 1152;
+  /** True when the tests are a column beside the canvas, not a drawer over it. */
+  const testsAreColumn = () => !isFullscreen && (boardWidth() >= WIDE || (boardWidth() >= MEDIUM && paletteCollapsed));
+
+  /**
+   * Open or close the tests. On a medium board there is no room for the components list,
+   * the canvas and the tests side by side, so the components list folds to its rail while
+   * the tests are open and comes back when they close.
+   */
+  function showTests(open: boolean) {
+    if (!isFullscreen && boardWidth() >= MEDIUM && boardWidth() < WIDE) {
+      if (open && !paletteCollapsed) {
+        foldedForTests.current = true;
+        setPaletteCollapsed(true);
+      } else if (!open && foldedForTests.current) {
+        foldedForTests.current = false;
+        setPaletteCollapsed(false);
+      }
+    }
+    setTestsOpen(open);
+  }
+
+  // The canvas changes width when a side panel opens or closes: keep the whole design in view.
+  const sidePanels = `${testsOpen}:${paletteCollapsed}`;
+  const previousSidePanels = useRef(sidePanels);
+  useEffect(() => {
+    if (previousSidePanels.current === sidePanels) return;
+    previousSidePanels.current = sidePanels;
+    if (isFullscreen) return;
+    const t = setTimeout(() => fitView({ padding: 0.12, maxZoom: 1, minZoom: boardWidth() < 520 ? 0.55 : 0.35 }), 80);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sidePanels, isFullscreen, fitView]);
+
   const onRootKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
       if (resultsOpen) {
@@ -605,6 +655,10 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
       } else if (challengeOpen) {
         e.stopPropagation();
         setChallengeOpen(false);
+      } else if (testsOpen && !testsAreColumn()) {
+        // The tests are a drawer over the canvas here, so Esc closes them first.
+        e.stopPropagation();
+        showTests(false);
       } else if (isFullscreen && onToggleFullscreen) {
         e.stopPropagation();
         onToggleFullscreen();
@@ -625,10 +679,15 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
       )
     : undefined;
   const checkLabels = useMemo(() => Object.fromEntries(report.checks.map((c) => [c.id, c.label])), [report]);
+  const testsCollapsed = testsOpen === false;
+  // With the components list folded, an open tests panel is a column from 56rem up.
+  const testsColumnFrom = testsOpen === true && paletteCollapsed ? "4xl" : "6xl";
   const gridColumns = paletteCollapsed
     ? testsCollapsed
       ? "@2xl:grid-cols-[48px_minmax(0,1fr)] @6xl:grid-cols-[48px_minmax(420px,1fr)_48px]"
-      : "@2xl:grid-cols-[48px_minmax(0,1fr)] @6xl:grid-cols-[48px_minmax(420px,1fr)_370px]"
+      : testsOpen === true
+        ? "@2xl:grid-cols-[48px_minmax(0,1fr)] @4xl:grid-cols-[48px_minmax(0,1fr)_370px] @6xl:grid-cols-[48px_minmax(420px,1fr)_370px]"
+        : "@2xl:grid-cols-[48px_minmax(0,1fr)] @6xl:grid-cols-[48px_minmax(420px,1fr)_370px]"
     : testsCollapsed
       ? "@2xl:grid-cols-[224px_minmax(0,1fr)] @6xl:grid-cols-[224px_minmax(420px,1fr)_48px]"
       : "@2xl:grid-cols-[224px_minmax(0,1fr)] @6xl:grid-cols-[224px_minmax(420px,1fr)_370px]";
@@ -660,7 +719,7 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setChallengeOpen((open) => !open); setComponentsOpen(false); }}
+                  onClick={() => { setChallengeOpen((open) => !open); setComponentsOpen(false); setTestsOpen(false); }}
                   aria-expanded={challengeOpen}
                   className={`lab-mono flex items-center gap-2 rounded-[6px] border px-3 py-2 text-[10.5px] font-bold uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 ${challengeOpen ? "border-sky-300 bg-sky-300 text-slate-950" : "border-slate-600 text-slate-100 hover:border-slate-400 hover:bg-white/10"}`}
                 >
@@ -668,6 +727,18 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
                   Challenge
                 </button>
               </>
+            ) : null}
+            {isFullscreen ? (
+              <button
+                type="button"
+                onClick={() => { setTestsOpen((open) => !open); setChallengeOpen(false); }}
+                aria-expanded={testsOpen === true}
+                data-testid="tests-button"
+                className={`lab-mono flex items-center gap-2 rounded-[6px] border px-3 py-2 text-[10.5px] font-bold uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 ${testsOpen ? "border-sky-300 bg-sky-300 text-slate-950" : "border-slate-600 text-slate-100 hover:border-slate-400 hover:bg-white/10"}`}
+              >
+                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>
+                Tests
+              </button>
             ) : null}
             <NamesToggle />
             {ran ? (
@@ -1035,7 +1106,7 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
             </div> : null}
           </div>
 
-          {!isFullscreen ? <RunPanel
+          <RunPanel
             spec={spec}
             result={result}
             report={report}
@@ -1044,13 +1115,15 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
             ran={ran}
             load={load}
             previewId={previewId}
-            collapsed={testsCollapsed}
+            open={testsOpen}
+            placement={isFullscreen ? "float" : "dock"}
+            columnFrom={testsColumnFrom}
             onLoad={(n) => setControls((c) => ({ ...c, load: n }))}
             onShow={setPreviewId}
             onBack={() => setPreviewId(null)}
-            onToggle={() => setTestsCollapsed((value) => !value)}
+            onToggle={() => showTests(testsOpen === null ? !testsAreColumn() : !testsOpen)}
             onOpenResults={() => setResultsOpen(true)}
-          /> : null}
+          />
         </div>
 
         {readOnly && compare ? <CompareView compare={compare} onClose={() => onHideCompare?.()} /> : null}

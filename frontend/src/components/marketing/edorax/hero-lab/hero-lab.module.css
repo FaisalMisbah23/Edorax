@@ -559,15 +559,12 @@
   display: none;
 }
 
-/* The board is long (canvas, tests, notes), so it scrolls inside the window. Its own
-   Full screen button gives the whole screen. */
+/* The board is shown whole: its tests open as a drawer over the canvas, so there is no
+   second scroll area inside the window. Its own Full screen button gives the whole screen. */
 .board {
   flex: none;
   background: #EEF0FA;
-  padding: 12px;
-  height: 640px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  padding: 0 12px;
 }
 
 /* Listen */
