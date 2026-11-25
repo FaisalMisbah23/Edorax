@@ -107,7 +107,7 @@ export function EvaluationWorkspace({ evaluation }: { evaluation: MenteeEvaluati
             hidden={section !== tab.id}
             className="space-y-5 outline-none"
           >
-            {section === tab.id && tab.id === "progress" ? <CourseProgressMap modules={evaluation.modules} integrity={evaluation.integrity} currentChapterTitle={evaluation.enrollment.currentChapter} /> : null}
+            {section === tab.id && tab.id === "progress" ? <CourseProgressMap modules={evaluation.modules} integrity={evaluation.integrity} currentChapterTitle={evaluation.enrollment.currentChapter} submissions={evaluation.submissions} courseSlug={evaluation.course.slug} /> : null}
             {section === tab.id && tab.id === "reviews" ? <>
               {evaluation.reviewNextHref ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4"><div><p className="text-sm font-semibold">A submission is ready for review</p><p className="mt-0.5 text-xs text-muted-foreground">Open the full review when you are ready to score and respond.</p></div><Link href={evaluation.reviewNextHref} className={cn(buttonVariants({ size: "sm" }), "gap-1.5")}>Review next <ArrowRight className="size-4" aria-hidden /></Link></div> : null}
               <SubmissionFilters items={evaluation.submissions} />
