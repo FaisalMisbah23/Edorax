@@ -21,6 +21,7 @@ import { useReaderLayout } from "@/lib/use-reader-layout";
 import type { Heading } from "@/shared/lib/mdx-headings";
 import type { ReaderHighlight } from "@/shared/api/reader";
 import type { SyllabusModule } from "@/components/learn/course-syllabus";
+import type { ModuleVersionsItem } from "@/shared/api/module-versions";
 import { AskHelpDialog } from "@/components/help/ask-help-dialog";
 import { ReportIssueDialog } from "@/components/help/report-issue-dialog";
 import { EarlierAnswersButton, EarlierAnswersProvider } from "@/components/learn/earlier-answers";
@@ -68,6 +69,7 @@ export function ChapterReaderShell({
   lessonLabel,
   chapterTitle,
   modules,
+  moduleVersions = [],
   headings,
   prev,
   next,
@@ -139,6 +141,8 @@ export function ChapterReaderShell({
   /** Listen-along audio for this chapter, when its course has it. */
   narration?: ChapterNarration | null;
   modules: SyllabusModule[];
+  /** Modules with alternative versions, for the sidebar switch and vote card. */
+  moduleVersions?: ModuleVersionsItem[];
   headings: Heading[];
   prev?: { slug: string; title: string; moduleOrder: number; order: number };
   next?: { slug: string; title: string; moduleOrder: number; order: number };
@@ -426,6 +430,7 @@ export function ChapterReaderShell({
             courseTitle={courseTitle}
             courseSlug={courseSlug}
             modules={modules}
+            moduleVersions={moduleVersions}
             currentChapterSlug={chapterSlug}
             collapsed={leftCollapsed}
             onToggle={() => setLeftCollapsed(!leftCollapsed)}
