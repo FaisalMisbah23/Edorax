@@ -128,7 +128,7 @@ export function HomeVisualLabs({ labCount, areas }: { labCount: number; areas: s
         </div>
         <div className={s.media}>
           <LoopWindow
-            title="Visual lab: design a short-link service"
+            title="Visual lab"
             file="demo-visual-labs-loop"
             poster="demo-visual-labs"
             label="A short silent loop filmed on edorax.com: a visual lab going from 5 of 11 checks passing to 11 of 11"
