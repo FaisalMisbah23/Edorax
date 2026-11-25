@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Sparkles,
   Flag,
+  GraduationCap,
   Users,
   Wallet,
   type LucideIcon,
@@ -184,6 +185,12 @@ export function MentorWorkspaceSidebar({
       icon: Users,
       active: pathname.startsWith("/learners") || (Boolean(routeCourseSlug) && pathname.includes("/mentees")),
       count: total((course) => course.learnerCount),
+    },
+    {
+      label: "Classes",
+      href: "/classes",
+      icon: GraduationCap,
+      active: pathname.startsWith("/classes"),
     },
     {
       label: "Answers to check",

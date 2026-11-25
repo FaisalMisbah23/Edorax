@@ -1,5 +1,6 @@
 import type { LearnerHabit, LearnerWorkspace } from "@/shared/api/learner";
 import type { GamificationSummary } from "@/shared/api/gamification";
+import type { MyClassesView } from "@/shared/api/classes";
 import { canAccessLearnSurface, getSessionUser } from "@/server/auth/guards";
 import { getActiveSurface } from "@/server/auth/surface";
 import { serverApiFetch } from "@/lib/api-server";
@@ -17,10 +18,12 @@ export default async function LearnLayout({ children }: { children: React.ReactN
 
   if (!user || !learner) return <>{children}</>;
 
-  const [workspace, gamification, habit] = await Promise.all([
+  const [workspace, gamification, habit, myClasses] = await Promise.all([
     serverApiFetch<LearnerWorkspace>("/api/v1/learner/workspace"),
     serverApiFetch<GamificationSummary>("/api/v1/learner/gamification").catch(() => null),
     serverApiFetch<LearnerHabit>("/api/v1/learner/habit").catch(() => null),
+    // The "My classes" link only shows for learners who are in a class.
+    serverApiFetch<MyClassesView>("/api/v1/classes").catch(() => null),
   ]);
 
   const stats = {
@@ -44,6 +47,7 @@ export default async function LearnLayout({ children }: { children: React.ReactN
         assignedCourses={workspace.assignedCourses}
         pendingReviews={workspace.pendingReviews}
         openHelpRequests={workspace.openHelpRequests}
+        classCount={myClasses?.classes.length ?? 0}
         signOutAction={signOutAction}
         stats={stats}
       >

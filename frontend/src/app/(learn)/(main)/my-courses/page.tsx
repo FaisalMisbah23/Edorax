@@ -4,6 +4,7 @@ import { Dot } from "@/components/brand/dot";
 import { buttonVariants } from "@/components/ui/button";
 import { MenteeCourseList } from "@/components/learn/dashboard/mentee-dashboard";
 import type { MenteeDashboardViewModel } from "@/shared/api/learner";
+import type { MyClassesView } from "@/shared/api/classes";
 import { requireLearnSurface } from "@/server/auth/guards";
 import { serverApiFetch } from "@/lib/api-server";
 
@@ -11,7 +12,11 @@ export const metadata: Metadata = { title: "My learning" };
 
 export default async function MenteeCoursesPage() {
   await requireLearnSurface();
-  const model = await serverApiFetch<MenteeDashboardViewModel>("/api/v1/learner/dashboard");
+  const [model, myClasses] = await Promise.all([
+    serverApiFetch<MenteeDashboardViewModel>("/api/v1/learner/dashboard"),
+    serverApiFetch<MyClassesView>("/api/v1/classes").catch(() => null),
+  ]);
+  const classCount = myClasses?.classes.length ?? 0;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
@@ -19,6 +24,15 @@ export default async function MenteeCoursesPage() {
         <h1 className="text-[32px] leading-tight tracking-[-0.035em] sm:text-[40px]">My learning</h1>
         <p className="mt-2 max-w-2xl text-lg text-muted-foreground">Pick up where you left off, review your lessons, or open a course you have joined.</p>
       </header>
+
+      {classCount > 0 ? (
+        <p className="mt-6 text-base">
+          You are in {classCount} {classCount === 1 ? "class" : "classes"}.{" "}
+          <Link href="/my-classes" className="font-bold text-primary underline-offset-4 hover:underline">
+            See my classes
+          </Link>
+        </p>
+      ) : null}
 
       {model.courses.length > 0 ? (
         <div className="mt-8">
