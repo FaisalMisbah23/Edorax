@@ -117,13 +117,42 @@ export function redirectedChapterSlug(content: ReleaseContent | null | undefined
  * a changed lesson was not matched to its earlier version (publishCourseRelease now replaces by
  * slug). The publisher appends the replacement, so the later entry is the current lesson and the
  * earlier one is dropped.
+ *
+ * One exception: when the two chapters sit in different modules, the one in the module the address
+ * names wins ("2-1-set-the-scene" is lesson 1 of module 2). A leftover chapter in a later module
+ * that happens to hold the same address must not hide the lesson that owns it: System Design module
+ * 2 lost its first lesson to a leftover chapter in module 10.
  */
 export function withoutSupersededChapters(modules: ReleaseModule[]): ReleaseModule[] {
+  const holders = new Map<string, { id: string; moduleOrder: number }[]>();
+  let total = 0;
+  for (const module of modules) for (const chapter of module.chapters) {
+    total += 1;
+    const slug = cleanChapterSlug(chapter.slug);
+    holders.set(slug, [...(holders.get(slug) ?? []), { id: chapter.id, moduleOrder: module.order }]);
+  }
+  if (holders.size === total) return modules;
   const current = new Map<string, string>();
-  for (const module of modules) for (const chapter of module.chapters) current.set(cleanChapterSlug(chapter.slug), chapter.id);
-  if (current.size === modules.reduce((sum, module) => sum + module.chapters.length, 0)) return modules;
+  for (const [slug, list] of holders) {
+    const named = Number(/^(\d+)-/.exec(slug)?.[1]);
+    const own = list.filter(holder => holder.moduleOrder === named);
+    current.set(slug, (own.length ? own : list).at(-1)!.id);
+  }
   return modules.map(module => ({ ...module,
     chapters: module.chapters.filter(chapter => current.get(cleanChapterSlug(chapter.slug)) === chapter.id) }));
+}
+
+/**
+ * Public addresses held by chapters of more than one module, with the module titles. Within one
+ * module a repeat is a replacement (the later entry wins); across modules it is a clash.
+ */
+export function crossModuleAddressClashes(modules: ReleaseModule[]): { slug: string; modules: string[] }[] {
+  const seen = new Map<string, Set<string>>();
+  for (const module of modules) for (const chapter of module.chapters) {
+    const slug = cleanChapterSlug(chapter.slug);
+    seen.set(slug, new Set([...(seen.get(slug) ?? []), module.title]));
+  }
+  return [...seen].filter(([, titles]) => titles.size > 1).map(([slug, titles]) => ({ slug, modules: [...titles] }));
 }
 
 /** Read a stored release. Always go through this, so every caller sees each lesson once. */

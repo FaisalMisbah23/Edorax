@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { ulid } from "ulid";
 import { Prisma } from "../../generated/prisma/index.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
-import { cleanChapterSlug, DEFAULT_MODULE_VERSION, ensureBaselineRelease, readReleaseContent, type ReleaseChapter, type ReleaseContent, type ReleaseModule,
+import { cleanChapterSlug, crossModuleAddressClashes, DEFAULT_MODULE_VERSION, ensureBaselineRelease, readReleaseContent, type ReleaseChapter, type ReleaseContent, type ReleaseModule,
   type ReleaseModuleVersion } from "../courses/releases.js";
 import { BadRequestError } from "../../utils/errors.js";
 import { notify } from "../notifications/service.js";
@@ -116,6 +116,22 @@ async function publishModuleVersions(tx: Prisma.TransactionClient, courseId: str
     for (const version of built) if (!merged.some(item => item.key === version.key)) merged.push(version);
     // Each variant gets its own copies, so a later edit to one variant cannot reach another.
     module.versions = merged.map(version => ({ ...version, chapters: version.chapters.map(chapter => ({ ...chapter })) }));
+  }
+}
+
+/**
+ * A publish may not put one lesson address in two modules. An older release that already has such a
+ * clash is not blocked (the reader shows the lesson in the module the address names); only a clash
+ * this publish would add is refused, naming both modules.
+ */
+function assertNoNewAddressClash(baselineContent: unknown, next: ReleaseContent) {
+  const before = baselineContent as ReleaseContent | null;
+  for (const [variant, modules] of Object.entries(next.variants)) {
+    const known = new Set(crossModuleAddressClashes(before?.variants?.[variant] ?? []).map(clash => clash.slug));
+    const added = crossModuleAddressClashes(modules).filter(clash => !known.has(clash.slug));
+    if (added.length) {
+      throw new BadRequestError(`Two modules would hold the same lesson address in ${variant}: ${added.map(clash => `${clash.slug} (${clash.modules.join(" and ")})`).join("; ")}. Rename one lesson file or remove the leftover lesson.`);
+    }
   }
 }
 
@@ -325,6 +341,7 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
     }
   }
   assertDistinctVersionSlugs(next);
+  assertNoNewAddressClash(baseline.content, next);
   for (const modules of Object.values(next.variants)) {
     modules.sort((a, b) => a.order - b.order);
     for (const module of modules) {
