@@ -33,6 +33,7 @@ import {
   deleteCourseBody,
   enrollmentIdParams,
   helpInboxQuery,
+  nudgeManyBody,
   acceptAiDraftsBody,
   threadIdParams,
   threadFeedbackBody,
@@ -133,6 +134,7 @@ router.get("/courses/:courseSlug/mentees/:enrollmentId", validateParams(menteePa
 router.post("/courses/:courseId/invites/assign", validate({ params: courseIdParams, body: assignByEmailsBody }), teach.assignByEmails);
 router.post("/courses/:courseId/invites/link", validateParams(courseIdParams), teach.createInviteLink);
 router.delete("/courses/:courseId/invites/:inviteId", validateParams(inviteParams), teach.revokeInvite);
+router.post("/enrollments/nudge", validate({ body: nudgeManyBody }), teach.nudgeMany);
 router.post("/enrollments/:enrollmentId/nudge", validateParams(enrollmentIdParams), teach.nudgeMentee);
 router.post("/enrollments/:enrollmentId/repair-progress", validateParams(enrollmentIdParams), teach.repairProgress);
 

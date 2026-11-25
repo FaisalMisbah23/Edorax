@@ -105,7 +105,9 @@ export const assignByEmailsBody = z.object({ emails: z.string().min(1).max(20_00
 
 export const reportsQuery = z.object({ chapterId: z.string().optional() });
 
-export const reviewQueueQuery = z.object({ courseId: z.string().optional() });
+export const reviewQueueQuery = z.object({ courseId: z.string().optional(), learnerId: z.string().max(64).optional() });
+
+export const nudgeManyBody = z.object({ enrollmentIds: z.array(z.string().min(1).max(64)).min(1).max(300) });
 export const submitReviewBody = z.object({
   verdict: z.enum(["APPROVED", "NEEDS_REVISION"]),
   feedback: z.string().min(1, "Feedback is required — the mentee sees this verbatim.").max(5000),
@@ -129,6 +131,7 @@ export const helpInboxQuery = z.object({
   status: z.enum(["open", "resolved", "all"]).optional(),
   /** "reports" narrows the inbox to lesson reports; "questions" hides them. */
   kind: z.enum(["all", "questions", "reports"]).optional(),
+  learnerId: z.string().max(64).optional(),
 });
 export type HelpInboxQuery = z.infer<typeof helpInboxQuery>;
 

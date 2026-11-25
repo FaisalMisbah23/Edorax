@@ -259,8 +259,8 @@ export async function getCourseActivity(req: Request, res: Response) {
 
 // GET /api/v1/teach/review?courseId=
 export async function getReviewQueue(req: Request, res: Response) {
-  const { courseId } = req.query as { courseId?: string };
-  ok(res, await reviews.loadReviewQueue(req.user!, courseId));
+  const { courseId, learnerId } = req.query as { courseId?: string; learnerId?: string };
+  ok(res, await reviews.loadReviewQueue(req.user!, courseId, learnerId));
 }
 
 // GET /api/v1/teach/review/:responseId
@@ -292,6 +292,11 @@ export async function generateAiReviewDraft(req: Request, res: Response) {
 }
 
 // GET /api/v1/teach/help/threads?courseId=&status=
+// POST /api/v1/teach/enrollments/nudge
+export async function nudgeMany(req: Request, res: Response) {
+  ok(res, await enrollments.nudgeMany(req.user!, (req.body as { enrollmentIds: string[] }).enrollmentIds));
+}
+
 // POST /api/v1/teach/review/accept-ai-drafts
 export async function acceptAiDrafts(req: Request, res: Response) {
   ok(res, await reviews.acceptAiDrafts(req.user!, (req.body as { responseIds: string[] }).responseIds));

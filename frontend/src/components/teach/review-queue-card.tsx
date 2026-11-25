@@ -16,6 +16,11 @@ import { formatUsd } from "@/components/teach/format-usd";
 
 const CLAMP_CHARS = 420;
 
+/** The answer was reviewed or archived from another tab or device: nothing left to do here. */
+function alreadyHandled(message: string) {
+  return message.includes("already been reviewed");
+}
+
 function Clamped({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   const long = text.length > CLAMP_CHARS;
@@ -50,7 +55,7 @@ export function ReviewQueueCard({ item, ageLabel, autoDraft }: { item: ReviewQue
     startTransition(async () => {
       setError(null);
       const result = await submitReview({ responseId: item.id, verdict, feedback: feedback.trim(), score: score === "" ? undefined : Number(score) });
-      if (!result.ok) setError(result.errors.join(" "));
+      if (!result.ok && !alreadyHandled(result.errors.join(" "))) setError(result.errors.join(" "));
       else {
         setGone(true);
         router.refresh();
@@ -62,7 +67,7 @@ export function ReviewQueueCard({ item, ageLabel, autoDraft }: { item: ReviewQue
     startTransition(async () => {
       setError(null);
       const result = await archiveReviewResponse({ responseId: item.id });
-      if (!result.ok) setError(result.error);
+      if (!result.ok && !alreadyHandled(result.error)) setError(result.error);
       else {
         setGone(true);
         router.refresh();

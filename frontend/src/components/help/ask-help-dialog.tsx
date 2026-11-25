@@ -72,6 +72,7 @@ export function AskHelpDialog({
       <button
         type="button"
         onClick={() => setOpen(true)}
+        title={triggerLabel}
         className={cn(
           "relative inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md border px-2.5 text-[15px] font-semibold transition-colors outline-none focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow sm:px-4",
           mentorReplied
@@ -82,7 +83,8 @@ export function AskHelpDialog({
         )}
       >
         <HandHelping className="size-5 shrink-0" aria-hidden />
-        <span className="hidden sm:inline">{triggerLabel}</span>
+        {/* The label shows only while a conversation is going; otherwise the icon is enough. */}
+        <span className={isOpen || mentorReplied ? "hidden sm:inline" : "sr-only"}>{triggerLabel}</span>
         <span className="sr-only sm:hidden">{copy.askQuestionShort}</span>
         {mentorReplied && (
           <span className="absolute -right-1 -top-1 flex size-3" aria-hidden>
