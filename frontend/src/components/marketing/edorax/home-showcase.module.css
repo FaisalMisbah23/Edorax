@@ -453,3 +453,58 @@
   outline: 3px solid #ffc933;
   outline-offset: 2px;
 }
+
+/* The on-page full screen: the window fills the page, the recording fits inside it. */
+.expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 0;
+  background: #0a0f2c;
+  box-shadow: none;
+}
+
+.expanded .stage {
+  flex: 1;
+  min-height: 0;
+}
+
+.expanded .video {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+
+.expanded .fullscreen {
+  display: none;
+}
+
+.close {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 32px;
+  padding: 0 14px;
+  background: #ffc933;
+  border: 0;
+  border-radius: 6px;
+  color: #0a0f2c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: #ffd75c;
+}
+
+.close:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 2px;
+}
