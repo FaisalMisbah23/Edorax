@@ -52,7 +52,7 @@ export function AcceptAllAiDraftsButton({ responseIds, approveCount, reviseCount
   return (
     <div className="flex flex-col items-start gap-1">
       <Button type="button" onClick={() => setConfirming(true)}>
-        <CheckCheck aria-hidden /> Send all {responseIds.length} drafted reviews
+        <CheckCheck aria-hidden /> {responseIds.length === 1 ? "Send the drafted review" : `Send all ${responseIds.length} drafted reviews`}
       </Button>
       {message ? (
         <p role="status" className="text-xs text-muted-foreground">
