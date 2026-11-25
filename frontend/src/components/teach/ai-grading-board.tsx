@@ -9,6 +9,7 @@ import { updateAiGrading } from "@/server/actions/ai-grading";
 import { toast } from "@/components/ui/app-toast";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { BulkSelect, SELECT_CLASS } from "./bulk-select";
 
 // One default for all the instructor's courses, then a row per course that uses the
 // default or has its own value. Every change saves at once; several rows can be changed
@@ -16,9 +17,6 @@ import { cn } from "@/lib/utils";
 
 type Setting = keyof AiGradingValues;
 type CourseChange = NonNullable<AiGradingUpdateInput["courses"]>[number];
-
-const SELECT_CLASS =
-  "h-10 w-full min-w-0 rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60";
 
 const onOff = (value: boolean) => (value ? "On" : "Off");
 const money = (value: number) => `$${value < 1 ? value.toFixed(2) : String(Number(value.toFixed(2)))}`;
@@ -391,25 +389,5 @@ function CourseRow({
         <span className="hidden @4xl:block" />
       )}
     </li>
-  );
-}
-
-function BulkSelect({ label, placeholder, options, onPick }: { label: string; placeholder: string; options: Array<[string, string]>; onPick: (value: string) => void }) {
-  return (
-    <select
-      aria-label={label}
-      value=""
-      onChange={(event) => {
-        if (event.target.value) onPick(event.target.value);
-      }}
-      className={cn(SELECT_CLASS, "border-primary/50 font-medium sm:w-44")}
-    >
-      <option value="">{placeholder}</option>
-      {options.map(([value, text]) => (
-        <option key={value} value={value}>
-          {text}
-        </option>
-      ))}
-    </select>
   );
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { AiGradingUpdateInput, AiGradingView } from "@/shared/api/teach";
+import type { AiGradingUpdateInput, AiGradingView, BulkCourseSettingsInput } from "@/shared/api/teach";
 import { teachCall } from "./teach-call";
 
 /** Change the AI grading default, any number of courses, or both. Returns the fresh page data. */
@@ -11,4 +11,13 @@ export async function updateAiGrading(input: AiGradingUpdateInput): Promise<{ ok
   // Each course's Settings page shows the same values.
   revalidatePath("/courses/[courseSlug]/settings", "page");
   return { ok: true, view: result.data };
+}
+
+/** Change chapter order, quiz camera or AI grading for several courses from My courses. */
+export async function updateCoursesInBulk(input: BulkCourseSettingsInput): Promise<{ ok: true; updated: number } | { ok: false; error: string }> {
+  const result = await teachCall<{ updated: number }>("/api/v1/teach/courses/bulk-settings", { method: "PUT", json: input });
+  if (!result.ok) return { ok: false, error: result.errors.join(" ") };
+  revalidatePath("/courses");
+  revalidatePath("/courses/[courseSlug]/settings", "page");
+  return { ok: true, updated: result.data.updated };
 }
