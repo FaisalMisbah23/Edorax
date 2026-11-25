@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { HeroLab } from "./hero-lab/hero-lab";
+import { HeroFloaters } from "./hero-floaters";
 import { HomeAi } from "./home-ai";
 import { HomeDemos } from "./home-demos";
 import { StartFreeMenu } from "./start-free-menu";
@@ -50,7 +51,8 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
             </nav>
           </div>
         </header>
-        <section id="top" style={{ width: "100%" }}>
+        <section id="top" style={{ width: "100%", position: "relative" }}>
+          <HeroFloaters />
           <div className={s.hero} style={{ maxWidth: "1200px", margin: "0 auto", padding: "44px 24px 88px", boxSizing: "border-box", textAlign: "center" }}>
             <h1 className={s.h1} style={{ margin: "0", fontFamily: "var(--font-unbounded), sans-serif", fontWeight: "700", fontSize: "68px", lineHeight: "1.04", letterSpacing: "-0.04em" }}>
               Run it. Break it. <span style={{ boxShadow: "inset 0 -0.3em 0 #FFC933" }}>Learn it.</span>
