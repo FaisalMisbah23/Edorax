@@ -330,6 +330,7 @@ model User {
   helpMessagesAuthored  HelpMessage[]  @relation("HelpMessagesAuthored")
   headingNotes          HeadingNote[]
   highlights            ChapterHighlight[]
+  moduleVersionFeedback ModuleVersionFeedback[]
   organizationCourseRequestsReviewed OrganizationCourseRequest[] @relation("OrgCourseRequestReviewer")
   instructorAccessRequest       InstructorAccessRequest?
   instructorAccessReviews       InstructorAccessRequest[] @relation("InstructorAccessReviewer")
@@ -516,6 +517,7 @@ model Course {
   chapters       Chapter[]
   chapterDrafts  CourseChapterDraft[]
   enrollments    Enrollment[]
+  moduleVersionFeedback ModuleVersionFeedback[]
   organizationCourses OrganizationCourse[]
   organizationFreeAccesses CourseOrganizationAccess[]
   organizationCourseRequests OrganizationCourseRequest[]
@@ -797,9 +799,12 @@ model Enrollment {
   release           CourseRelease? @relation(fields: [releaseId], references: [id], onDelete: SetNull)
   specialisationSlug     String? // follow-up track picked once the course is complete
   specialisationChosenAt DateTime?
+  /// Module key to version key for modules with alternative versions. No entry means the default version.
+  moduleVersions    Json?
   createdAt         DateTime          @default(now())
   chapterProgress   ChapterProgress[]
   highlights        ChapterHighlight[]
+  moduleVersionFeedback ModuleVersionFeedback[]
   dailyActivity     DailyActivity[]
   studySessions     StudySession[]
   integrityAttempts IntegrityAttempt[]
@@ -1547,6 +1552,28 @@ model ChapterHighlight {
   @@index([userId, createdAt])
   @@index([enrollmentId, chapterId])
   @@index([chapterId])
+}
+
+/// A learner's vote on which version of a module was better. One current vote per enrollment and module.
+model ModuleVersionFeedback {
+  id           String     @id @default(cuid())
+  enrollmentId String
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId     String
+  course       Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  moduleKey    String
+  /// The version the learner says is better; the original lesson list is stored as "default".
+  versionKey   String
+  note         String?    @db.Text
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([enrollmentId, moduleKey])
+  @@index([courseId, moduleKey])
+  @@index([updatedAt])
+  @@index([userId])
 }
 
 // Mentor -> mentee assignment surface (docs/phases/m7-assignment-and-polish.mdx).
