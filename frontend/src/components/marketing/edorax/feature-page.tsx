@@ -33,18 +33,11 @@ function Demo({ page }: { page: FeaturePageContent }) {
           </span>
           <span className={s.address}>{demo.address}</span>
         </div>
-        {demo.video ? (
-          <video className={s.video} controls playsInline muted preload="none" poster={`/video/${demo.video}.webp`} width={1280} height={720} aria-label={demo.label}>
-            <source src={`/video/${demo.video}.mp4`} type="video/mp4" />
-          </video>
-        ) : (
-          <div className={s.placeholder} role="img" aria-label="Placeholder: the recording of this feature has not been filmed yet">
-            <strong>Placeholder</strong>
-            <span>The recording of this feature has not been filmed yet.</span>
-          </div>
-        )}
+        <video className={s.video} controls playsInline muted preload="none" poster={`/video/${demo.video}.webp`} width={1280} height={720} aria-label={demo.label}>
+          <source src={`/video/${demo.video}.mp4`} type="video/mp4" />
+        </video>
       </div>
-      <figcaption className={s.caption}>{demo.video ? demo.caption : "A recording from the real product goes here."}</figcaption>
+      <figcaption className={s.caption}>{demo.caption}</figcaption>
       {proof.quote ? (
         <blockquote className={s.quote}>
           <p>{proof.quote.text}</p>
@@ -76,7 +69,7 @@ export function FeaturePage({ page }: { page: FeaturePageContent }) {
 
       <main>
         <section className={s.hero}>
-          <div className={s.heroWrap}>
+          <div className={page.demo.video ? s.heroWrap : `${s.heroWrap} ${s.heroSolo}`}>
             <div className={s.copy}>
               <div className={s.eyebrow}>{page.eyebrow}</div>
               <h1 className={s.h1}>
@@ -98,7 +91,8 @@ export function FeaturePage({ page }: { page: FeaturePageContent }) {
                 <p className={s.note}>{page.cta.note}</p>
               </div>
             </div>
-            <Demo page={page} />
+            {/* No frame at all until a real recording exists. */}
+            {page.demo.video ? <Demo page={page} /> : null}
           </div>
           {page.proof.number ? (
             <div className={s.proof}>

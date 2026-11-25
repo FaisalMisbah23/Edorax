@@ -26,7 +26,7 @@ export type FeaturePageContent = {
   /** The one main button, and the short reassurance line under it. */
   cta: FeatureLink & { note: string };
   demo: {
-    /** File name in public/video without the extension (needs .mp4 and .webp). Leave out to show a marked placeholder. */
+    /** File name in public/video without the extension (needs .mp4 and .webp). Leave out and the page shows no frame. */
     video?: string;
     /** The address shown in the window frame. */
     address: string;
@@ -264,7 +264,7 @@ export const FEATURE_PAGES: FeaturePageContent[] = [
       note: "A free course with four checked projects. No AI key needed. Up to three checks a day on each project.",
     },
     demo: {
-      // Not filmed yet: add public/video/feature-project-check.mp4 and .webp, then set video: "feature-project-check".
+      // No recording yet, so the page shows no frame. Add public/video/feature-project-check.mp4 and .webp, then set video: "feature-project-check".
       address: "edorax.com/courses/dw-level-1",
       caption: "Filmed in the real product: a project check on a test repository.",
       label: "Recording of an AI project check on Edorax: a GitHub repository link is submitted and the report shows the checks, the rubric and what is left",
