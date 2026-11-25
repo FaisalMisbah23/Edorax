@@ -3,11 +3,12 @@ import { Suspense } from "react";
 import { HeroLab } from "./hero-lab/hero-lab";
 import { HeroFloaters } from "./hero-floaters";
 import { HomeAi } from "./home-ai";
-import { HomeDemos } from "./home-demos";
+import { HomeFeatureTabs, HomeVisualLabs } from "./home-showcase";
 import { ExploreFeatures } from "./feature-page";
 import { FEATURE_PAGES, featurePath } from "./feature-pages";
 import { StartFreeMenu } from "./start-free-menu";
-import { CatalogSections, CatalogSectionsFallback, Certificates, Faq, FinalCall, Pricing, ShellLabs } from "./home-sections";
+import { CatalogSections, CatalogSectionsFallback, Certificates, Faq, FinalCall, Pricing } from "./home-sections";
+import { visualLabGroups } from "@/lib/visual-labs";
 import { Wordmark } from "@/components/brand/wordmark";
 import s from "./edorax-landing.module.css";
 
@@ -31,6 +32,7 @@ function LabsNavLink() {
 
 
 export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string | null }) {
+  const labGroups = visualLabGroups();
   return (
     <div className={s.root} style={{ width: "100%", boxSizing: "border-box", background: "#F6F7FB", color: "#0A0F2C", fontFamily: "var(--font-dm-sans), system-ui, sans-serif", fontSize: "18px", lineHeight: "1.55" }}>
       <div style={{ width: "100%", background: "#F6F7FB", color: "#0A0F2C" }}>
@@ -84,10 +86,11 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
       <Suspense fallback={<CatalogSectionsFallback />}>
         <CatalogSections />
       </Suspense>
-      <HomeDemos />
+      <HomeVisualLabs labCount={labGroups.reduce((sum, group) => sum + group.labs.length, 0)} areas={labGroups.map((group) => group.title)} />
+      {/* Dark and light bands alternate: visual labs (dark), the tabs (white), AI (dark), then light again. */}
+      <HomeFeatureTabs />
       <HomeAi />
       <ExploreFeatures />
-      <ShellLabs />
       <Certificates />
       <Pricing />
       <Faq />
