@@ -409,17 +409,15 @@
     font-size: 27px;
   }
 
+  /* The three tabs wrap, so Mock interview is not hidden off the edge. */
   .tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    margin-right: -16px;
-    padding-right: 16px;
+    flex-wrap: wrap;
   }
 
   .tab,
   .tabOn {
-    flex: none;
+    flex: 1 1 auto;
+    justify-content: center;
     font-size: 15px;
   }
 
