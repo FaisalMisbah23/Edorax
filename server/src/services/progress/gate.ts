@@ -38,7 +38,7 @@ export async function loadCourseGate(
     },
   });
   if (!course) return null;
-  const enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, select: { releaseId: true, variantSlug: true } });
+  const enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, select: { releaseId: true, variantSlug: true, moduleVersions: true } });
   const selected = await releaseForEnrollment(courseId, enrollment, course.familySlug);
   const modules = selected?.modules ?? course.modules;
 

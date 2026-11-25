@@ -17,6 +17,8 @@ import { loadLearnerHabit } from "../progress/learner-habit.js";
 import { milestoneReflectionBlocked } from "../progress/reflection.js";
 import { isCompletableBlock, previousChapterId } from "../progress/rules.js";
 import {
+  applyModuleVersions,
+  readModuleVersionChoices,
   releaseForEnrollment,
   releaseModulesWithBlocks,
   upgradeEnrollmentToRelease,
@@ -116,8 +118,9 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
         });
         enrollment.variantSlug = variantSlug;
       }
-      selectedRelease = { ...selectedRelease, variant: variantSlug, modules };
-      courseModules = await releaseModulesWithBlocks(modules);
+      const resolved = applyModuleVersions(modules, readModuleVersionChoices(enrollment.moduleVersions));
+      selectedRelease = { ...selectedRelease, variant: variantSlug, modules: resolved, allModules: modules };
+      courseModules = await releaseModulesWithBlocks(resolved);
       flatChapters = courseModules.flatMap((mod) =>
         mod.chapters.map((ch) => ({
           ...ch,

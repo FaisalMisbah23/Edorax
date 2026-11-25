@@ -12,7 +12,7 @@ import { visibleExplanation } from "../../shared/lib/quiz-feedback.js";
 export async function loadQuizChapterState(chapterId: string, userId: string): Promise<QuizChapterState> {
   const chapter = await prisma.chapter.findUnique({ where: { id: chapterId }, select: { courseId: true, quizPassingScore: true, course: { select: { familySlug: true, variantFamily: true } } } });
   if (!chapter) throw new NotFoundError("Chapter not found");
-  const enrollment = await prisma.enrollment.findUnique({ where: { courseId_userId: { courseId: chapter.courseId, userId } }, select: { id: true, releaseId: true, variantSlug: true } });
+  const enrollment = await prisma.enrollment.findUnique({ where: { courseId_userId: { courseId: chapter.courseId, userId } }, select: { id: true, releaseId: true, variantSlug: true, moduleVersions: true } });
   if (enrollment && !(await releaseContainsChapter(chapter.courseId, enrollment, chapter.course.familySlug, chapterId))) throw new NotFoundError("Chapter not found");
   const blocks = await prisma.block.findMany({
     where: { chapterId, archivedAt: null, type: { in: ["QUIZ", "OPEN_QUESTION", "PREDICT", "CODE"] } },

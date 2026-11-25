@@ -63,6 +63,7 @@ export async function saveCourseRating(
       percentComplete: true,
       releaseId: true,
       variantSlug: true,
+      moduleVersions: true,
     },
   });
   if (!enrollment) {

@@ -52,7 +52,7 @@ describe("dashboard chapter publishing", () => {
       await publishChapter(archived.mentor, archived.chapterA.id);
       const enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: archived.enrollment.id } });
       const pinned = await releaseForEnrollment(archived.course.id, enrollment, null);
-      const latest = await releaseForEnrollment(archived.course.id, { releaseId: null, variantSlug: null }, null);
+      const latest = await releaseForEnrollment(archived.course.id, { releaseId: null, variantSlug: null, moduleVersions: null }, null);
       expect(pinned?.modules[0].chapters[0].id).toBe(archived.chapterA.id);
       expect(latest?.modules[0].chapters[0].id).not.toBe(archived.chapterA.id);
     } finally {
@@ -71,7 +71,7 @@ describe("dashboard chapter publishing", () => {
     const oldEnrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: fx.enrollment.id } });
     const oldRelease = await releaseForEnrollment(fx.course.id, oldEnrollment, null);
     expect(oldRelease?.modules[0].chapters[0].id).toBe(fx.chapterA.id);
-    const latest = await releaseForEnrollment(fx.course.id, { releaseId: null, variantSlug: null }, null);
+    const latest = await releaseForEnrollment(fx.course.id, { releaseId: null, variantSlug: null, moduleVersions: null }, null);
     expect(latest?.modules[0].chapters[0].id).not.toBe(fx.chapterA.id);
     // The old chapter row is untouched; the learner moves to the new release when they open the chapter.
     expect((await prisma.chapter.findUniqueOrThrow({ where: { id: fx.chapterA.id } })).source).toBe("# A");

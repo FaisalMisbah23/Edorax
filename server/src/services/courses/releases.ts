@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import type { Prisma } from "../../generated/prisma/index.js";
+import { Prisma } from "../../generated/prisma/index.js";
 import { prisma } from "../../db/prisma.js";
 import { resolveCourseFamily, type CourseFamily } from "../../shared/lib/course-tracks.js";
 import { NotFoundError } from "../../utils/errors.js";
@@ -14,9 +14,89 @@ export type ReleaseChapter = {
   estimatedMinutes: number | null; readerMode: "DEFAULT" | "QUIZ"; isMilestone: boolean;
   quizPassingScore: number;
 };
-export type ReleaseModule = { id: string; key: string | null; title: string; order: number; chapters: ReleaseChapter[] };
+/** An alternative lesson list for one module. Its chapters carry slugs distinct from the default version's. */
+export type ReleaseModuleVersion = { key: string; label: string; chapters: ReleaseChapter[] };
+/**
+ * `chapters` is the default version. `versions` lists the alternatives a learner may pick instead;
+ * a module without `versions` reads exactly as before.
+ */
+export type ReleaseModule = {
+  id: string; key: string | null; title: string; order: number; chapters: ReleaseChapter[];
+  versions?: ReleaseModuleVersion[]; defaultVersionLabel?: string;
+};
 /** `redirects` maps the address of a lesson a release removed to the address that replaced it. */
 export type ReleaseContent = { variants: Record<string, ReleaseModule[]>; redirects?: Record<string, string> };
+
+/** The key a learner's choice and feedback use for the module's own lesson list. */
+export const DEFAULT_MODULE_VERSION = "default";
+/** Module key to chosen version key, as stored on `Enrollment.moduleVersions`. */
+export type ModuleVersionChoices = Record<string, string>;
+/** What every learner-facing module list needs from the enrollment to pick one version per module. */
+export type EnrollmentContentSelection = { releaseId: string | null; variantSlug: string | null; moduleVersions: unknown };
+
+/** The stable name of a module across releases: its content key, else its id. */
+export function moduleVersionKey(module: Pick<ReleaseModule, "id" | "key">): string {
+  return module.key ?? module.id;
+}
+
+/** Read `Enrollment.moduleVersions`, ignoring anything that is not a map of strings. */
+export function readModuleVersionChoices(raw: unknown): ModuleVersionChoices {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.fromEntries(Object.entries(raw as Record<string, unknown>)
+    .filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+}
+
+/** The version a learner reads in this module: their choice when the release still has it, else the default. */
+export function chosenModuleVersion(module: ReleaseModule, choices: ModuleVersionChoices): ReleaseModuleVersion | null {
+  const wanted = choices[moduleVersionKey(module)];
+  if (!wanted || wanted === DEFAULT_MODULE_VERSION) return null;
+  return module.versions?.find(version => version.key === wanted) ?? null;
+}
+
+/**
+ * Swap in each module's chosen version so callers see exactly one lesson list per module.
+ * A list without versions comes back as the same array, so existing courses are untouched.
+ */
+export function applyModuleVersions(modules: ReleaseModule[], choices: ModuleVersionChoices): ReleaseModule[] {
+  if (!modules.some(module => module.versions?.length)) return modules;
+  return withoutSupersededChapters(modules.map(module => {
+    const { versions: _versions, defaultVersionLabel: _label, ...rest } = module;
+    const chosen = chosenModuleVersion(module, choices);
+    return chosen ? { ...rest, chapters: chosen.chapters } : rest;
+  }));
+}
+
+/** Every chapter of a module list across all of its versions. */
+export function allVersionChapters(modules: ReleaseModule[]): ReleaseChapter[] {
+  return modules.flatMap(module => [...module.chapters, ...(module.versions ?? []).flatMap(version => version.chapters)]);
+}
+
+/** Chapters that belong to a version this learner did not choose. Empty for a course without versions. */
+export function unchosenVersionChapterIds(modules: ReleaseModule[], choices: ModuleVersionChoices): Set<string> {
+  const chosen = new Set(applyModuleVersions(modules, choices).flatMap(module => module.chapters.map(chapter => chapter.id)));
+  return new Set(allVersionChapters(modules).map(chapter => chapter.id).filter(id => !chosen.has(id)));
+}
+
+/** Resolve the variant, then one version per module: the single module list a learner works through. */
+export function modulesForEnrollment(content: ReleaseContent, family: CourseFamily | null, enrollment: { variantSlug: string | null; moduleVersions: unknown }) {
+  const variant = resolveVariantInRelease(content, family, enrollment.variantSlug);
+  const all = content.variants[variant]!;
+  return { variant, all, modules: applyModuleVersions(all, readModuleVersionChoices(enrollment.moduleVersions)) };
+}
+
+/**
+ * The choices that still make sense in a release: a module key and version key both present.
+ * Anything else falls back to the default version.
+ */
+export function carryModuleVersionChoices(content: ReleaseContent, choices: ModuleVersionChoices): ModuleVersionChoices {
+  const kept: ModuleVersionChoices = {};
+  for (const [moduleKey, versionKey] of Object.entries(choices)) {
+    const exists = Object.values(content.variants).some(modules => modules.some(module =>
+      moduleVersionKey(module) === moduleKey && module.versions?.some(version => version.key === versionKey)));
+    if (exists) kept[moduleKey] = versionKey;
+  }
+  return kept;
+}
 
 /** Where a removed lesson's address leads now, or null. Follows a chain of removals, never a loop. */
 export function redirectedChapterSlug(content: ReleaseContent | null | undefined, chapterSlug: string): string | null {
@@ -110,7 +190,8 @@ export function resolveVariantInRelease(
   return variant;
 }
 
-export async function releaseForEnrollment(courseId: string, enrollment: { releaseId: string | null; variantSlug: string | null }, familySlug: string | null) {
+/** `modules` holds one version of each module (the learner's choice); `allModules` keeps every version. */
+export async function releaseForEnrollment(courseId: string, enrollment: EnrollmentContentSelection, familySlug: string | null) {
   const course = await prisma.course.findUniqueOrThrow({ where: { id: courseId }, select: { activeReleaseId: true, variantFamily: true } });
   const releaseId = enrollment.releaseId ?? course.activeReleaseId;
   if (!releaseId) return null;
@@ -118,8 +199,8 @@ export async function releaseForEnrollment(courseId: string, enrollment: { relea
   if (!release) throw new NotFoundError("Course release not found.");
   const content = readReleaseContent(release.content);
   const family = resolveCourseFamily(familySlug, course.variantFamily);
-  const variant = resolveVariantInRelease(content, family, enrollment.variantSlug);
-  return { release, variant, modules: content.variants[variant]! };
+  const { variant, all, modules } = modulesForEnrollment(content, family, enrollment);
+  return { release, variant, modules, allModules: all };
 }
 
 /** Build the existing syllabus shape from a pinned release. Chapter and block rows are immutable once referenced. */
@@ -132,22 +213,21 @@ export async function releaseModulesWithBlocks(modules: ReleaseModule[]) {
   return modules.map(module => ({ ...module, chapters: module.chapters.map(chapter => ({ ...chapter, blocks: byId.get(chapter.id) ?? [] })) }));
 }
 
-export async function releaseContainsChapter(courseId: string, enrollment: { releaseId: string | null; variantSlug: string | null }, familySlug: string | null, chapterId: string) {
+export async function releaseContainsChapter(courseId: string, enrollment: EnrollmentContentSelection, familySlug: string | null, chapterId: string) {
   const selected = await releaseForEnrollment(courseId, enrollment, familySlug);
   return !selected || selected.modules.some(module => module.chapters.some(chapter => chapter.id === chapterId));
 }
 
 export async function assertEnrollmentChapter(tx: Prisma.TransactionClient, enrollmentId: string, chapterId: string) {
   const enrollment = await tx.enrollment.findUniqueOrThrow({ where: { id: enrollmentId },
-    select: { courseId: true, releaseId: true, variantSlug: true, course: { select: { activeReleaseId: true, familySlug: true, variantFamily: true } } } });
+    select: { courseId: true, releaseId: true, variantSlug: true, moduleVersions: true, course: { select: { activeReleaseId: true, familySlug: true, variantFamily: true } } } });
   const id = enrollment.releaseId ?? enrollment.course.activeReleaseId;
   if (!id) return;
   const release = await tx.courseRelease.findFirstOrThrow({ where: { id, courseId: enrollment.courseId } });
   const content = readReleaseContent(release.content);
   const family = resolveCourseFamily(enrollment.course.familySlug, enrollment.course.variantFamily);
   // Same fallback as releaseForEnrollment so overview/reader and chapter-start never disagree.
-  const variant = resolveVariantInRelease(content, family, enrollment.variantSlug);
-  const modules = content.variants[variant]!;
+  const { modules } = modulesForEnrollment(content, family, enrollment);
   if (!modules.some(module => module.chapters.some(chapter => chapter.id === chapterId))) throw new NotFoundError("Chapter is not in this learner's course release.");
 }
 
@@ -183,7 +263,9 @@ export async function upgradeEnrollmentToRelease(
   const family = resolveCourseFamily(enrollment.course.familySlug, enrollment.course.variantFamily);
   const variant = resolveVariantInRelease(content, family, enrollment.variantSlug);
   const modules = content.variants[variant]!;
-  const targetChapters: ReleaseChapter[] = modules.flatMap((m) => m.chapters);
+  // Every version counts as part of the target: progress in a version the learner is not reading
+  // now is carried forward too, and never makes a lesson look removed.
+  const targetChapters: ReleaseChapter[] = allVersionChapters(modules);
 
   const targetById = new Map(targetChapters.map((c) => [c.id, c]));
   const targetBySlug = new Map(targetChapters.map((c) => [cleanChapterSlug(c.slug), c]));
@@ -316,10 +398,14 @@ export async function upgradeEnrollmentToRelease(
     }
   }
 
-  // 3. Update releaseId and recalculate rollup metrics
+  // 3. Update releaseId, keep each module version choice the target still has, and recalculate rollup metrics
+  const choices = readModuleVersionChoices(enrollment.moduleVersions);
+  const keptChoices = carryModuleVersionChoices(content, choices);
+  const choicesChanged = Object.keys(choices).length !== Object.keys(keptChoices).length;
   await tx.enrollment.update({
     where: { id: enrollmentId },
-    data: { releaseId: targetReleaseId },
+    data: { releaseId: targetReleaseId,
+      ...(choicesChanged ? { moduleVersions: Object.keys(keptChoices).length ? keptChoices : Prisma.DbNull } : {}) },
   });
 
   await recomputeEnrollmentRollup(tx, enrollmentId, { preserveActivity: true });

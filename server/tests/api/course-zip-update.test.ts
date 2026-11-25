@@ -226,7 +226,7 @@ describe("ZIP update preview and approval", () => {
       const next = await prisma.enrollment.create({ data: { courseId: course.id, userId: newcomer.id, variantSlug: "books", lifecycle: "ACTIVE" } });
       const books = await releaseForEnrollment(course.id, next, "multi-vendor-marketplace");
       expect(books?.modules[0].chapters[0].id).not.toBe(payments.id);
-      const grocery = await releaseForEnrollment(course.id, { releaseId: null, variantSlug: "grocery" }, "multi-vendor-marketplace");
+      const grocery = await releaseForEnrollment(course.id, { releaseId: null, variantSlug: "grocery", moduleVersions: null }, "multi-vendor-marketplace");
       expect(grocery?.modules[0].chapters[0].id).not.toBe(books?.modules[0].chapters[0].id);
       const token = (await createSession(newcomer.id)).sessionToken;
       const reader = await request(app).get(`/api/v1/courses/${course.slug}/chapters/payments`).set({ Authorization: `Bearer ${token}` });
@@ -278,7 +278,7 @@ describe("a rewritten lesson in a course without stable keys", () => {
     currentPlan = plan([{ title: "Checkout", lessons: [lesson("Payments", rewritten)] }, { title: "Operations", lessons: [lesson("Deployment", deploymentText)] }]);
   };
   const sharedChapters = async () => {
-    const selected = await releaseForEnrollment(course.id, { releaseId: null, variantSlug: null }, null);
+    const selected = await releaseForEnrollment(course.id, { releaseId: null, variantSlug: null, moduleVersions: null }, null);
     return selected!.modules.flatMap(module => module.chapters);
   };
 
