@@ -20,6 +20,13 @@ export default async function MyClassesPage() {
         <p className="mt-2 max-w-2xl text-lg text-muted-foreground">The classes you have joined, with each course, your progress and what is due next.</p>
       </header>
 
+      <p className="mt-4 text-base text-muted-foreground">
+        Teach a class?{" "}
+        <Link href="/organizations" className="font-bold text-primary underline-offset-4 hover:underline">
+          Create an organisation.
+        </Link>
+      </p>
+
       {classes.length > 0 ? (
         <ul className="mt-8 space-y-5">
           {classes.map((item) => (

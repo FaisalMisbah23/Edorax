@@ -13,6 +13,7 @@ export function ClassCard({ item }: { item: ClassSummary }) {
         <h2 className="min-w-0 text-lg font-semibold tracking-tight">{item.name}</h2>
         {item.archived ? <Badge variant="outline">Archived</Badge> : null}
       </div>
+      {item.organization ? <p className="-mt-2 text-xs text-muted-foreground">{item.organization.name}</p> : null}
       <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <Users className="size-4" aria-hidden />
         {item.memberCount} {item.memberCount === 1 ? "learner" : "learners"}
