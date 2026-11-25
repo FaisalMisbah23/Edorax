@@ -698,9 +698,9 @@
     height: 260px;
   }
 
+  /* No fixed height: the board is shown whole, so its tests sheet is never cut off. */
   .board {
-    height: 560px;
-    padding: 8px;
+    padding: 0 8px;
   }
 
   .body,
