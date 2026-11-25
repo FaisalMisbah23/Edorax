@@ -23,7 +23,16 @@ function waitLabel(hours: number) {
   return hours >= 48 ? `${Math.floor(hours / 24)} days` : hours >= 1 ? `${Math.floor(hours)} h` : "under an hour";
 }
 
-export function HelpInboxThreadCard({ thread }: { thread: MentorHelpInboxThread }) {
+export function HelpInboxThreadCard({
+  thread,
+  selected = false,
+  onSelect,
+}: {
+  thread: MentorHelpInboxThread;
+  selected?: boolean;
+  /** Present when the thread can be picked for a bulk action. */
+  onSelect?: (on: boolean) => void;
+}) {
   const router = useRouter();
   const [body, setBody] = useState("");
   const [note, setNote] = useState<string | null>(null);
@@ -32,7 +41,11 @@ export function HelpInboxThreadCard({ thread }: { thread: MentorHelpInboxThread 
   const [gone, setGone] = useState(false);
   const [pending, startTransition] = useTransition();
   const open = thread.status === "OPEN";
-  const earlier = thread.messageCount - thread.messages.length;
+  // The website can deploy a minute before the API: fall back to the one-line preview until it catches up.
+  const messages =
+    thread.messages ??
+    (thread.preview ? [{ id: "preview", body: thread.preview.body, fromLearner: true, authorName: thread.menteeLabel, createdAt: thread.preview.createdAt }] : []);
+  const earlier = Math.max(0, (thread.messageCount ?? messages.length) - messages.length);
 
   function run(work: () => Promise<string | null>, hide = false) {
     startTransition(async () => {
@@ -76,6 +89,15 @@ export function HelpInboxThreadCard({ thread }: { thread: MentorHelpInboxThread 
   return (
     <li className={cn("rounded-2xl border bg-card p-4 sm:p-5", thread.needsReply ? "border-amber-400/60" : "border-border")}>
       <div className="flex items-start gap-3">
+        {onSelect ? (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(event) => onSelect(event.target.checked)}
+            aria-label={`Select ${thread.menteeLabel}'s question`}
+            className="mt-3 size-4 shrink-0 accent-[var(--primary)]"
+          />
+        ) : null}
         <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary" aria-hidden>
           {initials(thread.menteeLabel)}
         </div>
@@ -117,7 +139,7 @@ export function HelpInboxThreadCard({ thread }: { thread: MentorHelpInboxThread 
             {earlier} earlier {earlier === 1 ? "message" : "messages"}: open the full chat
           </Link>
         ) : null}
-        {thread.messages.map((message) => (
+        {messages.map((message) => (
           <div key={message.id} className={cn("flex", message.fromLearner ? "justify-start" : "justify-end")}>
             <div
               className={cn(

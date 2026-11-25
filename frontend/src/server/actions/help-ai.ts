@@ -2,6 +2,7 @@
 
 import type { HelpReplyDraft, ThreadFeedbackView } from "@/shared/api/teach";
 import { teachCall } from "./teach-call";
+import { resolveHelpThread } from "./help";
 
 /** Claude's suggested reply to a learner question; the mentor edits and sends it. */
 export async function draftHelpReply(input: { threadId: string }): Promise<{ ok: true; draft: HelpReplyDraft } | { ok: false; error: string }> {
@@ -22,4 +23,16 @@ export async function setThreadFeedback(input: {
   });
   if (!result.ok) return { ok: false, error: result.errors.join(" ") };
   return { ok: true, feedback: result.data };
+}
+
+/** Mark several learner questions resolved; one failure does not stop the rest. */
+export async function resolveHelpThreads(input: { threadIds: string[] }): Promise<{ resolved: number; failed: number }> {
+  let resolved = 0;
+  let failed = 0;
+  for (const threadId of [...new Set(input.threadIds)].slice(0, 200)) {
+    const result = await resolveHelpThread({ threadId });
+    if (result.ok) resolved += 1;
+    else failed += 1;
+  }
+  return { resolved, failed };
 }

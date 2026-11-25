@@ -114,7 +114,7 @@ export function ReviewQueueCard({ item, ageLabel, autoDraft }: { item: ReviewQue
         <>
           <div className="mt-3 rounded-lg border bg-background p-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Learner&apos;s answer</p>
-            {item.answerText ? <Clamped text={item.answerText} /> : <p className="text-sm text-muted-foreground">No text in this answer.</p>}
+            {item.answerText ? <Clamped text={item.answerText} /> : item.answerText === undefined ? <p className="text-sm text-muted-foreground">Open the full page to read the answer.</p> : <p className="text-sm text-muted-foreground">No text in this answer.</p>}
             {item.answerUrl ? (
               <a href={item.answerUrl} target="_blank" rel="noreferrer noopener" className="mt-2 inline-flex items-center gap-1 break-all text-sm text-primary underline underline-offset-2">
                 <ExternalLink className="size-3.5 shrink-0" aria-hidden /> {item.answerUrl}

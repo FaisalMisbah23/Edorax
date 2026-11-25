@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HelpInboxThreadCard } from "@/components/teach/help-inbox-thread-card";
+import { HelpInboxList } from "@/components/teach/help-inbox-list";
 import { Inbox } from "lucide-react";
 import type { MentorHelpInboxView } from "@/shared/api/teach";
 import { requireTeachSurface } from "@/server/auth/guards";
@@ -30,7 +30,7 @@ export default async function MentorHelpInboxPage({
   const {
     courses,
     openCount: openHelpCount,
-    needsReplyCount,
+    needsReplyCount = 0,
     learner,
     threads,
   } = await serverApiFetch<MentorHelpInboxView>(
@@ -38,7 +38,7 @@ export default async function MentorHelpInboxPage({
   );
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
@@ -50,7 +50,7 @@ export default async function MentorHelpInboxPage({
           {(statusFilter ?? "open") !== "resolved" && (
             <p className="mt-2 text-sm font-medium text-foreground">
               {needsReplyCount > 0
-                ? `${needsReplyCount} ${needsReplyCount === 1 ? "needs" : "need"} your reply. ${threads.length - needsReplyCount} waiting on the learner.`
+                ? `${needsReplyCount} ${needsReplyCount === 1 ? "needs" : "need"} your reply. ${Math.max(0, threads.length - needsReplyCount)} waiting on the learner.`
                 : threads.length > 0
                   ? "Nothing needs your reply. These are waiting on the learner: mark them resolved when you are done."
                   : ""}
@@ -121,11 +121,7 @@ export default async function MentorHelpInboxPage({
           </p>
         </div>
       ) : (
-        <ul className="mt-6 space-y-3">
-          {threads.map((thread) => (
-            <HelpInboxThreadCard key={thread.id} thread={thread} />
-          ))}
-        </ul>
+        <HelpInboxList threads={threads} />
       )}
     </div>
   );
