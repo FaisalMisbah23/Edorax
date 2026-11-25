@@ -8,6 +8,12 @@ import { loadBlockState } from "../services/blocks/state.js";
 import { BadRequestError } from "../utils/errors.js";
 import { chooseCourseSpecialisation, chooseCourseVariant } from "../services/courses/track.js";
 import { saveCourseRating, getMyCourseRating, dismissCourseRatingPrompt } from "../services/courses/ratings.js";
+import {
+  chooseModuleVersion as chooseModuleVersionFor,
+  deleteModuleVersionFeedback as removeModuleVersionFeedback,
+  listCourseModuleVersions,
+  setModuleVersionFeedback,
+} from "../services/courses/module-versions.js";
 
 // GET /api/v1/courses/:courseSlug/continue
 export async function continueChapter(req: Request, res: Response) {
@@ -83,4 +89,26 @@ export async function getRating(req: Request, res: Response) {
 // POST /api/v1/courses/:courseSlug/rating/dismiss
 export async function dismissRating(req: Request, res: Response) {
   ok(res, await dismissCourseRatingPrompt(req.user!, req.params.courseSlug as string));
+}
+
+// GET /api/v1/courses/:courseSlug/module-versions
+export async function listModuleVersions(req: Request, res: Response) {
+  ok(res, await listCourseModuleVersions(req.params.courseSlug as string, req.user!));
+}
+
+// PUT /api/v1/courses/:courseSlug/modules/:moduleKey/version
+export async function chooseModuleVersion(req: Request, res: Response) {
+  const { versionKey } = req.body as { versionKey: string };
+  ok(res, await chooseModuleVersionFor(req.params.courseSlug as string, req.user!, req.params.moduleKey as string, versionKey));
+}
+
+// PUT /api/v1/courses/:courseSlug/modules/:moduleKey/version-feedback
+export async function putModuleVersionFeedback(req: Request, res: Response) {
+  const body = req.body as { versionKey: string; note?: string | null };
+  ok(res, await setModuleVersionFeedback(req.params.courseSlug as string, req.user!, req.params.moduleKey as string, body));
+}
+
+// DELETE /api/v1/courses/:courseSlug/modules/:moduleKey/version-feedback
+export async function deleteModuleVersionFeedback(req: Request, res: Response) {
+  ok(res, await removeModuleVersionFeedback(req.params.courseSlug as string, req.user!, req.params.moduleKey as string));
 }

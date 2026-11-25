@@ -20,5 +20,6 @@
   "api/syllabus.ts",
   "domain/enums.ts",
   "lib/course-tracks.ts",
-  "html-preview/spec.ts"
+  "html-preview/spec.ts",
+  "api/module-versions.ts"
 ]
