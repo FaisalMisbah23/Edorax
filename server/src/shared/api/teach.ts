@@ -298,6 +298,8 @@ export type AllMenteesView = {
   courses: Array<{ id: string; slug: string; title: string }>;
   /** The course filter in effect, or null for all courses. */
   courseId: string | null;
+  /** Distinct people; one person enrolled in three courses counts once. */
+  learnerCount: number;
   mentees: MenteeRosterItem[];
   attentionMentees: MenteeRosterItem[];
   summary: CourseMenteesView["summary"];
@@ -569,6 +571,9 @@ export type ReviewQueueItem = ReviewContext & {
   maxScore: number;
   /** The automatic AI first pass, when it is ready. */
   aiDraft: AiReviewDraft | null;
+  /** Which model wrote the draft and what it cost in US dollars, when known. */
+  aiDraftModel: string | null;
+  aiDraftCostUsd: number | null;
 };
 
 export type ReviewQueueView = {
@@ -576,7 +581,12 @@ export type ReviewQueueView = {
   items: ReviewQueueItem[];
   /** True when every open answer gets an automatic AI draft on the platform key. */
   autoDraft: boolean;
+  /** Total cost in US dollars of the drafts in this list. */
+  draftCostUsd: number;
 };
+
+/** POST /api/v1/teach/review/accept-ai-drafts */
+export type AcceptAiDraftsResult = { sent: number; failed: number };
 
 export type ReviewDetailView = ReviewContext & {
   id: string;
@@ -613,7 +623,7 @@ export type AiReviewDraft = {
   confidence: "LOW" | "MEDIUM" | "HIGH";
 };
 
-export type AiReviewDraftResult = { draft: AiReviewDraft; model: string };
+export type AiReviewDraftResult = { draft: AiReviewDraft; model: string; costUsd?: number | null };
 
 // ---------------------------------------------------------------------------
 // Mentor help inbox
@@ -630,6 +640,44 @@ export type MentorHelpInboxThread = {
   preview: { body: string; createdAt: string } | null;
   /** Hours since the latest message; drives the "waiting" badge. */
   ageHours: number;
+  /** Set when a mentor flagged the thread as feedback for the team. */
+  feedbackScope: "COURSE" | "PLATFORM" | null;
+};
+
+/** Claude's suggested reply to a learner question, for the mentor to edit and send. */
+export type HelpReplyDraft = {
+  reply: string;
+  model: string;
+  costUsd: number | null;
+  /** Whether the message looks like a course or platform problem worth flagging. */
+  feedbackScope: "NONE" | "COURSE" | "PLATFORM";
+  feedbackNote: string | null;
+};
+
+export type ThreadFeedbackView = { scope: "COURSE" | "PLATFORM" | null; note: string | null };
+
+export type FeedbackItem = {
+  id: string;
+  scope: "COURSE" | "PLATFORM";
+  /** "report": the learner filed a lesson report. "flag": a mentor flagged a question. */
+  source: "report" | "flag";
+  category: MentorHelpInboxThread["category"];
+  status: HelpThreadStatus;
+  courseTitle: string;
+  moduleTitle: string | null;
+  chapterTitle: string | null;
+  learnerLabel: string;
+  note: string | null;
+  quote: string | null;
+  /** The learner's first message in the thread. */
+  message: string | null;
+  createdAt: string;
+  href: string;
+};
+
+export type FeedbackView = {
+  items: FeedbackItem[];
+  counts: { course: number; platform: number; open: number };
 };
 
 export type MentorHelpInboxView = {

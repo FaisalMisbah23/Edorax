@@ -203,6 +203,7 @@ export async function loadAllMentees(user: SessionUser, courseId?: string | null
   return {
     courses,
     courseId: courseId && selected.length ? courseId : null,
+    learnerCount: new Set(mentees.map((mentee) => mentee.userId)).size,
     mentees,
     attentionMentees: mentees.filter((mentee) => mentee.attention.length > 0),
     summary: summarize(mentees),

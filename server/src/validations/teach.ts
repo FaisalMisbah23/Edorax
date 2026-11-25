@@ -113,6 +113,17 @@ export const submitReviewBody = z.object({
 });
 export type SubmitReviewBody = z.infer<typeof submitReviewBody>;
 
+export const acceptAiDraftsBody = z.object({
+  responseIds: z.array(z.string().min(1).max(64)).min(1).max(200),
+});
+
+export const threadIdParams = z.object({ threadId: z.string().min(1).max(64) });
+
+export const threadFeedbackBody = z.object({
+  scope: z.enum(["COURSE", "PLATFORM"]).nullable(),
+  note: z.string().trim().max(600).nullable().optional(),
+});
+
 export const helpInboxQuery = z.object({
   courseId: z.string().optional(),
   status: z.enum(["open", "resolved", "all"]).optional(),

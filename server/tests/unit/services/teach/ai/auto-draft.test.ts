@@ -13,7 +13,8 @@ const draft = {
 
 describe("readStoredDraft", () => {
   it("returns a saved draft with its model", () => {
-    expect(readStoredDraft(draft, "claude-haiku-5-5")).toEqual({ draft, model: "claude-haiku-5-5" });
+    expect(readStoredDraft(draft, "claude-haiku-5-5")).toEqual({ draft, model: "claude-haiku-5-5", costUsd: null });
+    expect(readStoredDraft(draft, "claude-haiku-5-5", 1200)?.costUsd).toBe(0.0012);
   });
 
   it("ignores a missing model, a missing draft or a malformed one", () => {
