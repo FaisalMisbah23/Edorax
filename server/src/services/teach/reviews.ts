@@ -48,6 +48,7 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string):
               select: {
                 type: true,
                 points: true,
+                config: true,
                 chapter: { select: { id: true, title: true, module: { select: { title: true } }, course: { select: { slug: true, title: true } } } },
               },
             },
@@ -71,6 +72,7 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string):
     chapterTitle: response.block.chapter.title,
     blockType: response.block.type,
     maxScore: response.block.points,
+    ...questionAndAnswer(response.block.config, response.payload),
     aiDraft: readStoredDraft(response.aiDraft, response.aiDraftModel)?.draft ?? null,
     aiDraftModel: response.aiDraft ? response.aiDraftModel : null,
     aiDraftCostUsd: response.aiDraft && response.aiDraftCostMicroUsd != null ? response.aiDraftCostMicroUsd / 1_000_000 : null,
@@ -81,6 +83,21 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string):
 
   const draftCostUsd = items.reduce((sum, item) => sum + (item.aiDraftCostUsd ?? 0), 0);
   return { courses, items, autoDraft: aiReviewAutoDraftAvailable, draftCostUsd };
+}
+
+const QUEUE_TEXT_LIMIT = 6000;
+
+/** The prompt and the learner's words for a queue card. A capstone has neither: its report is on its own page. */
+function questionAndAnswer(rawConfig: unknown, rawPayload: unknown) {
+  const config = OpenQuestionConfigSchema.safeParse(rawConfig);
+  const payload = rawPayload as { text?: unknown; url?: unknown } | null;
+  const text = typeof payload?.text === "string" ? payload.text.trim() : "";
+  const rawUrl = typeof payload?.url === "string" ? payload.url : null;
+  return {
+    questionPrompt: config.success ? config.data.prompt.slice(0, QUEUE_TEXT_LIMIT) : null,
+    answerText: text.slice(0, QUEUE_TEXT_LIMIT),
+    answerUrl: rawUrl ? (parseSafeSubmissionUrl(rawUrl)?.toString() ?? null) : null,
+  };
 }
 
 type LearnerProgress = NonNullable<ReviewDetailView["learnerProgress"]>;
@@ -348,4 +365,24 @@ export async function acceptAiDrafts(user: SessionUser, responseIds: string[]): 
     }
   }
   return { sent, failed };
+}
+
+/**
+ * Take an answer out of the queue without sending feedback: placeholder text, a test
+ * submission, an answer from a learner who has left. The answer stays on record as
+ * submitted, and the learner is not notified.
+ */
+export async function archiveResponse(user: SessionUser, responseId: string): Promise<void> {
+  const response = await requireReviewableResponse(user, responseId);
+  if (response.status !== "PENDING_REVIEW") {
+    throw new ConflictError("This submission has already been reviewed.", TEACH_ERROR_CODES.ALREADY_REVIEWED);
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.response.update({ where: { id: response.id }, data: { status: "SUBMITTED" } });
+    await resolvePendingBlockReview(tx, response.blockId);
+    const enrolled = await tx.enrollment.findUnique({ where: { id: response.enrollmentId }, select: { id: true } });
+    if (!enrolled) return;
+    await adjustEnrollmentPendingReviews(tx, response.enrollmentId, -1);
+    await recomputeChapterProgress(tx, response.enrollmentId, response.block.chapter.id);
+  });
 }

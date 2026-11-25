@@ -14,6 +14,13 @@ export async function acceptAllAiReviewDrafts(input: { responseIds: string[] }):
   return { ok: true, sent: result.data.sent, failed: result.data.failed };
 }
 
+/** Take an answer out of the queue without sending feedback. */
+export async function archiveReviewResponse(input: { responseId: string }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const result = await teachCall<null>(`/api/v1/teach/review/${encodeURIComponent(input.responseId)}/archive`, { method: "POST" });
+  if (!result.ok) return { ok: false, error: result.errors.join(" ") };
+  return { ok: true };
+}
+
 /** Send the saved AI first pass as the review, unchanged. */
 export async function acceptAiReviewDraft(input: { responseId: string }): Promise<{ ok: true } | { ok: false; error: string }> {
   const result = await teachCall<null>(`/api/v1/teach/review/${encodeURIComponent(input.responseId)}/accept-ai-draft`, { method: "POST" });

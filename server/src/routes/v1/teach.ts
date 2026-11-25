@@ -146,6 +146,7 @@ router.get("/review/:responseId", validateParams(responseIdParams), teach.getRev
 router.post("/review/:responseId", validate({ params: responseIdParams, body: submitReviewBody }), teach.submitReview);
 router.post("/review/:responseId/ai-draft", validateParams(responseIdParams), teach.generateAiReviewDraft);
 router.post("/review/:responseId/accept-ai-draft", validateParams(responseIdParams), teach.acceptAiDraft);
+router.post("/review/:responseId/archive", validateParams(responseIdParams), teach.archiveResponse);
 
 router.get("/integrity/attempts/:attemptId", validateParams(attemptParams), integrity.attemptDetail);
 

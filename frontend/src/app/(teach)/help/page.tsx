@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ChevronRight, Inbox } from "lucide-react";
+import { HelpInboxActions } from "@/components/teach/help-inbox-actions";
+import { Inbox } from "lucide-react";
 import type { MentorHelpInboxView } from "@/shared/api/teach";
 import { requireTeachSurface } from "@/server/auth/guards";
 import { serverApiFetch } from "@/lib/api-server";
@@ -117,22 +118,16 @@ export default async function MentorHelpInboxPage({
               thread.status === "OPEN" && thread.ageHours >= AGING_HOURS;
 
             return (
-              <li key={thread.id}>
-                <Link
-                  href={`/help/${thread.id}`}
-                  className="group flex items-center gap-4 border-l-[3px] border-transparent px-4 py-4 outline-none transition-colors hover:border-primary hover:bg-primary/5 focus-visible:border-primary focus-visible:bg-primary/5 sm:px-5"
-                >
-                  <div
-                    className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
-                    aria-hidden
-                  >
+              <li key={thread.id} className="px-4 py-4 sm:px-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary" aria-hidden>
                     {initials(thread.menteeLabel)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-[15px] font-semibold text-foreground">
+                      <Link href={`/help/${thread.id}`} className="truncate text-[15px] font-semibold text-foreground hover:underline">
                         {thread.menteeLabel}
-                      </p>
+                      </Link>
                       {thread.kind === "LESSON_REPORT" && (
                         <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
                           Report
@@ -155,21 +150,18 @@ export default async function MentorHelpInboxPage({
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    <p className="mt-0.5 text-xs text-muted-foreground">
                       {thread.courseTitle}
                       {thread.chapterTitle ? ` › ${thread.chapterTitle}` : ""}
                     </p>
                     {thread.preview && (
-                      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                      <p className="mt-2 line-clamp-[12] whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
                         {thread.preview.body}
                       </p>
                     )}
+                    <HelpInboxActions threadId={thread.id} open={thread.status === "OPEN"} />
                   </div>
-                  <ChevronRight
-                    className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-                    aria-hidden
-                  />
-                </Link>
+                </div>
               </li>
             );
           })}

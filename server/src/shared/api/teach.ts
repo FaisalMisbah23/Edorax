@@ -569,6 +569,10 @@ export type ReviewQueueItem = ReviewContext & {
   chapterTitle: string;
   blockType: string;
   maxScore: number;
+  /** The question asked and what the learner wrote, so the mentor can review without opening the answer. */
+  questionPrompt: string | null;
+  answerText: string;
+  answerUrl: string | null;
   /** The automatic AI first pass, when it is ready. */
   aiDraft: AiReviewDraft | null;
   /** Which model wrote the draft and what it cost in US dollars, when known. */
