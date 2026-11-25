@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { preconnect } from "react-dom";
 import s from "./hero-lab.module.css";
 
-// A real chapter from a live course. The file is only fetched once a visitor presses play.
+// A real chapter from a live course. Opening the Listen tab fetches only the file's first
+// few kilobytes (its length); the sound itself starts loading when the visitor reaches for play.
 const SAMPLE = {
   course: "Cause and effect",
   chapter: "Chapter 1: Set the scene",
@@ -24,6 +26,9 @@ function clock(seconds: number) {
 export function ListenSample({ onSolved }: { onSolved: () => void }) {
   const audio = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
+  // True from the press on play until sound is really coming out, and again whenever it stalls.
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(SAMPLE.minutes * 60);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
@@ -39,14 +44,35 @@ export function ListenSample({ onSolved }: { onSolved: () => void }) {
     return () => el?.pause();
   }, []);
 
+  // Open the connection to the audio host as soon as the tab is shown, so play has less to wait for.
+  preconnect(new URL(SAMPLE.src).origin);
+
+  /** The visitor is about to press play (pointer or keyboard is on the button): start loading the sound. */
+  function warm() {
+    const el = audio.current;
+    if (el && el.preload !== "auto") el.preload = "auto";
+  }
+
   function toggle() {
     const el = audio.current;
     if (!el) return;
-    if (el.paused) {
-      el.playbackRate = speed;
-      void el.play();
-    } else el.pause();
+    if (!el.paused) {
+      el.pause();
+      return;
+    }
+    setFailed(false);
+    // Not enough of the file is here yet to play: say so until the playing event arrives.
+    if (el.readyState < 3) setLoading(true);
+    el.playbackRate = speed;
+    el.play().catch((err: unknown) => {
+      // A pause before the sound started is not a failure.
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setLoading(false);
+      setFailed(true);
+    });
   }
+
+  const label = loading ? "Loading the chapter" : playing ? "Pause" : "Play the chapter";
 
   return (
     <div className={s.split}>
@@ -56,8 +82,19 @@ export function ListenSample({ onSolved }: { onSolved: () => void }) {
         </p>
         <p className={s.taskTitle}>Listen to the chapter instead of reading it, on a walk or on the bus.</p>
         <div className={s.player}>
-          <button type="button" className={s.playButton} onClick={toggle} aria-label={playing ? "Pause" : "Play the chapter"}>
-            {playing ? (
+          <button
+            type="button"
+            className={s.playButton}
+            onClick={toggle}
+            onPointerEnter={warm}
+            onPointerDown={warm}
+            onFocus={warm}
+            aria-label={label}
+            aria-busy={loading}
+          >
+            {loading ? (
+              <span className={s.spinner} aria-hidden="true" />
+            ) : playing ? (
               <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor" />
               </svg>
@@ -84,6 +121,9 @@ export function ListenSample({ onSolved }: { onSolved: () => void }) {
             />
             <div className={s.playerTimes}>
               <span>{clock(time)}</span>
+              <span role="status" className={failed ? s.playerError : s.playerNote}>
+                {failed ? "Could not load the audio. Check your connection and press play again." : loading ? "Loading the chapter..." : ""}
+              </span>
               <span>{clock(duration)}</span>
             </div>
           </div>
@@ -98,7 +138,15 @@ export function ListenSample({ onSolved }: { onSolved: () => void }) {
         <audio
           ref={audio}
           src={SAMPLE.src}
-          preload="none"
+          preload="metadata"
+          onWaiting={() => setLoading(true)}
+          onPlaying={() => setLoading(false)}
+          onCanPlay={() => setLoading(false)}
+          onError={() => {
+            setLoading(false);
+            setPlaying(false);
+            setFailed(true);
+          }}
           onPlay={() => {
             setPlaying(true);
             if (!heard.current) {
@@ -106,7 +154,10 @@ export function ListenSample({ onSolved }: { onSolved: () => void }) {
               onSolved();
             }
           }}
-          onPause={() => setPlaying(false)}
+          onPause={() => {
+            setPlaying(false);
+            setLoading(false);
+          }}
           onEnded={() => setPlaying(false)}
           onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
