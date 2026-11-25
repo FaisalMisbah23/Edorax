@@ -146,6 +146,11 @@ const schema = z.object({
     .optional()
     .transform((value) => value !== "false"),
   AI_REVIEW_MODEL: z.string().trim().min(1).default("claude-haiku-5-5"),
+  /**
+   * Suggested replies to learner questions. These are few and need the whole course in view
+   * (links, which chapter covers what), so they run on a stronger model than the bulk reviews.
+   */
+  HELP_REPLY_MODEL: z.string().trim().min(1).default("claude-sonnet-5-5"),
   /** Drafts the whole platform may make per UTC day, the cap on the Anthropic bill. */
   AI_REVIEW_DAILY_LIMIT: z.coerce.number().int().min(1).max(20_000).default(1_000),
   /** Optional fine-grained GitHub token, public read only. Without it the API allows 60 calls an hour, about 12 checks. */

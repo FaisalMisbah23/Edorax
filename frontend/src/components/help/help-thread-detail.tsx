@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import {
   askMentorFromChapter,
@@ -11,6 +11,7 @@ import {
 import { HelpNoteTimeline } from "./help-note-timeline";
 import { HelpNoteComposer } from "./help-note-composer";
 import { MentorQuickReplies } from "./mentor-quick-replies";
+import { AiReplyButton, aiNoteFor } from "./ai-reply-button";
 import { MentorThreadAside } from "./mentor-thread-aside";
 import {
   ChatAvatar,
@@ -73,6 +74,7 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<HelpMessageView | null>(null);
+  const [aiNote, setAiNote] = useState<string | null>(null);
 
   const active = props.active ?? true;
   const isOpen = props.status === "OPEN";
@@ -97,16 +99,6 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
   useRealtimeEvent("help-thread", (event) => {
     if (event.threadId === props.threadId) router.refresh();
   });
-
-  // The mentor's AI panel hands a suggested reply to the typing bar with this event.
-  useEffect(() => {
-    function onDraft(event: Event) {
-      const text = (event as CustomEvent<string>).detail;
-      if (typeof text === "string" && text.trim()) setBody(text);
-    }
-    window.addEventListener("edorax:help-reply-draft", onDraft);
-    return () => window.removeEventListener("edorax:help-reply-draft", onDraft);
-  }, []);
 
   function cancelReply() {
     setReplyingTo(null);
@@ -332,6 +324,7 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
         />
         <ChatCanvas aria-live="polite">{timelineBlock}</ChatCanvas>
         <ChatFooter>
+          {isOpen && aiNote ? <p className="mb-2 px-2 text-xs text-muted-foreground">{aiNote}</p> : null}
           {isOpen ? (
             <HelpNoteComposer
               id={composerId}
@@ -346,6 +339,16 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
               replyingTo={replyingTo}
               onCancelReply={cancelReply}
               leading={<MentorQuickReplies onPick={pickQuickReply} />}
+              trailing={
+                <AiReplyButton
+                  threadId={props.threadId}
+                  onDraft={(draft) => {
+                    pickStarter(draft.reply);
+                    setAiNote(aiNoteFor(draft));
+                  }}
+                  onError={(message) => toast(message)}
+                />
+              }
             />
           ) : (
             <p className="mx-auto w-fit max-w-full rounded-2xl bg-muted px-4 py-2 text-center text-sm text-muted-foreground">
