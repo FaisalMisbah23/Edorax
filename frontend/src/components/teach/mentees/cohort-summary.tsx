@@ -1,9 +1,10 @@
 import { CheckCircle2, CircleHelp, Clock3, Gauge, MessageSquareText, Radio, Users } from "lucide-react";
 import type { CourseMenteesView } from "@/shared/api/teach";
 
-export function CohortSummary({ summary }: { summary: CourseMenteesView["summary"] }) {
+export function CohortSummary({ summary, learnerCount }: { summary: CourseMenteesView["summary"]; learnerCount?: number }) {
   const metrics = [
-    { label: "Enrolled", value: summary.total, icon: Users },
+    ...(learnerCount !== undefined ? [{ label: "Learners", value: learnerCount, icon: Users }] : []),
+    { label: learnerCount !== undefined ? "Enrollments" : "Enrolled", value: summary.total, icon: Users },
     { label: "Active 7 days", value: summary.active, icon: Radio },
     { label: "Average progress", value: `${summary.averageCompletion}%`, icon: Gauge },
     { label: "Completed", value: summary.completed, icon: CheckCircle2 },

@@ -1,0 +1,40 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCheck } from "lucide-react";
+import { acceptAllAiReviewDrafts } from "@/server/actions/ai-review";
+import { Button } from "@/components/ui/button";
+
+/** Sends every drafted review in the list with Claude's suggested verdict, after one confirmation. */
+export function AcceptAllAiDraftsButton({ responseIds, approveCount, reviseCount }: { responseIds: string[]; approveCount: number; reviseCount: number }) {
+  const router = useRouter();
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  if (responseIds.length === 0) return null;
+
+  function sendAll() {
+    const summary = `Send ${responseIds.length} reviews as Claude wrote them?\n\n${approveCount} will be approved and ${reviseCount} sent back for revision. Learners see the feedback straight away.`;
+    if (!window.confirm(summary)) return;
+    startTransition(async () => {
+      setMessage(null);
+      const result = await acceptAllAiReviewDrafts({ responseIds });
+      if (!result.ok) setMessage(result.error);
+      else setMessage(result.failed ? `Sent ${result.sent}. ${result.failed} could not be sent and are still in the list.` : `Sent ${result.sent} reviews.`);
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <Button type="button" onClick={sendAll} loading={pending} disabled={pending}>
+        <CheckCheck aria-hidden /> Send all {responseIds.length} drafted reviews
+      </Button>
+      {message ? (
+        <p role="status" className="text-xs text-muted-foreground">
+          {message}
+        </p>
+      ) : null}
+    </div>
+  );
+}

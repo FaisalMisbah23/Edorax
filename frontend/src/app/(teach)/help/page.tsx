@@ -144,6 +144,11 @@ export default async function MentorHelpInboxPage({
                           {Math.floor(thread.ageHours)}h waiting
                         </span>
                       )}
+                      {thread.feedbackScope && (
+                        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                          {thread.feedbackScope === "PLATFORM" ? "Platform feedback" : "Course feedback"}
+                        </span>
+                      )}
                       {thread.status === "RESOLVED" && (
                         <span className="rounded-full bg-ok-soft px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ok">
                           Resolved
@@ -151,7 +156,8 @@ export default async function MentorHelpInboxPage({
                       )}
                     </div>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {thread.chapterTitle ?? thread.courseTitle}
+                      {thread.courseTitle}
+                      {thread.chapterTitle ? ` › ${thread.chapterTitle}` : ""}
                     </p>
                     {thread.preview && (
                       <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">

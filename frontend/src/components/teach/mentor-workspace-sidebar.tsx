@@ -17,6 +17,7 @@ import {
   MessageSquareText,
   Settings2,
   Sparkles,
+  Flag,
   Users,
   Wallet,
   type LucideIcon,
@@ -92,14 +93,13 @@ export function MentorWorkspaceSidebar({
     }
   }, [routeCourseSlug]);
 
+  // No course is forced on the instructor: with nothing picked, the workspace is on "All courses".
   const selectedSlug =
     routeCourseSlug ??
-    (rememberedSlug && courses.some((course) => course.slug === rememberedSlug)
-      ? rememberedSlug
-      : courses[0]?.slug ?? null);
+    (rememberedSlug && courses.some((course) => course.slug === rememberedSlug) ? rememberedSlug : null);
 
   const selectedCourse = useMemo(
-    () => courses.find((course) => course.slug === selectedSlug) ?? courses[0] ?? null,
+    () => courses.find((course) => course.slug === selectedSlug) ?? null,
     [courses, selectedSlug]
   );
   const courseBase = selectedCourse ? `/courses/${selectedCourse.slug}` : null;
@@ -197,7 +197,22 @@ export function MentorWorkspaceSidebar({
       active: pathname.startsWith("/help"),
       count: total((course) => course.openHelpRequests),
     },
+    {
+      label: "Feedback",
+      href: "/feedback",
+      icon: Flag,
+      active: pathname.startsWith("/feedback"),
+    },
   ];
+
+  /** Back to all courses: forget the remembered course and leave any course-only page. */
+  const chooseAllCourses = () => {
+    clearLastCourse();
+    if (routeCourseSlug) router.push("/courses");
+    else if (pathname.startsWith("/review")) router.push("/review");
+    else if (pathname.startsWith("/help")) router.push("/help");
+    else if (pathname.startsWith("/learners")) router.push("/learners");
+  };
 
   const chooseCourse = (course: MentorSidebarCourse) => {
     writeLastCourse(course.slug);
@@ -244,10 +259,12 @@ export function MentorWorkspaceSidebar({
                     <span className="text-[11px] text-primary">Change</span>
                   </DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem onClick={() => router.push("/courses")}>Create your first course</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/courses")}>
+                    {courses.length ? "Pick a course to see its tools" : "Create your first course"}
+                  </DropdownMenuItem>
                 )}
               </DropdownMenuGroup>
-              <MobileItems items={[...courseItems, ...insightItems]} router={router} />
+              {selectedCourse ? <MobileItems items={[...courseItems, ...insightItems]} router={router} /> : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -278,7 +295,7 @@ export function MentorWorkspaceSidebar({
                   Active course
                 </span>
                 <span className="mt-0.5 block truncate text-sm font-semibold">
-                  {selectedCourse?.title ?? "No course selected"}
+                  {selectedCourse?.title ?? "All courses"}
                 </span>
               </span>
               <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
@@ -286,6 +303,9 @@ export function MentorWorkspaceSidebar({
             <DropdownMenuContent align="start" className="w-60">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Switch course</DropdownMenuLabel>
+                <DropdownMenuItem className={cn(!selectedCourse && "bg-accent")} onClick={chooseAllCourses}>
+                  <span className="min-w-0 flex-1 truncate font-medium">All courses</span>
+                </DropdownMenuItem>
                 {courses.map((course) => (
                   <DropdownMenuItem
                     key={course.id}
@@ -369,7 +389,7 @@ function SidebarItems({ items }: { items: NavItem[] }) {
         );
 
         return item.disabled ? (
-          <span key={item.label} className={classes} aria-disabled="true" title="Select a course first">
+          <span key={item.label} className={classes} aria-disabled="true" title="Pick a course first">
             {content}
           </span>
         ) : (
@@ -434,6 +454,11 @@ function subscribeToLastCourse(onStoreChange: () => void): () => void {
 
 function readLastCourse(): string | null {
   return window.localStorage.getItem(LAST_COURSE_KEY);
+}
+
+function clearLastCourse(): void {
+  window.localStorage.removeItem(LAST_COURSE_KEY);
+  window.dispatchEvent(new Event(LAST_COURSE_EVENT));
 }
 
 function writeLastCourse(slug: string): void {
