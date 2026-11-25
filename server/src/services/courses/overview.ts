@@ -3,7 +3,7 @@ import { buildCourseTrack } from "../../shared/lib/course-tracks.js";
 import { prisma } from "../../db/prisma.js";
 import { BadRequestError, NotFoundError } from "../../utils/errors.js";
 import type { SessionUser } from "../../types/auth.js";
-import { shouldBypassProgressGating } from "../auth/seed-access.js";
+import { shouldBypassProgressGatingForCourse } from "../auth/seed-access.js";
 import { enrollmentGrantsContentAccess } from "../enrollment/lifecycle.js";
 import { ensureOwnCourseEnrollment, isCourseInstructor } from "../enrollment/own-course.js";
 import { redeemCouponOnCourseOpen } from "../coupons/redeem.js";
@@ -120,7 +120,7 @@ export async function getCourseOverview(courseSlug: string, user: SessionUser): 
   const { modules, flatChapters } = await syllabusForEnrollment(
     { sequential, modules: effectiveModules },
     enrollment.id,
-    shouldBypassProgressGating(user)
+    shouldBypassProgressGatingForCourse(user, course)
   );
 
   return {

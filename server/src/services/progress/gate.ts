@@ -2,6 +2,7 @@ import { prisma } from "../../db/prisma.js";
 import { flattenChapterIds, lockedChapterIds, previousChapterId } from "./rules.js";
 import type { ProgressStatus } from "../../generated/prisma/index.js";
 import { releaseForEnrollment } from "../courses/releases.js";
+import { isCourseInstructor } from "../enrollment/own-course.js";
 
 export class ChapterLockedError extends Error {
   constructor(
@@ -22,6 +23,7 @@ export async function loadCourseGate(
     where: { id: courseId },
     select: {
       sequential: true,
+      mentorId: true,
       familySlug: true,
       modules: {
         where: { archivedAt: null },
@@ -38,7 +40,7 @@ export async function loadCourseGate(
     },
   });
   if (!course) return null;
-  const enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, select: { releaseId: true, variantSlug: true, moduleVersions: true } });
+  const enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, select: { userId: true, releaseId: true, variantSlug: true, moduleVersions: true } });
   const selected = await releaseForEnrollment(courseId, enrollment, course.familySlug);
   const modules = selected?.modules ?? course.modules;
 
@@ -50,7 +52,8 @@ export async function loadCourseGate(
     progressRows.map((row) => [row.chapterId, row.status])
   );
   const orderedIds = flattenChapterIds(modules);
-  const lockedIds = options?.bypassLocking
+  // The instructor previews their own course, so no chapter is locked for them.
+  const lockedIds = options?.bypassLocking || isCourseInstructor(enrollment.userId, course)
     ? new Set<string>()
     : lockedChapterIds(orderedIds, progressById, course.sequential);
 
