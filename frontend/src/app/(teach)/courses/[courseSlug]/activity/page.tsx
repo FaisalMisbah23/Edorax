@@ -68,11 +68,13 @@ export default async function CourseActivityPage({
               </div>
               <ActivityLegend />
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-sm">
+            {/* The newest days are on the right. A right-to-left scroll box opens at that end, so a phone
+                shows this week first; the table itself still reads left to right. */}
+            <div className="overflow-x-auto [direction:rtl]">
+              <table className="w-full min-w-[900px] text-sm [direction:ltr]">
                 <thead>
                   <tr className="border-b bg-muted/30 text-left text-xs text-muted-foreground">
-                    <th className="sticky left-0 z-10 min-w-44 bg-muted/95 px-4 py-3 font-medium backdrop-blur sm:px-6">
+                    <th className="sticky left-0 z-10 w-28 min-w-28 bg-muted/95 px-3 py-3 font-medium backdrop-blur sm:w-auto sm:min-w-44 sm:px-6">
                       Learner
                     </th>
                     {days.map((day) => (
@@ -85,7 +87,7 @@ export default async function CourseActivityPage({
                         </span>
                       </th>
                     ))}
-                    <th className="sticky right-0 min-w-20 bg-muted/95 px-4 py-3 text-right font-medium backdrop-blur">
+                    <th className="sticky right-0 min-w-14 bg-muted/95 px-2 py-3 text-right font-medium backdrop-blur sm:min-w-20 sm:px-4">
                       Total
                     </th>
                   </tr>
@@ -93,15 +95,15 @@ export default async function CourseActivityPage({
                 <tbody className="divide-y">
                   {rows.map((row) => (
                     <tr key={row.enrollmentId} className="group transition-colors hover:bg-muted/30">
-                      <td className="sticky left-0 z-10 bg-card px-4 py-3 transition-colors group-hover:bg-muted/30 sm:px-6">
+                      <td className="sticky left-0 z-10 w-28 min-w-28 bg-card px-3 py-3 transition-colors group-hover:bg-muted/30 sm:w-auto sm:px-6">
                         <Link
                           href={`/courses/${course.slug}/mentees/${row.enrollmentId}`}
-                          className="block max-w-44 truncate font-medium underline-offset-2 hover:underline"
+                          className="block max-w-[5.5rem] truncate py-1 font-medium underline-offset-2 hover:underline sm:max-w-44 sm:py-0"
                         >
                           {row.label}
                         </Link>
                         {row.email && row.email !== row.label ? (
-                          <span className="block max-w-44 truncate text-xs text-muted-foreground">{row.email}</span>
+                          <span className="hidden max-w-44 truncate text-xs text-muted-foreground sm:block">{row.email}</span>
                         ) : null}
                       </td>
                       {days.map((day, index) => {
@@ -122,7 +124,7 @@ export default async function CourseActivityPage({
                           </td>
                         );
                       })}
-                      <td className="sticky right-0 min-w-20 whitespace-nowrap bg-card px-4 py-3 text-right text-xs font-medium tabular-nums transition-colors group-hover:bg-muted/30">
+                      <td className="sticky right-0 min-w-14 whitespace-nowrap bg-card px-2 py-3 text-right text-xs font-medium tabular-nums transition-colors group-hover:bg-muted/30 sm:min-w-20 sm:px-4">
                         {formatStudyHours(row.totalSeconds)}
                       </td>
                     </tr>

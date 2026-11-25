@@ -71,14 +71,14 @@ export default async function MentorHelpInboxPage({
         </div>
 
         <form
-          className="flex flex-wrap items-center gap-2"
+          className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center"
           action="/help"
           method="GET"
         >
           <AutoSubmitSelect
             name="status"
             defaultValue={statusFilter ?? "open"}
-            className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-ring"
+            className="h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-ring sm:h-10 sm:w-auto"
           >
             <option value="open">Open ({openHelpCount})</option>
             <option value="resolved">Resolved</option>
@@ -87,7 +87,7 @@ export default async function MentorHelpInboxPage({
           <AutoSubmitSelect
             name="kind"
             defaultValue={kindFilter ?? "all"}
-            className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-ring"
+            className="h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-ring sm:h-10 sm:w-auto"
           >
             <option value="all">Everything</option>
             <option value="questions">Questions</option>
@@ -97,7 +97,8 @@ export default async function MentorHelpInboxPage({
             <AutoSubmitSelect
               name="courseId"
               defaultValue={courseFilter ?? ""}
-              className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-ring"
+              aria-label="Filter by course"
+              className="col-span-2 h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-ring sm:h-10 sm:w-72"
             >
               <option value="">All courses</option>
               {courses.map((course) => (

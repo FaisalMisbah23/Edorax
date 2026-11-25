@@ -246,11 +246,12 @@ export default async function CourseReportsPage({
                   Current shared chapters only. Older and variant-only work remains in each learner’s evaluation.
                 </p>
               </div>
-              <form action={`/courses/${course.slug}/reports`} method="GET">
+              <form className="w-full min-w-0 sm:w-auto" action={`/courses/${course.slug}/reports`} method="GET">
                 <AutoSubmitSelect
                   name="chapterId"
                   defaultValue={chapterId ?? ""}
-                  className="h-9 rounded-lg border bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Choose a chapter"
+                  className="h-11 w-full min-w-0 rounded-lg border bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-10 sm:w-80"
                 >
                   <option value="" disabled>
                     Choose a chapter…
