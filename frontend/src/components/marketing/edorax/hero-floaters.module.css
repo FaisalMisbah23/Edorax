@@ -25,21 +25,21 @@
 /* Measured from the middle of the page. From 1280px the cards sit under the line of the
    headline, beside the text and buttons (about 700px wide), which leaves them room. */
 .leftTop {
-  top: 150px;
+  top: 166px;
   right: calc(50% + 424px);
   --tilt: -5deg;
   animation-delay: 0.15s;
 }
 
 .leftBottom {
-  top: 292px;
+  top: 308px;
   right: calc(50% + 396px);
   --tilt: 3deg;
   animation-delay: 0.45s;
 }
 
 .rightTop {
-  top: 146px;
+  top: 162px;
   left: calc(50% + 424px);
   --tilt: 4deg;
   animation-delay: 0.3s;
@@ -47,7 +47,7 @@
 
 /* Kept clear of Dot and the speech bubble, which sit above the lab window on this side. */
 .rightBottom {
-  top: 258px;
+  top: 274px;
   left: calc(50% + 400px);
   --tilt: -3deg;
   animation-delay: 0.6s;
@@ -61,22 +61,22 @@
   }
 
   .leftTop {
-    top: 44px;
+    top: 60px;
     right: calc(50% + 540px);
   }
 
   .leftBottom {
-    top: 232px;
+    top: 248px;
     right: calc(50% + 500px);
   }
 
   .rightTop {
-    top: 34px;
+    top: 50px;
     left: calc(50% + 540px);
   }
 
   .rightBottom {
-    top: 210px;
+    top: 226px;
     left: calc(50% + 505px);
   }
 }
@@ -173,7 +173,7 @@
 .needGot {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  margin-top: 8px;
+  margin-top: 24px;
   border: 1px solid #dce0f2;
   border-radius: 6px;
   background: #f6f7fb;
@@ -206,7 +206,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 9px !important;
+  margin-top: 25px !important;
   font-size: 12px;
   font-weight: 700;
   color: #12805c;
@@ -242,7 +242,7 @@
 .track {
   display: block;
   height: 4px;
-  margin-top: 7px;
+  margin-top: 23px;
   border-radius: 2px;
   background: #dce0f2;
   overflow: hidden;
