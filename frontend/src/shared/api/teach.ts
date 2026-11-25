@@ -603,6 +603,8 @@ export type ReviewQueueItem = ReviewContext & {
   /** Which model wrote the draft and what it cost in US dollars, when known. */
   aiDraftModel: string | null;
   aiDraftCostUsd: number | null;
+  /** Why Claude could not draft this answer, when the last try failed. */
+  aiDraftError?: string | null;
   /** False when this answer's course has automatic drafts switched off. Missing from an older API. */
   autoDraft?: boolean;
 };

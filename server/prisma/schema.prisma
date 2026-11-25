@@ -1397,6 +1397,9 @@ model Response {
   aiDraftAt    DateTime?
   /** What the draft cost, in millionths of a dollar. */
   aiDraftCostMicroUsd Int?
+  /** Why the last automatic draft failed, shown to the mentor; cleared when a draft succeeds. */
+  aiDraftError String?
+  aiDraftFailedAt DateTime?
 
   @@index([blockId, userId, attempt])
   @@index([enrollmentId])
