@@ -20,6 +20,7 @@ import type { PlatformCertificateSettings } from "../../shared/lib/certificates.
 import type { SessionUser } from "../../types/auth.js";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError } from "../../utils/errors.js";
 import { requireCourseById } from "../teach/access.js";
+import { readModuleVersionChoices, releaseForEnrollment, unchosenVersionChapterIds } from "../courses/releases.js";
 import { newCertificateCode } from "./code.js";
 import { notifyCertificateIssued } from "../notifications/events.js";
 import { logger } from "../../utils/logger.js";
@@ -84,7 +85,21 @@ type EnrollmentForCertificate = {
   courseId: string;
   completedAt: Date | null;
   percentComplete: number;
+  releaseId: string | null;
+  variantSlug: string | null;
+  moduleVersions: unknown;
 };
+
+/**
+ * Chapters in a module version this learner did not choose. Their capstones are not required.
+ * Empty for a course without module versions, so the gate below is unchanged for those.
+ */
+async function unchosenVersionChapters(enrollment: EnrollmentForCertificate): Promise<string[]> {
+  const course = await prisma.course.findUnique({ where: { id: enrollment.courseId }, select: { familySlug: true } });
+  const selected = await releaseForEnrollment(enrollment.courseId, enrollment, course?.familySlug ?? null);
+  if (!selected) return [];
+  return [...unchosenVersionChapterIds(selected.allModules, readModuleVersionChoices(enrollment.moduleVersions))];
+}
 
 /** Eligibility plus the evidence the certificate will list. */
 export async function certificateEligibility(
@@ -95,8 +110,10 @@ export async function certificateEligibility(
   const missing: string[] = [];
   if (!enrollment.completedAt && enrollment.percentComplete < 100) missing.push("Finish every chapter in the track.");
 
+  const skipped = await unchosenVersionChapters(enrollment);
   const capstones = await prisma.block.findMany({
-    where: { type: "CAPSTONE_CHECK", archivedAt: null, chapter: { courseId: enrollment.courseId, archivedAt: null } },
+    where: { type: "CAPSTONE_CHECK", archivedAt: null, chapter: { courseId: enrollment.courseId, archivedAt: null },
+      ...(skipped.length ? { chapterId: { notIn: skipped } } : {}) },
     select: { id: true, chapter: { select: { title: true } } },
     orderBy: [{ chapter: { order: "asc" } }, { order: "asc" }],
   });
@@ -133,7 +150,7 @@ async function loadLearnerEnrollment(courseSlug: string, user: SessionUser | und
   if (!course) throw new NotFoundError("Course not found");
   const enrollment = await prisma.enrollment.findUnique({
     where: { courseId_userId: { courseId: course.id, userId: user.id } },
-    select: { id: true, userId: true, courseId: true, completedAt: true, percentComplete: true, certificate: true },
+    select: { id: true, userId: true, courseId: true, completedAt: true, percentComplete: true, releaseId: true, variantSlug: true, moduleVersions: true, certificate: true },
   });
   if (!enrollment) throw new ForbiddenError("You are not enrolled in this course.");
   const platform = await getPlatformCertificateSettings();
@@ -146,7 +163,7 @@ export async function getMyCertificate(courseSlug: string, user: SessionUser | u
   let { enrollment } = loaded;
   if (settings) {
     await issueCertificateAutomatically(enrollment.id);
-    enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: enrollment.id }, select: { id: true, userId: true, courseId: true, completedAt: true, percentComplete: true, certificate: true } });
+    enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: enrollment.id }, select: { id: true, userId: true, courseId: true, completedAt: true, percentComplete: true, releaseId: true, variantSlug: true, moduleVersions: true, certificate: true } });
   }
   const { evidence: _evidence, ...eligibility } = await certificateEligibility(enrollment, settings);
   const learner = await prisma.user.findUnique({ where: { id: user!.id }, select: { name: true } });
