@@ -71,7 +71,7 @@ export function HeroFloaters() {
             </svg>
             Hint
           </p>
-          <p className={s.body}>The reply needs a route back too. Check the server&apos;s routes.</p>
+          <p className={s.body}>The reply needs a route back too.</p>
         </div>
       </div>
 

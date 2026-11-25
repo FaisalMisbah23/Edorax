@@ -16,7 +16,7 @@
    so the two movements never fight over the same transform. */
 .slot {
   position: absolute;
-  width: 208px;
+  width: 176px;
   text-align: left;
   opacity: 0;
   animation: arrive 0.7s cubic-bezier(0.2, 0.85, 0.25, 1) forwards;
@@ -25,30 +25,30 @@
 /* Measured from the middle of the page. From 1280px the cards sit under the line of the
    headline, beside the text and buttons (about 700px wide), which leaves them room. */
 .leftTop {
-  top: 144px;
-  right: calc(50% + 400px);
+  top: 150px;
+  right: calc(50% + 424px);
   --tilt: -5deg;
   animation-delay: 0.15s;
 }
 
 .leftBottom {
-  top: 288px;
-  right: calc(50% + 364px);
+  top: 292px;
+  right: calc(50% + 396px);
   --tilt: 3deg;
   animation-delay: 0.45s;
 }
 
 .rightTop {
-  top: 140px;
-  left: calc(50% + 400px);
+  top: 146px;
+  left: calc(50% + 424px);
   --tilt: 4deg;
   animation-delay: 0.3s;
 }
 
 /* Kept clear of Dot and the speech bubble, which sit above the lab window on this side. */
 .rightBottom {
-  top: 256px;
-  left: calc(50% + 368px);
+  top: 258px;
+  left: calc(50% + 400px);
   --tilt: -3deg;
   animation-delay: 0.6s;
 }
@@ -57,38 +57,38 @@
    itself (about 930px wide), so the four spread out. */
 @media (min-width: 1500px) {
   .slot {
-    width: 228px;
+    width: 196px;
   }
 
   .leftTop {
-    top: 40px;
-    right: calc(50% + 500px);
+    top: 44px;
+    right: calc(50% + 540px);
   }
 
   .leftBottom {
-    top: 226px;
-    right: calc(50% + 440px);
+    top: 232px;
+    right: calc(50% + 500px);
   }
 
   .rightTop {
-    top: 30px;
-    left: calc(50% + 500px);
+    top: 34px;
+    left: calc(50% + 540px);
   }
 
   .rightBottom {
-    top: 204px;
-    left: calc(50% + 450px);
+    top: 210px;
+    left: calc(50% + 505px);
   }
 }
 
 .card {
-  padding: 12px 14px 13px;
+  padding: 10px 12px 11px;
   background: #ffffff;
   border: 1px solid #dce0f2;
   border-radius: 10px;
-  box-shadow: 0 18px 36px -18px rgba(10, 15, 44, 0.35), 0 2px 6px rgba(10, 15, 44, 0.06);
+  box-shadow: 0 14px 28px -16px rgba(10, 15, 44, 0.28), 0 1px 4px rgba(10, 15, 44, 0.05);
   color: #0a0f2c;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.4;
   transform: rotate(var(--tilt));
   animation: float 7s ease-in-out infinite alternate;
@@ -162,7 +162,8 @@
 .title {
   display: block;
   font-weight: 700;
-  font-size: 13.5px;
+  font-size: 12.5px;
+  white-space: nowrap;
 }
 
 .body {
@@ -226,8 +227,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: #2434e0;
   color: #f6f7fb;
