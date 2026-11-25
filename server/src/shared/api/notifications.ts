@@ -53,6 +53,7 @@ export const NOTIFICATION_TYPES = [
   "certificate.issued",
   "course.learner_completed",
   "course.curriculum_updated",
+  "course.announcement",
   "study.reminder",
   "course.suggestion",
   "instructor.request",
