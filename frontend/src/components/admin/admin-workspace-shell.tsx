@@ -16,6 +16,7 @@ import {
   Receipt,
   MonitorDown,
   SlidersHorizontal,
+  ThumbsUp,
   Users,
   Wallet,
 } from "lucide-react";
@@ -82,6 +83,12 @@ export function AdminWorkspaceShell({
       title: "Catalog & sales",
       items: [
         { label: "Courses", href: "/admin/courses", icon: BookOpen, active: pathname.startsWith("/admin/courses") },
+        {
+          label: "Agent IP feedback",
+          href: "/admin/agent-ip-feedback",
+          icon: ThumbsUp,
+          active: pathname.startsWith("/admin/agent-ip-feedback"),
+        },
         { label: "Enrollments", href: "/admin/enrollments", icon: Receipt, active: pathname.startsWith("/admin/enrollments") },
         { label: "Discounts", href: "/admin/discounts", icon: BadgePercent, active: pathname.startsWith("/admin/discounts") },
       ],
