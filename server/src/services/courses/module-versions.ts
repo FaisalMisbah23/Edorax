@@ -13,11 +13,13 @@ import type { SessionUser } from "../../types/auth.js";
 import { NotFoundError } from "../../utils/errors.js";
 import { requireBlockSubmissionAccess } from "../enrollment/api-learn-access.js";
 import { recomputeEnrollmentRollup } from "../progress/compute.js";
+import { findChapterIndex } from "../chapters/chapter-slug.js";
 import {
   chosenModuleVersion,
   moduleVersionKey,
   readModuleVersionChoices,
   releaseForEnrollment,
+  type ModuleVersionChoices,
   type ReleaseChapter,
   type ReleaseModule,
 } from "./releases.js";
@@ -95,6 +97,49 @@ export async function listCourseModuleVersions(courseSlug: string, user: Session
   };
 }
 
+/** Store one module's version choice and recompute the roll-up for the new lesson list. */
+async function saveModuleVersionChoice(enrollmentId: string, moduleKey: string, versionKey: string) {
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "Enrollment" WHERE "id" = ${enrollmentId} FOR UPDATE`;
+    const current = await tx.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, select: { moduleVersions: true } });
+    const choices = readModuleVersionChoices(current.moduleVersions);
+    if (versionKey === DEFAULT_MODULE_VERSION_KEY) delete choices[moduleKey];
+    else choices[moduleKey] = versionKey;
+    await tx.enrollment.update({ where: { id: enrollmentId },
+      data: { moduleVersions: Object.keys(choices).length ? choices : Prisma.DbNull } });
+    // A learner who has not begun keeps their status; anyone else gets a percentage for the new list.
+    if (await tx.chapterProgress.count({ where: { enrollmentId } })) {
+      await recomputeEnrollmentRollup(tx, enrollmentId, { preserveActivity: true });
+    }
+    const updated = await tx.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, select: { percentComplete: true, chaptersCompleted: true } });
+    return { ...updated, choices };
+  });
+}
+
+/**
+ * A shared link can point at a chapter in a version the learner has not chosen. When the chapter
+ * belongs to one version of a module, switch that module to it and return the new choices.
+ * Returns null when no version of any module has the chapter.
+ */
+export async function switchModuleVersionForChapter(
+  enrollmentId: string,
+  allModules: ReleaseModule[],
+  chapterSlug: string
+): Promise<ModuleVersionChoices | null> {
+  for (const module of allModules) {
+    if (!module.versions?.length) continue;
+    const lists = [
+      { key: DEFAULT_MODULE_VERSION_KEY, chapters: module.chapters },
+      ...module.versions.map(version => ({ key: version.key, chapters: version.chapters })),
+    ];
+    const owner = lists.find(list => findChapterIndex(list.chapters, chapterSlug) !== -1);
+    if (!owner) continue;
+    const saved = await saveModuleVersionChoice(enrollmentId, moduleVersionKey(module), owner.key);
+    return saved.choices;
+  }
+  return null;
+}
+
 /**
  * Pick the version a learner reads in one module. Allowed at any time, also after the course
  * variant is locked. Progress rows stay with their chapters; the roll-up is recomputed.
@@ -104,20 +149,7 @@ export async function chooseModuleVersion(courseSlug: string, user: SessionUser,
   const module = requireVersionedModule(modules, moduleKey);
   const option = requireVersionOption(module, versionKey);
 
-  const updated = await prisma.$transaction(async tx => {
-    await tx.$queryRaw`SELECT "id" FROM "Enrollment" WHERE "id" = ${enrollment.id} FOR UPDATE`;
-    const current = await tx.enrollment.findUniqueOrThrow({ where: { id: enrollment.id }, select: { moduleVersions: true } });
-    const choices = readModuleVersionChoices(current.moduleVersions);
-    if (versionKey === DEFAULT_MODULE_VERSION_KEY) delete choices[moduleKey];
-    else choices[moduleKey] = versionKey;
-    await tx.enrollment.update({ where: { id: enrollment.id },
-      data: { moduleVersions: Object.keys(choices).length ? choices : Prisma.DbNull } });
-    // A learner who has not begun keeps their status; anyone else gets a percentage for the new list.
-    if (await tx.chapterProgress.count({ where: { enrollmentId: enrollment.id } })) {
-      await recomputeEnrollmentRollup(tx, enrollment.id, { preserveActivity: true });
-    }
-    return tx.enrollment.findUniqueOrThrow({ where: { id: enrollment.id }, select: { percentComplete: true, chaptersCompleted: true } });
-  });
+  const updated = await saveModuleVersionChoice(enrollment.id, moduleKey, versionKey);
 
   return {
     courseSlug: course.slug, moduleKey, chosenVersionKey: versionKey, firstChapterSlug: option.firstChapterSlug,

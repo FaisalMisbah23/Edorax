@@ -80,7 +80,28 @@ describe("module versions for a learner", () => {
     expect(res.status).toBe(200);
     expect(moduleTwo(res.body).chapters.map(chapter => chapter.slug)).toEqual(["basics-one", "basics-two"]);
     expect(res.body.data.next.slug).toBe("basics-one");
-    expect((await read("basics-v2-one")).status).toBe(404);
+    expect((await enrollmentRow()).moduleVersions).toBeNull();
+  });
+
+  it("switches to the version that owns a chapter opened from a shared link", async () => {
+    const opened = await read("basics-v2-one");
+    expect(opened.status).toBe(200);
+    expect(opened.body.data.chapter.slug).toBe("basics-v2-one");
+    expect(moduleTwo(opened.body).chapters.map(chapter => chapter.slug)).toEqual(["basics-v2-one"]);
+    expect((await enrollmentRow()).moduleVersions).toEqual({ m2: "v2" });
+    const listed = await request(app).get(`${base()}/module-versions`).set(learner());
+    expect(listed.body.data.modules[0].chosenVersionKey).toBe("v2");
+
+    const back = await read("basics-two");
+    expect(back.status).toBe(200);
+    expect(moduleTwo(back.body).chapters.map(chapter => chapter.slug)).toEqual(["basics-one", "basics-two"]);
+    expect((await enrollmentRow()).moduleVersions).toBeNull();
+  });
+
+  it("still returns 404 for a chapter that is in no version", async () => {
+    const res = await read("no-such-chapter");
+    expect(res.status).toBe(404);
+    expect((await enrollmentRow()).moduleVersions).toBeNull();
   });
 
   it("switches the reader, next and previous to the chosen version", async () => {
@@ -96,7 +117,6 @@ describe("module versions for a learner", () => {
     expect(chosen.body.data.prev.slug).toBe("chapter-b");
     expect(chosen.body.data.next).toBeNull();
     expect(moduleTwo(chosen.body).chapters.map(chapter => chapter.slug)).toEqual(["basics-v2-one"]);
-    expect((await read("basics-one")).status).toBe(404);
 
     const listed = await request(app).get(`${base()}/module-versions`).set(learner());
     expect(listed.body.data.modules[0].chosenVersionKey).toBe("v2");
