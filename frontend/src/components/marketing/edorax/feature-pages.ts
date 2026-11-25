@@ -72,7 +72,7 @@ export const FEATURE_PAGES: FeaturePageContent[] = [
       note: "Then choose Request instructor access in your account menu. An admin approves each request.",
     },
     demo: {
-      // Not filmed yet: add public/video/feature-instructors.mp4 and .webp, then set video: "feature-instructors".
+      video: "feature-instructors",
       address: "edorax.com/review",
       caption: "Filmed in the real product, on a test run with sample learners. The reviews are real Claude drafts.",
       label: "Recording of the Edorax instructor workspace: the list of answers to check with Claude's draft reviews, the learner questions inbox and the learners list",
@@ -132,7 +132,7 @@ export const FEATURE_PAGES: FeaturePageContent[] = [
       note: "Eight AI interviews in this course. 10 USD, no subscription. You bring your own AI key.",
     },
     demo: {
-      // Not filmed yet: add public/video/feature-ai-interview.mp4 and .webp, then set video: "feature-ai-interview".
+      video: "feature-ai-interview",
       address: "edorax.com/courses/founder-interviews",
       caption: "Filmed in the real product: an interview from The Founder Interview, answered by a test learner on a test run.",
       label: "Recording of an AI interview on Edorax: the learner answers, the interviewer asks follow-up questions, and written feedback appears at the end",

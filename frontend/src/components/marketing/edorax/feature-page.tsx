@@ -34,7 +34,7 @@ function Demo({ page }: { page: FeaturePageContent }) {
           <span className={s.address}>{demo.address}</span>
         </div>
         {demo.video ? (
-          <video className={s.video} controls playsInline muted preload="none" poster={`/video/${demo.video}.webp`} width={1920} height={1080} aria-label={demo.label}>
+          <video className={s.video} controls playsInline muted preload="none" poster={`/video/${demo.video}.webp`} width={1280} height={720} aria-label={demo.label}>
             <source src={`/video/${demo.video}.mp4`} type="video/mp4" />
           </video>
         ) : (
