@@ -3,18 +3,33 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, ChevronDown, Circle, Clock3, LockKeyhole, MessageSquareText, Search, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { SubmissionCard } from "./submission-card";
 import { formatStudyAmount } from "@/lib/format-study-duration";
 import { cn } from "@/lib/utils";
-import type { EvaluationChapter, EvaluationModule } from "@/shared/api/teach";
+import type { EvaluationChapter, EvaluationModule, EvaluationSubmission } from "@/shared/api/teach";
 import type { IntegrityAttemptSummary } from "@/shared/api/integrity";
 
 function date(value: string | null) { return value ? new Date(value).toLocaleDateString() : null; }
 
-function ChapterRow({ chapter, flags }: { chapter: EvaluationChapter; flags: number }) {
+function ChapterRow({
+  chapter,
+  flags,
+  work,
+  courseSlug,
+}: {
+  chapter: EvaluationChapter;
+  flags: number;
+  /** What this learner submitted in this chapter, newest first. */
+  work: EvaluationSubmission[];
+  courseSlug?: string;
+}) {
+  const [open, setOpen] = useState(false);
   const Icon = chapter.locked ? LockKeyhole : chapter.status === "COMPLETED" ? CheckCircle2 : chapter.status === "IN_PROGRESS" ? Clock3 : Circle;
   return (
-    <div className="grid gap-2 border-t px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] sm:items-center">
+    <div className="border-t">
+    <div className="grid gap-2 px-4 py-3 text-sm sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] sm:items-center">
       <div className="flex min-w-0 items-start gap-2.5">
         <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
         <div className="min-w-0"><p className="font-medium">{chapter.title}</p><p className="mt-0.5 text-xs text-muted-foreground">{chapter.blocksCompleted}/{chapter.blocksTotal} checkpoints · {formatStudyAmount(chapter.timeSpentSeconds)}</p></div>
@@ -27,12 +42,54 @@ function ChapterRow({ chapter, flags }: { chapter: EvaluationChapter; flags: num
         <Badge variant="outline" className="capitalize">{chapter.locked ? "Locked" : chapter.status.toLowerCase().replaceAll("_", " ")}</Badge>
         {chapter.pendingReviews > 0 ? <Badge variant="secondary"><MessageSquareText /> {chapter.pendingReviews} review</Badge> : chapter.requiresReview ? <Badge variant="outline">Has rubric review</Badge> : null}
         {flags > 0 ? <a href="#quiz-integrity" className="rounded-full focus-visible:outline-2 focus-visible:outline-ring"><Badge variant="secondary"><ShieldAlert /> {flags} {flags === 1 ? "flag" : "flags"}</Badge></a> : null}
+        {work.length > 0 ? (
+          <Button type="button" size="sm" variant={open ? "default" : "outline"} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+            {open ? "Hide work" : `See work (${work.length})`}
+          </Button>
+        ) : null}
+        {courseSlug ? (
+          <Link href={`/courses/${encodeURIComponent(courseSlug)}/preview?chapter=${encodeURIComponent(chapter.id)}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+            Open chapter
+          </Link>
+        ) : null}
       </div>
+    </div>
+    {open ? (
+      <div className="space-y-3 bg-background px-4 pb-4">
+        {work.map((item) => (
+          <SubmissionCard key={item.id} item={item} full />
+        ))}
+      </div>
+    ) : null}
     </div>
   );
 }
 
-export function CourseProgressMap({ modules, integrity = [], currentChapterTitle }: { modules: EvaluationModule[]; integrity?: IntegrityAttemptSummary[]; currentChapterTitle?: string | null }) {
+export function CourseProgressMap({
+  modules,
+  integrity = [],
+  currentChapterTitle,
+  submissions = [],
+  courseSlug,
+}: {
+  modules: EvaluationModule[];
+  integrity?: IntegrityAttemptSummary[];
+  currentChapterTitle?: string | null;
+  /** The learner's submissions, so each chapter row can show the work done in it. */
+  submissions?: EvaluationSubmission[];
+  courseSlug?: string;
+}) {
+  // Submissions carry titles, not ids: group them by module and chapter title.
+  const workByChapter = useMemo(() => {
+    const groups = new Map<string, EvaluationSubmission[]>();
+    for (const item of submissions) {
+      const key = `${item.moduleTitle}\n${item.chapterTitle}`;
+      const list = groups.get(key);
+      if (list) list.push(item);
+      else groups.set(key, [item]);
+    }
+    return groups;
+  }, [submissions]);
   const [openModuleId, setOpenModuleId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [query, setQuery] = useState("");
@@ -98,7 +155,7 @@ export function CourseProgressMap({ modules, integrity = [], currentChapterTitle
                 <span className="shrink-0 text-right text-xs text-muted-foreground"><span className="block font-medium text-foreground">{percent}%</span>{module.completedCount}/{module.chapters.length} chapters</span>
                 <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} aria-hidden />
               </button>
-              {open ? <div id={`module-chapters-${module.id}`} className="border-t bg-muted/10">{module.chapters.map((chapter) => <ChapterRow key={chapter.id} chapter={chapter} flags={flagsByChapter.get(chapter.id) ?? 0} />)}</div> : null}
+              {open ? <div id={`module-chapters-${module.id}`} className="border-t bg-muted/10">{module.chapters.map((chapter) => <ChapterRow key={chapter.id} chapter={chapter} flags={flagsByChapter.get(chapter.id) ?? 0} work={workByChapter.get(`${module.title}\n${chapter.title}`) ?? []} courseSlug={courseSlug} />)}</div> : null}
             </div>
           );
         })}
