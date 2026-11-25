@@ -6,3 +6,4 @@ export { DiffBlock } from "./diff-block";
 export { ArchitectureDiagram, ArchNode } from "./architecture-diagram";
 export { TraceRequest, TraceStep } from "./trace-request";
 export { HtmlPreview } from "./html-preview";
+export { RunnableJs } from "./runnable-js";
