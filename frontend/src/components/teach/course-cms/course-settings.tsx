@@ -18,7 +18,7 @@ import { COURSE_CATEGORY_INFO } from "@/lib/course-categories";
 import { aiGradingModelLabel } from "@/shared/lib/ai-grading";
 import { cn } from "@/lib/utils";
 
-type SettingsSection = "details" | "learning" | "pricing";
+export type SettingsSection = "details" | "learning" | "pricing";
 
 function settingsFromCourse(course: CourseSettingsView): CourseSettingsInput {
   return {
@@ -99,7 +99,13 @@ function mergeSection(saved: CourseSettingsInput, current: CourseSettingsInput, 
   return { ...saved, pricingType: current.pricingType, priceDollars: current.priceDollars, currency: current.currency };
 }
 
-export function CourseSettings({ course }: { course: CourseSettingsView }) {
+export type CourseSettingsDirty = Record<SettingsSection, boolean>;
+
+/**
+ * The course form. With `section` set, only that part shows (the Settings page tabs); the
+ * other parts stay mounted so unsaved edits survive a tab switch.
+ */
+export function CourseSettings({ course, section, onDirtyChange }: { course: CourseSettingsView; section?: SettingsSection | null; onDirtyChange?: (dirty: CourseSettingsDirty) => void }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [pricingType, setPricingType] = useState(course.pricingType);
@@ -117,6 +123,15 @@ export function CourseSettings({ course }: { course: CourseSettingsView }) {
   }, []);
 
   useEffect(() => { syncValues(); }, [coverUrl, pricingType, syncValues]);
+
+  const detailsDirty = sectionChanged(currentValues, savedValues, "details");
+  const learningDirty = sectionChanged(currentValues, savedValues, "learning");
+  const pricingDirty = sectionChanged(currentValues, savedValues, "pricing");
+  useEffect(() => {
+    onDirtyChange?.({ details: detailsDirty, learning: learningDirty, pricing: pricingDirty });
+  }, [detailsDirty, learningDirty, pricingDirty, onDirtyChange]);
+  const sectionClass = (name: SettingsSection) =>
+    cn("scroll-mt-24 overflow-hidden rounded-2xl border bg-card", section !== undefined && section !== name && "hidden");
 
   async function uploadCover(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -189,8 +204,8 @@ export function CourseSettings({ course }: { course: CourseSettingsView }) {
   }
 
   return (
-    <form ref={formRef} onInput={syncValues} onChange={syncValues} onSubmit={(event) => { event.preventDefault(); saveFocusedSection(); }} className="space-y-6">
-      <section id="course-details" aria-labelledby="course-details-title" className="scroll-mt-24 overflow-hidden rounded-2xl border bg-card">
+    <form ref={formRef} onInput={syncValues} onChange={syncValues} onSubmit={(event) => { event.preventDefault(); saveFocusedSection(); }} className={cn("space-y-6", section === null && "hidden")}>
+      <section id="course-details" aria-labelledby="course-details-title" className={sectionClass("details")}>
         <SectionHeading icon={ImageIcon} title="Course details" description="The name, summary, and cover learners see in the catalog." id="course-details-title" />
         <div className="grid gap-7 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="space-y-5">
@@ -228,7 +243,7 @@ export function CourseSettings({ course }: { course: CourseSettingsView }) {
         {footer("details")}
       </section>
 
-      <section id="learning-rules" aria-labelledby="learning-rules-title" className="scroll-mt-24 overflow-hidden rounded-2xl border bg-card">
+      <section id="learning-rules" aria-labelledby="learning-rules-title" className={sectionClass("learning")}>
         <SectionHeading icon={BookOpenCheck} title="Learning experience" description="Set expectations and choose how learners move through chapters." id="learning-rules-title" />
         <div className="space-y-5 p-5 sm:p-6">
           <Field label="Project goal" htmlFor="course-goal" hint="One clear outcome learners can work toward.">
@@ -260,32 +275,8 @@ export function CourseSettings({ course }: { course: CourseSettingsView }) {
             <span><span className="block text-sm font-medium">Require chapters in order</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">Learners finish the previous chapter before opening the next one.</span></span>
           </label>
           {course.aiGrading ? (
-            <div id="ai-grading" className="scroll-mt-24 rounded-xl border bg-muted/25 p-4">
-              {/* The value is set on the AI grading page; the form still sends what applies today. */}
-              <input type="hidden" name="autoGradeOpenQuestions" value={course.autoGradeOpenQuestions ? "on" : ""} />
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">AI grading</p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Set for all your courses in one place. This course shows what applies to it today.</p>
-                </div>
-                <Link href="/ai-grading" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
-                  Change AI grading<ArrowRight className="size-4" aria-hidden />
-                </Link>
-              </div>
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-                {([
-                  { label: "First-pass review", value: course.aiGrading.effective.reviewDraft ? "On" : "Off", own: course.aiGrading.own.reviewDraft !== null },
-                  { label: "Instant grading of short answers", value: course.aiGrading.effective.instantGrading ? "On" : "Off", own: course.aiGrading.own.instantGrading !== null },
-                  { label: "Grading model", value: aiGradingModelLabel(course.aiGrading.effective.model), own: course.aiGrading.own.model !== null },
-                ]).map((item) => (
-                  <div key={item.label} className="rounded-lg border bg-background px-3 py-2">
-                    <dt className="text-xs text-muted-foreground">{item.label}</dt>
-                    <dd className="mt-0.5 font-semibold">{item.value}</dd>
-                    <dd className={cn("text-xs", item.own ? "font-medium text-primary" : "text-muted-foreground")}>{item.own ? "Set for this course" : "Uses the default"}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
+            // The value is set on the AI grading tab and page; the form still sends what applies today.
+            <input type="hidden" name="autoGradeOpenQuestions" value={course.autoGradeOpenQuestions ? "on" : ""} />
           ) : (
             <label className="flex items-start gap-3 rounded-xl border bg-muted/25 p-4">
               <input type="checkbox" name="autoGradeOpenQuestions" defaultChecked={course.autoGradeOpenQuestions} className="mt-1 size-4 accent-primary" />
@@ -308,7 +299,7 @@ export function CourseSettings({ course }: { course: CourseSettingsView }) {
         {footer("learning")}
       </section>
 
-      <section id="pricing" aria-labelledby="pricing-title" className="scroll-mt-24 overflow-hidden rounded-2xl border bg-card">
+      <section id="pricing" aria-labelledby="pricing-title" className={sectionClass("pricing")}>
         <SectionHeading icon={Wallet} title="Pricing" description="Choose how learners enroll in this course." id="pricing-title" />
         <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
           <fieldset className="space-y-2 sm:col-span-2">
@@ -345,4 +336,35 @@ function SectionHeading({ icon: Icon, title, description, id }: { icon: typeof I
 
 function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: React.ReactNode }) {
   return <div className="space-y-2"><Label htmlFor={htmlFor}>{label}</Label>{children}{hint && <p className="text-xs leading-5 text-muted-foreground">{hint}</p>}</div>;
+}
+
+/** What AI grading applies to this course today, with the way to change it. */
+export function CourseAiGradingSummary({ course }: { course: CourseSettingsView }) {
+  if (!course.aiGrading) return null;
+  return (
+    <div id="ai-grading" className="scroll-mt-24 rounded-2xl border bg-card p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold">AI grading</h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">Set for all your courses in one place. This course shows what applies to it today.</p>
+        </div>
+        <Link href="/ai-grading" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
+          Change AI grading<ArrowRight className="size-4" aria-hidden />
+        </Link>
+      </div>
+      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+        {([
+          { label: "First-pass review", value: course.aiGrading.effective.reviewDraft ? "On" : "Off", own: course.aiGrading.own.reviewDraft !== null },
+          { label: "Instant grading of short answers", value: course.aiGrading.effective.instantGrading ? "On" : "Off", own: course.aiGrading.own.instantGrading !== null },
+          { label: "Grading model", value: aiGradingModelLabel(course.aiGrading.effective.model), own: course.aiGrading.own.model !== null },
+        ]).map((item) => (
+          <div key={item.label} className="rounded-lg border bg-background px-3 py-2">
+            <dt className="text-xs text-muted-foreground">{item.label}</dt>
+            <dd className="mt-0.5 font-semibold">{item.value}</dd>
+            <dd className={cn("text-xs", item.own ? "font-medium text-primary" : "text-muted-foreground")}>{item.own ? "Set for this course" : "Uses the default"}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
