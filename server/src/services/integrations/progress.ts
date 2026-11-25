@@ -58,6 +58,7 @@ export async function getLearnerProgress(
       completedAt: true,
       releaseId: true,
       variantSlug: true,
+      moduleVersions: true,
       course: {
         select: {
           id: true,
@@ -104,7 +105,7 @@ export async function getLearnerProgress(
 
   const pinnedRelease = await releaseForEnrollment(
     enrollment.course.id,
-    { releaseId: enrollment.releaseId, variantSlug: enrollment.variantSlug },
+    { releaseId: enrollment.releaseId, variantSlug: enrollment.variantSlug, moduleVersions: enrollment.moduleVersions },
     enrollment.course.familySlug
   );
   const moduleSource = pinnedRelease?.modules ?? enrollment.course.modules;

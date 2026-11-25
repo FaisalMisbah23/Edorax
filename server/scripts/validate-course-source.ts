@@ -65,6 +65,8 @@ export function findBrokenChapters(): { total: number; failed: ChapterMdxFailure
           tokenInFieldProblem("course description", manifest.description),
           tokenInFieldProblem("course project goal", manifest.projectGoal),
           ...manifest.modules.map((mod) => tokenInFieldProblem(`module title for ${mod.dir}`, mod.title)),
+          ...manifest.modules.flatMap((mod) => (mod.versions ?? []).map((version) =>
+            tokenInFieldProblem(`version label for ${version.dir}`, version.label))),
           ...(manifest.variants ?? []).flatMap(variant => variant.modules.map(mod =>
             tokenInFieldProblem(`module title for ${variant.slug}/${mod.dir}`, mod.title))),
         ]
@@ -91,6 +93,9 @@ export function findBrokenChapters(): { total: number; failed: ChapterMdxFailure
   try {
     const manifest = loadCourseManifest();
     const files = new Set<string>();
+    for (const module of manifest?.modules ?? []) for (const version of module.versions ?? []) {
+      for (const lesson of version.lessons) files.add(`${version.dir}/${lesson.file}`);
+    }
     for (const variant of manifest?.variants ?? []) {
       for (const override of variant.overrides) if (override.file) files.add(override.file);
       for (const module of variant.modules) for (const lesson of module.lessons) {

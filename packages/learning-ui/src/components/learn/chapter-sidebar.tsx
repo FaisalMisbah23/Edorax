@@ -6,6 +6,13 @@ import { CheckCircle2, ChevronDown, ChevronRight, Menu, X, LayoutDashboard } fro
 import { cn } from "../../lib/utils";
 import type { SyllabusModule } from "./course-syllabus";
 import { SyllabusChapterRow } from "./syllabus-chapter-row";
+import type { ModuleVersionsItem } from "../../shared/api/module-versions";
+import {
+  ModuleVersionFeedbackCard,
+  ModuleVersionSwitch,
+  feedbackCardKey,
+  type ModuleVersionActions,
+} from "./module-versions";
 
 export type ChapterSidebarProps = {
   courseSlug: string;
@@ -17,6 +24,10 @@ export type ChapterSidebarProps = {
   mobileSheet?: boolean;
   width?: number;
   onWidthChange?: (width: number) => void;
+  /** Modules that have alternative versions, from the module-versions endpoint. Empty or missing: no switch. */
+  moduleVersions?: ModuleVersionsItem[];
+  /** How the host saves a version choice or a vote. Without it the switch and card are not shown. */
+  moduleVersionActions?: ModuleVersionActions;
 };
 
 function SidebarPanel({
@@ -28,6 +39,8 @@ function SidebarPanel({
   openModules,
   toggleModule,
   onToggle,
+  moduleVersions,
+  moduleVersionActions,
 }: {
   courseSlug: string;
   courseTitle: string;
@@ -37,7 +50,12 @@ function SidebarPanel({
   openModules: Set<string>;
   toggleModule: (id: string) => void;
   onToggle: () => void;
+  moduleVersions?: ModuleVersionsItem[];
+  moduleVersionActions?: ModuleVersionActions;
 }) {
+  const versionsByModule = new Map(
+    moduleVersionActions ? (moduleVersions ?? []).map((item) => [item.moduleId, item]) : [],
+  );
   return (
     <>
       <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
@@ -71,45 +89,48 @@ function SidebarPanel({
           const moduleHasActive = mod.chapters.some((ch) => ch.slug === activeSlug);
           const moduleComplete =
             mod.chapters.length > 0 && mod.completedCount === mod.chapters.length;
+          const versions = versionsByModule.get(mod.id);
 
           return (
             <div key={mod.id} className="mb-1">
-              <button
-                type="button"
-                onClick={() => toggleModule(mod.id)}
-                aria-label={`${mod.title}: ${mod.completedCount} of ${mod.chapters.length} lessons complete${moduleComplete ? ", module complete" : ""}`}
-                className={cn(
-                  "flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors",
-                  moduleHasActive && "bg-muted/60",
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs font-bold tabular-nums",
-                    moduleComplete
-                      ? "bg-ok-soft text-ok"
-                      : moduleHasActive
-                        ? "bg-foreground text-background"
-                        : "bg-muted text-muted-foreground",
-                  )}
+              <div className={cn(moduleHasActive && "bg-muted/60")}>
+                <button
+                  type="button"
+                  onClick={() => toggleModule(mod.id)}
+                  aria-label={`${mod.title}: ${mod.completedCount} of ${mod.chapters.length} lessons complete${moduleComplete ? ", module complete" : ""}`}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors"
                 >
-                  {String(mod.order).padStart(2, "0")}
-                </span>
-                <span className="min-w-0 flex-1 break-words text-sm font-medium text-foreground/90">
-                  {mod.title}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">
-                    {mod.completedCount}/{mod.chapters.length}
+                  <span
+                    className={cn(
+                      "flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs font-bold tabular-nums",
+                      moduleComplete
+                        ? "bg-ok-soft text-ok"
+                        : moduleHasActive
+                          ? "bg-foreground text-background"
+                          : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {String(mod.order).padStart(2, "0")}
                   </span>
-                  {moduleComplete ? <CheckCircle2 className="size-4 text-ok" aria-hidden /> : null}
-                  {isOpen ? (
-                    <ChevronDown className="size-3.5 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="size-3.5 text-muted-foreground" />
-                  )}
-                </div>
-              </button>
+                  <span className="min-w-0 flex-1 break-words text-sm font-medium text-foreground/90">
+                    {mod.title}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">
+                      {mod.completedCount}/{mod.chapters.length}
+                    </span>
+                    {moduleComplete ? <CheckCircle2 className="size-4 text-ok" aria-hidden /> : null}
+                    {isOpen ? (
+                      <ChevronDown className="size-3.5 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="size-3.5 text-muted-foreground" />
+                    )}
+                  </div>
+                </button>
+                {versions ? (
+                  <ModuleVersionSwitch item={versions} onChoose={moduleVersionActions?.choose} />
+                ) : null}
+              </div>
 
               {isOpen && (
                 <ul className="border-t border-border/60">
@@ -129,6 +150,13 @@ function SidebarPanel({
                   })}
                 </ul>
               )}
+              {isOpen && versions ? (
+                <ModuleVersionFeedbackCard
+                  key={feedbackCardKey(versions)}
+                  item={versions}
+                  actions={moduleVersionActions}
+                />
+              ) : null}
             </div>
           );
         })}
@@ -147,6 +175,8 @@ export function ChapterSidebar({
   mobileSheet = false,
   width,
   onWidthChange,
+  moduleVersions,
+  moduleVersionActions,
 }: ChapterSidebarProps) {
   const activeSlug = currentChapterSlug;
   const activeLinkRef = useRef<HTMLAnchorElement>(null);
@@ -205,6 +235,8 @@ export function ChapterSidebar({
     openModules,
     toggleModule,
     onToggle,
+    moduleVersions,
+    moduleVersionActions,
   };
 
   if (mobileSheet) {

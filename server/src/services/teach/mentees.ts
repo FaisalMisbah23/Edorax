@@ -1,6 +1,6 @@
 import type { AllMenteesView, CourseMenteesView, MenteeAttentionKind, MenteeEvaluation, MenteeRosterItem } from "../../shared/api/teach.js";
 import { resolveCourseFamily, summarizeLearnerTrack } from "../../shared/lib/course-tracks.js";
-import { readReleaseContent, variantForRelease } from "../courses/releases.js";
+import { applyModuleVersions, readModuleVersionChoices, readReleaseContent, variantForRelease } from "../courses/releases.js";
 import { helpUiCopy } from "../../shared/lib/help-ui-copy.js";
 import { prisma } from "../../db/prisma.js";
 import { NotFoundError } from "../../utils/errors.js";
@@ -52,6 +52,7 @@ export async function loadCourseMentees(user: SessionUser, courseSlug: string): 
           lastNudgeSentAt: true,
           variantSlug: true,
           releaseId: true,
+          moduleVersions: true,
           specialisationSlug: true,
           user: { select: { name: true, email: true, image: true } },
           chapterProgress: {
@@ -73,10 +74,10 @@ export async function loadCourseMentees(user: SessionUser, courseSlug: string): 
   const releases = await prisma.courseRelease.findMany({ where: { id: { in: releaseIds } }, select: { id: true, content: true } });
   const byRelease = new Map(releases.map(release => [release.id, readReleaseContent(release.content)]));
   const family = resolveCourseFamily(course.familySlug, course.variantFamily);
-  const chapterCountFor = (releaseId: string | null, variantSlug: string | null) => {
+  const chapterCountFor = (releaseId: string | null, variantSlug: string | null, moduleVersions: unknown = null) => {
     const content = byRelease.get(releaseId ?? course.activeReleaseId ?? "");
     const modules = content?.variants[variantForRelease(family, variantSlug)] ?? content?.variants.default;
-    return modules ? modules.flatMap(module => module.chapters).length : course._count.chapters;
+    return modules ? applyModuleVersions(modules, readModuleVersionChoices(moduleVersions)).flatMap(module => module.chapters).length : course._count.chapters;
   };
 
   // Latest response per (enrollment, block) decides whether a revision is still owed.
@@ -133,7 +134,7 @@ export async function loadCourseMentees(user: SessionUser, courseSlug: string): 
         progressState: progressState(enrollment.status, enrollment.percentComplete),
         percentComplete: enrollment.percentComplete,
         chaptersCompleted: enrollment.chaptersCompleted,
-        chapterCount: chapterCountFor(enrollment.releaseId, enrollment.variantSlug),
+        chapterCount: chapterCountFor(enrollment.releaseId, enrollment.variantSlug, enrollment.moduleVersions),
         score: enrollment.totalScore,
         maxScore: enrollment.maxScore,
         pendingReviews: enrollment.pendingReviews,

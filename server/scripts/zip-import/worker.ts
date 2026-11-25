@@ -13,14 +13,24 @@ try {
     throw new Error(validation.failed.map(f => `${f.file}: ${f.error}`).join("\n"));
   }
   if (process.exitCode) throw new Error("Course structure audit failed. Fix the errors above.");
-  const modules = readModuleDirs().map(({ dirName, moduleNum }) => ({
-    order: moduleNum,
-    key: manifest.modules.find(m => m.dir === dirName)!.key,
-    title: manifest.modules.find(m => m.dir === dirName)!.title,
-    lessons: readLessonFiles(dirName).map(({ fileName, lessonNum, slugPart }) =>
-      ({ ...parseLesson(moduleNum, dirName, fileName, lessonNum, slugPart),
-        key: manifest.modules.find(m => m.dir === dirName)!.lessons.find(l => l.file === fileName)!.key })),
-  }));
+  const modules = readModuleDirs().map(({ dirName, moduleNum }) => {
+    const planned = manifest.modules.find(m => m.dir === dirName)!;
+    return {
+      order: moduleNum,
+      key: planned.key,
+      title: planned.title,
+      lessons: readLessonFiles(dirName).map(({ fileName, lessonNum, slugPart }) =>
+        ({ ...parseLesson(moduleNum, dirName, fileName, lessonNum, slugPart),
+          key: planned.lessons.find(l => l.file === fileName)!.key })),
+      // Only a module that lists versions carries the field, so a course without them parses as before.
+      ...(planned.versions?.length ? { versions: planned.versions.map(version => ({
+        key: version.key, label: version.label, ...(version.source ? { source: version.source } : {}),
+        lessons: readLessonFiles(version.dir).map(({ fileName, lessonNum, slugPart }) =>
+          ({ ...parseLesson(moduleNum, version.dir, fileName, lessonNum, slugPart),
+            key: version.lessons.find(l => l.file === fileName)!.key })),
+      })) } : {}),
+    };
+  });
   const variants = (manifest.variants ?? []).map(variant => ({ slug: variant.slug,
     moduleOrder: variant.moduleOrder,
     omitLessonKeys: variant.omitLessonKeys,

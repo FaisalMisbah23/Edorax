@@ -127,7 +127,7 @@ export async function loadEnrollmentSyllabus(args: {
     select: { ...courseModulesSelect, familySlug: true },
   });
   if (!course) return null;
-  const enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: args.enrollmentId }, select: { releaseId: true, variantSlug: true } });
+  const enrollment = await prisma.enrollment.findUniqueOrThrow({ where: { id: args.enrollmentId }, select: { releaseId: true, variantSlug: true, moduleVersions: true } });
   const selected = await releaseForEnrollment(args.courseId, enrollment, course.familySlug);
   const modules = selected ? await releaseModulesWithBlocks(selected.modules) : course.modules;
   return syllabusForEnrollment({ ...course, modules }, args.enrollmentId, args.bypassLocking);

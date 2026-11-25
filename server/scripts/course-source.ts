@@ -60,15 +60,35 @@ const PlannedLessonSchema = z.object({
   goal: z.string().min(1),
 });
 
+/** The name a learner's choice uses for a module's own lesson list, so no alternative may take it. */
+export const DEFAULT_MODULE_VERSION_KEY = "default";
+
+/**
+ * A second, complete lesson list for the same module, kept in its own folder. Learners pick one
+ * version per module; the module's own `lessons` stay the default version.
+ */
+const ModuleVersionSchema = z.object({
+  key: z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, "Use a short kebab-case version key, for example v2")
+    .refine(key => key !== DEFAULT_MODULE_VERSION_KEY, `"${DEFAULT_MODULE_VERSION_KEY}" names the module's own lessons; pick another version key`),
+  /** What a learner sees on the version switch, for example "Rewritten: shorter and plainer". */
+  label: z.string().trim().min(1).max(80),
+  /** Where the version came from, for example agent-ip-v2. Not shown to learners. */
+  source: z.string().trim().min(1).optional(),
+  dir: z.string().regex(/^\d+-[a-z0-9-]+$/, "Version folders look like 02-some-slug--v2"),
+  lessons: z.array(PlannedLessonSchema).min(1),
+}).strict();
+
 const PlannedModuleSchema = z.object({
   key: z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, "Use a stable kebab-case module key").optional(),
   dir: z.string().regex(/^\d+-[a-z0-9-]+$/, "Module folders look like 01-some-slug"),
   title: z.string().min(1),
   summary: z.string().optional(),
   lessons: z.array(PlannedLessonSchema).min(1),
+  /** Alternative versions of this module (docs/course-publish.md in Edorax-core). */
+  versions: z.array(ModuleVersionSchema).min(1).optional(),
 });
 
-const VariantModuleSchema = PlannedModuleSchema.extend({
+const VariantModuleSchema = PlannedModuleSchema.omit({ versions: true }).extend({
   key: z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/),
   lessons: z.array(PlannedLessonSchema.extend({
     key: z.string().regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/),
@@ -220,8 +240,40 @@ export const CourseManifestSchema = z.object({
       lessons.add(lesson.key);
     }
   }
+  // Versions come after every module's own lessons, so a clash names the version, not the default lesson.
+  const folders = new Set(manifest.modules.map(module => module.dir));
+  const versionLessonKeys = new Set<string>();
+  for (const [mi, module] of manifest.modules.entries()) {
+    const versionKeys = new Set<string>();
+    const moduleNumber = module.dir.split("-")[0];
+    for (const [vi, version] of (module.versions ?? []).entries()) {
+      const at = ["modules", mi, "versions", vi];
+      if (versionKeys.has(version.key)) ctx.addIssue({ code: "custom", path: [...at, "key"], message: `Version key ${version.key} is used twice in module ${module.dir}` });
+      versionKeys.add(version.key);
+      if (folders.has(version.dir)) {
+        ctx.addIssue({ code: "custom", path: [...at, "dir"], message: `Version ${version.key} needs its own folder; ${version.dir} already holds other lessons` });
+      }
+      folders.add(version.dir);
+      if (version.dir.split("-")[0] !== moduleNumber) {
+        ctx.addIssue({ code: "custom", path: [...at, "dir"], message: `Version folder ${version.dir} must start with the module number ${moduleNumber}` });
+      }
+      const files = new Set<string>();
+      for (const [li, lesson] of version.lessons.entries()) {
+        if (lesson.file.split(".")[0] !== moduleNumber) {
+          ctx.addIssue({ code: "custom", path: [...at, "lessons", li, "file"], message: `${lesson.file} must use module number ${moduleNumber}` });
+        }
+        if (files.has(lesson.file)) ctx.addIssue({ code: "custom", path: [...at, "lessons", li, "file"], message: `${lesson.file} is listed twice in version ${version.key}` });
+        files.add(lesson.file);
+        if (!lesson.key) continue;
+        if (lessons.has(lesson.key) || versionLessonKeys.has(lesson.key)) {
+          ctx.addIssue({ code: "custom", path: [...at, "lessons", li, "key"], message: "Lesson key must be unique in this course, across every version" });
+        }
+        versionLessonKeys.add(lesson.key);
+      }
+    }
+  }
   const allModuleKeys = new Set(modules);
-  const allLessonKeys = new Set(lessons);
+  const allLessonKeys = new Set([...lessons, ...versionLessonKeys]);
   const family = manifest.variantFamily ?? findCourseFamily(manifest.family);
   if (manifest.availableVariantSlugs) {
     if (!family) ctx.addIssue({ code: "custom", path: ["availableVariantSlugs"], message: "A variant family is required" });
@@ -332,5 +384,40 @@ export function loadCourseManifest(): CourseManifest | null {
   if (result.data.slug !== COURSE_SLUG) {
     throw new Error(`course.yaml slug "${result.data.slug}" must match its folder name "${COURSE_SLUG}"`);
   }
+  const missing = moduleVersionSourceProblems(result.data, COURSE_SOURCE_DIR);
+  if (missing.length) throw new Error(`course.yaml is invalid: ${missing.join("; ")}`);
   return result.data;
+}
+
+/** A version's folder and every lesson file it lists must be on disk. */
+export function moduleVersionSourceProblems(manifest: CourseManifest, sourceDir: string): string[] {
+  const problems: string[] = [];
+  for (const [mi, module] of manifest.modules.entries()) for (const [vi, version] of (module.versions ?? []).entries()) {
+    const at = `modules.${mi}.versions.${vi}`;
+    const folder = path.join(sourceDir, version.dir);
+    if (!fs.existsSync(folder) || !fs.statSync(folder).isDirectory()) {
+      problems.push(`${at}.dir: version ${version.key} of ${module.dir} names folder ${version.dir}/, which does not exist`);
+      continue;
+    }
+    for (const [li, lesson] of version.lessons.entries()) if (!fs.existsSync(path.join(folder, lesson.file))) {
+      problems.push(`${at}.lessons.${li}.file: ${version.dir}/${lesson.file} does not exist`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * Folders that hold an alternative module version. They look like module folders, so every reader
+ * of module folders skips them. Read from the raw YAML so a broken manifest still reports its own error.
+ */
+export function moduleVersionDirs(sourceDir = COURSE_SOURCE_DIR): Set<string> {
+  const manifestPath = path.join(sourceDir, "course.yaml");
+  if (!fs.existsSync(manifestPath)) return new Set();
+  try {
+    const raw = loadYaml(fs.readFileSync(manifestPath, "utf8")) as { modules?: { versions?: { dir?: unknown }[] }[] } | null;
+    return new Set((raw?.modules ?? []).flatMap(module => (Array.isArray(module?.versions) ? module.versions : [])
+      .map(version => version?.dir).filter((dir): dir is string => typeof dir === "string")));
+  } catch {
+    return new Set();
+  }
 }

@@ -62,6 +62,14 @@ export function readCourseZip(buffer: Buffer, source: CourseZipSource = "dashboa
   return result;
 }
 
+export type ImportLesson = {
+  key?: string; lessonNum: number; slugPart: string; title: string; summary: string | null;
+  source: string; estimatedMinutes: number | null; readerMode: "DEFAULT" | "QUIZ";
+  quizPassingScore?: number;
+  isMilestone: boolean;
+  blocks: { id: string; type: Prisma.BlockCreateManyInput["type"]; config: Prisma.InputJsonValue; required: boolean }[];
+};
+
 export type ImportPlan = {
   manifest: {
     title: string; description: string; projectGoal: string; difficulty: string;
@@ -72,13 +80,9 @@ export type ImportPlan = {
     availableVariantSlugs?: string[];
     publication?: "create" | "update"; creatorEmail?: string;
   };
-  modules: { key?: string; order?: number; title: string; lessons: {
-    key?: string; lessonNum: number; slugPart: string; title: string; summary: string | null;
-    source: string; estimatedMinutes: number | null; readerMode: "DEFAULT" | "QUIZ";
-    quizPassingScore?: number;
-    isMilestone: boolean;
-    blocks: { id: string; type: Prisma.BlockCreateManyInput["type"]; config: Prisma.InputJsonValue; required: boolean }[];
-  }[] }[];
+  modules: { key?: string; order?: number; title: string; lessons: ImportLesson[];
+    /** Alternative lesson lists for this module. Absent means "leave any published versions as they are". */
+    versions?: { key: string; label: string; source?: string; lessons: ImportLesson[] }[] }[];
   variants?: { slug: string; overrides: { lessonKey: string; lesson: ImportPlan["modules"][number]["lessons"][number] }[];
     modules?: ImportPlan["modules"]; omitLessonKeys?: string[]; moduleOrder?: string[] }[];
   /** `lessons` removes by public address, for a course without stable lesson keys. */
@@ -184,7 +188,8 @@ async function runCourseImport(user: SessionUser, buffer: Buffer, source: Course
       await tx.module.createMany({ data: modules });
       await tx.chapter.createMany({ data: chapters });
       if (blocks.length) await tx.block.createMany({ data: blocks });
-      if (plan.variants?.length) await publishCourseRelease(tx, created.id, plan, mapping);
+      // Variants and module versions exist only in release content, so such a course starts with a release.
+      if (plan.variants?.length || plan.modules.some(module => module.versions?.length)) await publishCourseRelease(tx, created.id, plan, mapping);
       return created;
     }, { timeout: source === "repository" ? 300000 : 120000, maxWait: 10000 });
     return { courseSlug: course.slug };

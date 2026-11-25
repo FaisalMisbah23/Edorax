@@ -157,6 +157,7 @@ router.post("/organizations/:orgId/credits", validateParams(orgIdParams), valida
 
 router.get("/overview", admin.getOverview);
 router.get("/metrics", validateQuery(metricsQuery), admin.getMetrics);
+router.get("/module-version-feedback", admin.getModuleVersionFeedback);
 router.get("/courses", validateQuery(listCoursesQuery), admin.listCourses);
 router.post("/organizations/:orgId/free-access", validate({ params: orgIdParams, body: courseOrgAccessBulkBody }), admin.setOrgCoursesFreeAccess);
 router.get("/courses/:courseId/org-access", validateParams(courseIdParams), admin.listCourseOrgAccess);

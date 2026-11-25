@@ -6,7 +6,16 @@ import { certificateClaimBody } from "../../validations/capstone.js";
 import { authenticate, optionalAuth } from "../../middlewares/authenticate.js";
 import { requireVerified } from "../../middlewares/require-verified.js";
 import { validateBody, validateParams } from "../../middlewares/validate.js";
-import { chapterPathParams, chooseSpecialisationBody, chooseVariantBody, courseRatingBody, courseSlugParams } from "../../validations/courses.js";
+import {
+  chapterPathParams,
+  chooseModuleVersionBody,
+  chooseSpecialisationBody,
+  chooseVariantBody,
+  courseRatingBody,
+  courseSlugParams,
+  modulePathParams,
+  moduleVersionFeedbackBody,
+} from "../../validations/courses.js";
 
 const router = Router();
 
@@ -47,6 +56,36 @@ router.put(
   validateParams(courseSlugParams),
   validateBody(chooseSpecialisationBody),
   courses.chooseSpecialisation
+);
+router.get(
+  "/:courseSlug/module-versions",
+  authenticate,
+  requireVerified,
+  validateParams(courseSlugParams),
+  courses.listModuleVersions
+);
+router.put(
+  "/:courseSlug/modules/:moduleKey/version",
+  authenticate,
+  requireVerified,
+  validateParams(modulePathParams),
+  validateBody(chooseModuleVersionBody),
+  courses.chooseModuleVersion
+);
+router.put(
+  "/:courseSlug/modules/:moduleKey/version-feedback",
+  authenticate,
+  requireVerified,
+  validateParams(modulePathParams),
+  validateBody(moduleVersionFeedbackBody),
+  courses.putModuleVersionFeedback
+);
+router.delete(
+  "/:courseSlug/modules/:moduleKey/version-feedback",
+  authenticate,
+  requireVerified,
+  validateParams(modulePathParams),
+  courses.deleteModuleVersionFeedback
 );
 router.post(
   "/:courseSlug/upgrade-curriculum",

@@ -17,6 +17,8 @@ import { loadLearnerHabit } from "../progress/learner-habit.js";
 import { milestoneReflectionBlocked } from "../progress/reflection.js";
 import { isCompletableBlock, previousChapterId } from "../progress/rules.js";
 import {
+  applyModuleVersions,
+  readModuleVersionChoices,
   releaseForEnrollment,
   releaseModulesWithBlocks,
   upgradeEnrollmentToRelease,
@@ -26,6 +28,7 @@ import {
 } from "../courses/releases.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
 import { findChapterIndex } from "./chapter-slug.js";
+import { switchModuleVersionForChapter } from "../courses/module-versions.js";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -116,8 +119,9 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
         });
         enrollment.variantSlug = variantSlug;
       }
-      selectedRelease = { ...selectedRelease, variant: variantSlug, modules };
-      courseModules = await releaseModulesWithBlocks(modules);
+      const resolved = applyModuleVersions(modules, readModuleVersionChoices(enrollment.moduleVersions));
+      selectedRelease = { ...selectedRelease, variant: variantSlug, modules: resolved, allModules: modules };
+      courseModules = await releaseModulesWithBlocks(resolved);
       flatChapters = courseModules.flatMap((mod) =>
         mod.chapters.map((ch) => ({
           ...ch,
@@ -128,6 +132,27 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
       );
       index = findChapterIndex(flatChapters, chapterSlug);
       break;
+    }
+  }
+
+  // A shared link can open a lesson from another version of a module. Switch that module to the
+  // version that owns the lesson so the link works; a lesson in no version still 404s below.
+  if (index === -1 && selectedRelease) {
+    const choices = await switchModuleVersionForChapter(enrollment.id, selectedRelease.allModules, chapterSlug);
+    if (choices) {
+      enrollment.moduleVersions = choices;
+      const resolved = applyModuleVersions(selectedRelease.allModules, choices);
+      selectedRelease = { ...selectedRelease, modules: resolved };
+      courseModules = await releaseModulesWithBlocks(resolved);
+      flatChapters = courseModules.flatMap((mod) =>
+        mod.chapters.map((ch) => ({
+          ...ch,
+          moduleTitle: mod.title,
+          moduleOrder: mod.order,
+          blockCount: ch.blocks.filter((block) => isCompletableBlock(block)).length,
+        }))
+      );
+      index = findChapterIndex(flatChapters, chapterSlug);
     }
   }
 

@@ -2,7 +2,8 @@ import { createHash } from "node:crypto";
 import { ulid } from "ulid";
 import { Prisma } from "../../generated/prisma/index.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
-import { ensureBaselineRelease, readReleaseContent, type ReleaseChapter, type ReleaseContent, type ReleaseModule } from "../courses/releases.js";
+import { cleanChapterSlug, DEFAULT_MODULE_VERSION, ensureBaselineRelease, readReleaseContent, type ReleaseChapter, type ReleaseContent, type ReleaseModule,
+  type ReleaseModuleVersion } from "../courses/releases.js";
 import { BadRequestError } from "../../utils/errors.js";
 import { notify } from "../notifications/service.js";
 import type { ImportPlan } from "./course-import.js";
@@ -61,6 +62,74 @@ function locateSlug(modules: ReleaseModule[], slug: string, matchedIds: Set<stri
     if (index >= 0) return { module, index, chapter: module.chapters[index] };
   }
   return null;
+}
+
+/**
+ * The public address of a lesson in an alternative module version. The version key takes the place
+ * where a default address has its lesson number ("2-1-..."), and starts with a letter, so the two
+ * can never meet; the module number keeps two modules' versions apart. No "--", which the reader
+ * treats as the start of a row id (cleanChapterSlug).
+ */
+export function versionChapterSlug(moduleNumber: number, versionKey: string, lesson: Pick<Lesson, "lessonNum" | "slugPart">) {
+  return `${moduleNumber}-${versionKey}-${lesson.lessonNum}-${lesson.slugPart}`;
+}
+
+type IncomingModule = ImportPlan["modules"][number];
+
+/**
+ * Write the module's alternative versions into every variant that has the module. A listed version
+ * is complete: its lessons replace that version's earlier list. A lesson is matched to its earlier
+ * chapter by lesson key, else by its address, and an unchanged lesson keeps its chapter id, so
+ * learners keep their progress. Versions the package does not list stay as they were.
+ */
+async function publishModuleVersions(tx: Prisma.TransactionClient, courseId: string, moduleId: string, moduleNumber: number,
+  incoming: IncomingModule, previous: ReleaseContent, next: ReleaseContent) {
+  if (!incoming.versions?.length) return;
+  const earlier = Object.values(previous.variants).flat().find(module => module.id === moduleId && module.versions?.length)?.versions ?? [];
+  const built: ReleaseModuleVersion[] = [];
+  for (const version of incoming.versions) {
+    if (version.key === DEFAULT_MODULE_VERSION) throw new BadRequestError(`Module ${incoming.title}: "${DEFAULT_MODULE_VERSION}" cannot be a version key.`);
+    if (built.some(item => item.key === version.key)) throw new BadRequestError(`Module ${incoming.title} lists version ${version.key} twice.`);
+    const prior = earlier.find(item => item.key === version.key)?.chapters ?? [];
+    const used = new Set<string>();
+    const chapters: ReleaseChapter[] = [];
+    for (const lesson of version.lessons) {
+      const ownSlug = versionChapterSlug(moduleNumber, version.key, lesson);
+      // The address without its module number, so a renumbered module still finds its lessons.
+      const tail = `-${version.key}-${lesson.lessonNum}-${lesson.slugPart}`;
+      const open = prior.filter(chapter => !used.has(chapter.id));
+      const match = (lesson.key ? open.find(chapter => chapter.key === lesson.key) : undefined)
+        ?? open.find(chapter => (!chapter.key || chapter.key === (lesson.key ?? null)) && (chapter.slug === ownSlug || chapter.slug.endsWith(tail)));
+      if (match) used.add(match.id);
+      const chapter = match && await equivalent(tx, match, lesson)
+        ? { ...match }
+        : await createReleaseChapter(tx, courseId, moduleId, match?.slug ?? ownSlug, lesson);
+      chapters.push({ ...chapter, key: lesson.key ?? null, order: lesson.lessonNum });
+    }
+    chapters.sort((a, b) => a.order - b.order);
+    built.push({ key: version.key, label: version.label, chapters });
+  }
+  for (const modules of Object.values(next.variants)) {
+    const module = modules.find(item => item.id === moduleId);
+    if (!module) continue; // This variant omitted the module.
+    const merged = (module.versions ?? []).map(version => built.find(item => item.key === version.key) ?? version);
+    for (const version of built) if (!merged.some(item => item.key === version.key)) merged.push(version);
+    // Each variant gets its own copies, so a later edit to one variant cannot reach another.
+    module.versions = merged.map(version => ({ ...version, chapters: version.chapters.map(chapter => ({ ...chapter })) }));
+  }
+}
+
+/** Every lesson address in a variant is read by one lesson only, so an alternative's address must be its own. */
+function assertDistinctVersionSlugs(content: ReleaseContent) {
+  for (const [variant, modules] of Object.entries(content.variants)) {
+    const taken = new Set(modules.flatMap(module => module.chapters.map(chapter => cleanChapterSlug(chapter.slug))));
+    for (const module of modules) for (const version of module.versions ?? []) for (const chapter of version.chapters) {
+      const slug = cleanChapterSlug(chapter.slug);
+      if (slug !== chapter.slug) throw new BadRequestError(`Version ${version.key} of module ${module.title}: lesson address ${chapter.slug} may not contain "--" or capitals. Rename the lesson file.`);
+      if (taken.has(slug)) throw new BadRequestError(`Version ${version.key} of module ${module.title}: lesson address ${chapter.slug} is already used by another lesson in ${variant}. Rename the lesson file.`);
+      taken.add(slug);
+    }
+  }
 }
 
 /**
@@ -173,6 +242,7 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
         else if (existing) existing.chapter.order = lesson.lessonNum;
       }
     }
+    await publishModuleVersions(tx, courseId, moduleId, incomingModule.order ?? mi + 1, incomingModule, previous, next);
   }
 
   for (const key of plan.remove?.lessonKeys ?? []) {
@@ -201,7 +271,8 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
   }
   // An address that holds a lesson again is no longer a redirect.
   if (next.redirects) {
-    const live = new Set(Object.values(next.variants).flatMap(modules => modules.flatMap(module => module.chapters.map(chapter => chapter.slug))));
+    const live = new Set(Object.values(next.variants).flatMap(modules => modules.flatMap(module =>
+      [module.chapters, ...(module.versions ?? []).map(version => version.chapters)].flat().map(chapter => chapter.slug))));
     next.redirects = Object.fromEntries(Object.entries(next.redirects).filter(([slug]) => !live.has(slug)));
     if (!Object.keys(next.redirects).length) delete next.redirects;
   }
@@ -253,9 +324,13 @@ export async function publishCourseRelease(tx: Prisma.TransactionClient, courseI
       });
     }
   }
+  assertDistinctVersionSlugs(next);
   for (const modules of Object.values(next.variants)) {
     modules.sort((a, b) => a.order - b.order);
-    for (const module of modules) module.chapters.sort((a, b) => a.order - b.order);
+    for (const module of modules) {
+      module.chapters.sort((a, b) => a.order - b.order);
+      for (const version of module.versions ?? []) version.chapters.sort((a, b) => a.order - b.order);
+    }
   }
   // Tutor settings are not release content: they follow the manifest even when no chapter changed.
   const assistant = plan.manifest.assistant ? (plan.manifest.assistant as Prisma.InputJsonValue) : Prisma.DbNull;

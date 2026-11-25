@@ -5,7 +5,7 @@ import { ClipboardCopy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /** Copies the whole feedback list as plain text, ready to paste to whoever will fix it. */
-export function CopyFeedbackButton({ text }: { text: string }) {
+export function CopyFeedbackButton({ text, label = "Copy all as text" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <Button
@@ -22,7 +22,7 @@ export function CopyFeedbackButton({ text }: { text: string }) {
         }
       }}
     >
-      <ClipboardCopy aria-hidden /> {copied ? "Copied" : "Copy all as text"}
+      <ClipboardCopy aria-hidden /> {copied ? "Copied" : label}
     </Button>
   );
 }

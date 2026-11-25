@@ -155,3 +155,48 @@ export async function createOrganizationFixture(courseId: string, options: { max
 
   return { organization, headers, cleanup };
 }
+
+/**
+ * A course whose second module has an alternative version `v2`. Module 1 is the base fixture's
+ * (chapter-a, chapter-b). Module 2 (key `m2`) reads basics-one and basics-two by default, or
+ * basics-v2-one in `v2`, which also holds a capstone block. Not sequential, so no chapter is locked.
+ */
+export async function createModuleVersionsFixture() {
+  const fx = await createCourseFixture();
+  await prisma.course.update({ where: { id: fx.course.id }, data: { sequential: false } });
+  const module2 = await prisma.module.create({ data: { courseId: fx.course.id, title: "Module 2", order: 2, contentKey: "m2" } });
+  const chapter = (slug: string, title: string, order: number, estimatedMinutes: number) =>
+    prisma.chapter.create({ data: { courseId: fx.course.id, moduleId: module2.id, slug, title, order, estimatedMinutes, source: `# ${title}`, publishedAt: new Date() } });
+  const basicsOne = await chapter("basics-one", "Basics one", 1, 10);
+  const basicsTwo = await chapter("basics-two", "Basics two", 2, 5);
+  const basicsV2One = await chapter("basics-v2-one", "Basics, rewritten", 3, 8);
+  const capstoneBlock = await prisma.block.create({
+    data: { id: `blk-cap-${fx.tag}`, chapterId: basicsV2One.id, type: "CAPSTONE_CHECK", order: 1, config: { title: "Capstone" } },
+  });
+
+  const releaseChapter = (row: { id: string; slug: string; title: string; order: number; estimatedMinutes: number | null; readerMode: "DEFAULT" | "QUIZ"; isMilestone: boolean; quizPassingScore: number; contentKey: string | null }) => ({
+    id: row.id, key: row.contentKey, slug: row.slug, title: row.title, order: row.order, estimatedMinutes: row.estimatedMinutes,
+    readerMode: row.readerMode, isMilestone: row.isMilestone, quizPassingScore: row.quizPassingScore,
+  });
+  const module1 = await prisma.module.findUniqueOrThrow({ where: { id: fx.chapterA.moduleId! } });
+  const modules = [
+    { id: module1.id, key: module1.contentKey, title: module1.title, order: 1, chapters: [releaseChapter(fx.chapterA), releaseChapter(fx.chapterB)] },
+    {
+      id: module2.id, key: "m2", title: module2.title, order: 2, defaultVersionLabel: "Original lessons",
+      chapters: [releaseChapter(basicsOne), releaseChapter(basicsTwo)],
+      versions: [{ key: "v2", label: "Rewritten: shorter and plainer", chapters: [releaseChapter(basicsV2One)] }],
+    },
+  ];
+  const content = { variants: { default: modules } };
+  const release = await prisma.courseRelease.create({ data: { courseId: fx.course.id, number: 1, content } });
+  await prisma.course.update({ where: { id: fx.course.id }, data: { activeReleaseId: release.id } });
+  await prisma.enrollment.update({ where: { id: fx.enrollment.id }, data: { releaseId: release.id } });
+
+  async function cleanup() {
+    await prisma.capstoneCheck.deleteMany({ where: { blockId: capstoneBlock.id } });
+    await prisma.block.deleteMany({ where: { id: capstoneBlock.id } });
+    await fx.cleanup();
+  }
+
+  return { ...fx, module1, module2, basicsOne, basicsTwo, basicsV2One, capstoneBlock, release, content, cleanup };
+}
