@@ -16,6 +16,7 @@ import {
   Menu,
   MessageSquareText,
   Settings2,
+  ShieldCheck,
   Sparkles,
   Flag,
   Users,
@@ -238,12 +239,12 @@ export function MentorWorkspaceSidebar({
               render={
                 <button
                   type="button"
-                  className="grid size-9 place-items-center rounded-lg border bg-card outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                  className="grid size-11 place-items-center rounded-lg border bg-card outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Open mentor workspace navigation"
                 />
               }
             >
-              <Menu className="size-4" />
+              <Menu className="size-5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-h-[calc(100dvh-5rem)] w-[min(21rem,calc(100vw-2rem))] overflow-y-auto p-1.5">
               {/* On a phone the daily work comes first: learners, answers and questions across all courses. */}
@@ -254,17 +255,28 @@ export function MentorWorkspaceSidebar({
               <DropdownMenuGroup>
                 <DropdownMenuLabel>Course tools</DropdownMenuLabel>
                 {selectedCourse ? (
-                  <DropdownMenuItem className="py-2" onClick={() => router.push("/courses")}>
+                  <DropdownMenuItem className="min-h-11 py-2 text-[15px]" onClick={() => router.push("/courses")}>
                     <span className="min-w-0 flex-1 truncate font-medium">{selectedCourse.title}</span>
-                    <span className="text-[11px] text-primary">Change</span>
+                    <span className="text-xs font-medium text-primary">Change</span>
                   </DropdownMenuItem>
                 ) : (
-                  <DropdownMenuItem onClick={() => router.push("/courses")}>
+                  <DropdownMenuItem className="min-h-11 py-2 text-[15px]" onClick={() => router.push("/courses")}>
                     {courses.length ? "Pick a course to see its tools" : "Create your first course"}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuGroup>
               {selectedCourse ? <MobileItems items={[...courseItems, ...insightItems]} router={router} /> : null}
+              {user.role === "ADMIN" ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem className="min-h-11 py-2 text-[15px]" onClick={() => router.push("/admin")}>
+                      <ShieldCheck />
+                      <span className="min-w-0 flex-1 truncate">Admin console</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -420,7 +432,7 @@ function MobileItems({
           <DropdownMenuItem
             key={item.label}
             disabled={item.disabled}
-            className={cn("py-2", item.active && "bg-accent font-medium")}
+            className={cn("min-h-11 py-2 text-[15px]", item.active && "bg-accent font-medium")}
             onClick={() => router.push(item.href)}
           >
             <Icon />

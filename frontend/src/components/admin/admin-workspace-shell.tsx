@@ -2,8 +2,10 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
+  GraduationCap,
+  Menu,
   BookOpen,
   Building2,
   ClipboardList,
@@ -19,6 +21,15 @@ import {
 } from "lucide-react";
 import { WorkspaceAccountMenu } from "@/components/workspace/workspace-account-menu";
 import { Logo } from "@/components/brand/logo";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
@@ -44,6 +55,7 @@ export function AdminWorkspaceShell({
   signOutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navSections: { title: string; items: AdminNavItem[] }[] = [
     {
@@ -107,7 +119,7 @@ export function AdminWorkspaceShell({
     },
   ];
 
-  const navItems: AdminNavItem[] = navSections.flatMap((section) => section.items);
+  const currentItem = navSections.flatMap((section) => section.items).find((item) => item.active);
 
   return (
     <div className="min-h-dvh bg-muted/30 text-foreground">
@@ -120,39 +132,64 @@ export function AdminWorkspaceShell({
           <div className="flex items-center gap-1">
             <NotificationBell />
             <WorkspaceAccountMenu current="admin" user={{ ...user, role: "ADMIN" }} signOutAction={signOutAction} compact />
+            {/* The same menu pattern as the instructor workspace: one button, every section, rows tall enough to tap. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <button
+                    type="button"
+                    className="grid size-11 place-items-center rounded-lg border bg-card outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Open admin navigation"
+                  />
+                }
+              >
+                <Menu className="size-5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-[calc(100dvh-5rem)] w-[min(21rem,calc(100vw-2rem))] overflow-y-auto p-1.5">
+                {navSections.map((section, index) => (
+                  <div key={section.title}>
+                    {index > 0 ? <DropdownMenuSeparator /> : null}
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel>{section.title}</DropdownMenuLabel>
+                      {section.items.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <DropdownMenuItem
+                            key={item.href}
+                            className={cn("min-h-11 py-2 text-[15px]", item.active && "bg-accent font-medium")}
+                            onClick={() => router.push(item.href)}
+                          >
+                            <Icon />
+                            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                            {item.badge != null && item.badge > 0 ? (
+                              <span className="min-w-5 rounded-full bg-primary/10 px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums text-primary">
+                                {item.badge > 99 ? "99+" : item.badge}
+                              </span>
+                            ) : null}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuGroup>
+                  </div>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem className="min-h-11 py-2 text-[15px]" onClick={() => router.push("/workspace")}>
+                    <GraduationCap />
+                    <span className="min-w-0 flex-1 truncate">Instructor workspace</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-        <nav aria-label="Platform admin sections" className="flex gap-1.5 overflow-x-auto px-3 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={item.active ? "page" : undefined}
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                  item.active
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Icon className="size-3.5" aria-hidden />
-                {item.label}
-                {item.badge != null && item.badge > 0 ? (
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 text-[10px] font-semibold tabular-nums",
-                      item.active ? "bg-primary-foreground/20" : "bg-primary/10 text-primary"
-                    )}
-                  >
-                    {item.badge > 99 ? "99+" : item.badge}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Where you are, so the menu button is not the only clue on a phone. */}
+        {currentItem ? (
+          <p className="flex items-center gap-2 border-t px-4 py-2 text-sm font-medium">
+            <currentItem.icon className="size-4 text-primary" aria-hidden />
+            {currentItem.label}
+          </p>
+        ) : null}
       </div>
 
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border/70 bg-card lg:flex">
