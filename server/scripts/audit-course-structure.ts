@@ -448,6 +448,19 @@ function auditPlan(plan: CourseManifest): Issue[] {
     }
   }
 
+  // A version folder holds exactly the lessons its version lists (missing ones fail in course-source.ts).
+  for (const planned of plan.modules) for (const version of planned.versions ?? []) {
+    if (!fs.existsSync(path.join(COURSE_DIR, version.dir))) continue;
+    const moduleNum = Number(planned.dir.match(/^(\d+)-/)![1]);
+    const listed = new Set(version.lessons.map((l) => l.file));
+    for (const entry of fs.readdirSync(path.join(COURSE_DIR, version.dir), { withFileTypes: true })) {
+      if (!entry.isFile() || !listed.has(entry.name)) {
+        issues.push({ level: "error", module: moduleNum, file: `${version.dir}/${entry.name}`,
+          message: `File is not listed under version ${version.key} of ${planned.dir} in course.yaml` });
+      }
+    }
+  }
+
   const variantRoot = path.join(COURSE_DIR, "variants");
   const plannedVariantFiles = new Set<string>();
   for (const variant of plan.variants ?? []) {
@@ -492,6 +505,11 @@ function main() {
   for (const { dirName, moduleNum } of readModuleDirs()) {
     if (SKIP_DIRS.has(dirName)) continue;
     all.push(...auditModule(moduleNum, dirName));
+  }
+  // An alternative version is a whole module for the learner who picks it: same bar as the default.
+  for (const module of manifest?.modules ?? []) for (const version of module.versions ?? []) {
+    if (!fs.existsSync(path.join(COURSE_DIR, version.dir))) continue;
+    all.push(...auditModule(Number(module.dir.match(/^(\d+)-/)![1]), version.dir));
   }
   for (const variant of manifest?.variants ?? []) {
     for (const module of variant.modules) {

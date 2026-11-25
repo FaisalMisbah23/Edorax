@@ -39,7 +39,7 @@ import { RoadmapConfigSchema } from "../src/shared/blocks/roadmap/schema.js";
 import { AiInterviewFenceSchema } from "../src/shared/blocks/ai-interview/schema.js";
 import { CapstoneFenceSchema } from "../src/shared/blocks/capstone-check/schema.js";
 import { loadRubricPackFile } from "../src/services/capstone/pack-loader.js";
-import { COURSE_SOURCE_DIR, loadCourseManifest, type CourseManifest } from "./course-source.js";
+import { COURSE_SOURCE_DIR, loadCourseManifest, moduleVersionDirs, type CourseManifest } from "./course-source.js";
 import { recomputeEnrollmentRollup } from "../src/services/progress/compute.js";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
@@ -366,10 +366,12 @@ type ParsedLesson = {
   isMilestone: boolean;
 };
 
+/** The default module folders. A folder that course.yaml names as a module version is not a module. */
 export function readModuleDirs(): { dirName: string; moduleNum: number }[] {
+  const versionDirs = moduleVersionDirs();
   return fs
     .readdirSync(COURSE_SOURCE_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && /^\d+-/.test(entry.name))
+    .filter((entry) => entry.isDirectory() && /^\d+-/.test(entry.name) && !versionDirs.has(entry.name))
     .map((entry) => ({ dirName: entry.name, moduleNum: Number(entry.name.match(/^(\d+)-/)![1]) }))
     .sort((a, b) => a.moduleNum - b.moduleNum);
 }
@@ -972,6 +974,10 @@ async function main() {
 
   const manifest = loadCourseManifest();
   const moduleTitles = new Map(manifest?.modules.map((m) => [m.dir, m.title]) ?? []);
+  // Versions live only in release content, which this direct import never writes.
+  if (manifest?.modules.some((m) => m.versions?.length)) {
+    console.warn("Module versions are skipped here. Import the course as a ZIP or run courses:publish to include them.");
+  }
   const course = await upsertCourse(manifest);
 
   let moduleCount = 0;
