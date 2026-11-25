@@ -15,7 +15,10 @@ import {
 import { prisma } from "../../db/prisma.js";
 import type { EnrollmentLifecycle, Prisma } from "../../generated/prisma/index.js";
 import type { SessionUser } from "../../types/auth.js";
-import { ConflictError, NotFoundError, UnprocessableError } from "../../utils/errors.js";
+import { ConflictError, ForbiddenError, NotFoundError, UnprocessableError } from "../../utils/errors.js";
+import { ORGANIZATION_ERROR_CODES } from "../../shared/api/organizations.js";
+import { canAccessTeachSurface } from "../auth/access-rules.js";
+import { requireMembership } from "../organizations/members.js";
 import { appBaseUrl } from "../email/send.js";
 import { CONFIRMED_ENROLLMENT_WHERE } from "../enrollment/lifecycle.js";
 import { selfEnroll } from "../enrollment/self-enroll.js";
@@ -53,11 +56,24 @@ async function uniqueJoinCode(): Promise<string> {
 const iso = (value: Date | null) => value?.toISOString() ?? null;
 const toDate = (value: string | null | undefined) => (value === undefined ? undefined : value === null ? null : new Date(value));
 
-/** 404 for a class that does not exist or belongs to another teacher: its existence is not their business. */
+/**
+ * The class, if this person may run it: its teacher, or an admin of the organisation it
+ * belongs to. A teacher who has left the organisation loses its classes. Anyone else gets
+ * 404: a class's existence is not their business.
+ */
 export async function requireOwnClass(user: SessionUser, classId: string) {
-  const found = await prisma.teachingClass.findFirst({ where: { id: classId, teacherId: user.id } });
+  const found = await prisma.teachingClass.findUnique({ where: { id: classId } });
   if (!found) throw new NotFoundError("Class not found");
-  return found;
+  if (!found.organizationId) {
+    if (found.teacherId === user.id) return found;
+    throw new NotFoundError("Class not found");
+  }
+  const membership = await prisma.organizationMember.findUnique({
+    where: { organizationId_userId: { organizationId: found.organizationId, userId: user.id } },
+    select: { role: true },
+  });
+  if (membership && (membership.role === "ADMIN" || found.teacherId === user.id)) return found;
+  throw new NotFoundError("Class not found");
 }
 
 /** Every id must be a published course; returns them in the order given. */
@@ -73,6 +89,7 @@ async function loadClassCourses(courseIds: string[]): Promise<ClassCourseRef[]> 
 
 const summarySelect = {
   id: true, name: true, joinCode: true, startsAt: true, endsAt: true, archivedAt: true, createdAt: true,
+  organization: { select: { id: true, name: true } },
   _count: { select: { members: true } },
   courses: { orderBy: { order: "asc" }, select: { course: { select: { id: true, slug: true, title: true } } } },
 } satisfies Prisma.TeachingClassSelect;
@@ -90,6 +107,7 @@ function toSummary(row: SummaryRow): ClassSummary {
     archived: row.archivedAt !== null,
     memberCount: row._count.members,
     courses: row.courses.map((item) => item.course),
+    organization: row.organization,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -113,14 +131,21 @@ export async function listClassCourseOptions(): Promise<ClassCourseOptionsView> 
 
 export async function createClass(
   user: SessionUser,
-  input: { name: string; courseIds: string[]; startsAt?: string | null; endsAt?: string | null }
+  input: { name: string; courseIds: string[]; startsAt?: string | null; endsAt?: string | null; organizationId?: string | null }
 ): Promise<ClassSummary> {
+  // An organisation member teaches inside the organisation. Only a platform instructor may run a class of their own.
+  if (input.organizationId) {
+    await requireMembership(user, input.organizationId);
+  } else if (!canAccessTeachSurface(user)) {
+    throw new ForbiddenError("Pick the organisation this class belongs to.", ORGANIZATION_ERROR_CODES.ORGANIZATION_REQUIRED);
+  }
   const courses = await loadClassCourses(input.courseIds);
   const row = await prisma.teachingClass.create({
     data: {
       name: input.name,
       joinCode: await uniqueJoinCode(),
       teacherId: user.id,
+      organizationId: input.organizationId ?? null,
       startsAt: toDate(input.startsAt) ?? null,
       endsAt: toDate(input.endsAt) ?? null,
       courses: { create: courses.map((course, order) => ({ courseId: course.id, order })) },

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Award, BookOpenText, CircleHelp, Coins, Compass, Flame, GraduationCap, Highlighter, Home, Star, Trophy, TrendingUp, User, type LucideIcon } from "lucide-react";
+import { Award, BookOpenText, Building2,CircleHelp, Coins, Compass, Flame, GraduationCap, Highlighter, Home, Star, Trophy, TrendingUp, User, type LucideIcon } from "lucide-react";
 import { WorkspaceAccountMenu } from "@/components/workspace/workspace-account-menu";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
@@ -74,6 +74,7 @@ export function MenteeWorkspaceShell({
   openHelpRequests,
   pendingReviews,
   classCount = 0,
+  organizationCount = 0,
   signOutAction,
   stats,
 }: {
@@ -85,6 +86,8 @@ export function MenteeWorkspaceShell({
   pendingReviews: number;
   /** How many classes the learner is in. The "My classes" link only shows when this is above zero. */
   classCount?: number;
+  /** How many organisations the person belongs to. The "Organisations" link only shows when this is above zero. */
+  organizationCount?: number;
   signOutAction: () => Promise<void>;
   stats?: LearnerStats;
 }) {
@@ -154,6 +157,13 @@ export function MenteeWorkspaceShell({
     active: pathname.startsWith("/my-classes"),
     count: classCount,
   };
+  const organizations: LearnerNavItem = {
+    label: "Organisations",
+    href: "/organizations",
+    icon: Building2,
+    active: pathname.startsWith("/organizations"),
+    count: organizationCount,
+  };
   const profile: LearnerNavItem = {
     label: "Profile",
     href: "/profile",
@@ -182,7 +192,7 @@ export function MenteeWorkspaceShell({
   const sidebarGroups: { label?: string; items: LearnerNavItem[] }[] = [
     { items: [home] },
     { label: "Learn", items: areaItems },
-    { label: "You", items: [myLearning, ...(classCount > 0 ? [myClasses] : []), youItems[0]!, profile, certificates, ...youItems.slice(1)] },
+    { label: "You", items: [myLearning, ...(classCount > 0 ? [myClasses] : []), ...(organizationCount > 0 ? [organizations] : []), youItems[0]!, profile, certificates, ...youItems.slice(1)] },
   ];
   // Five slots on a phone: the areas share one "Learn" tab that opens the hub, and the hub's tabs switch between them.
   const mobileItems: LearnerNavItem[] = [

@@ -359,6 +359,9 @@ model User {
   rewardInventory               RewardInventory[]
   classesTaught                 TeachingClass[]       @relation("ClassTeacher")
   classMemberships              TeachingClassMember[]
+  organizationMemberships       OrganizationMember[]
+  organizationsCreated          Organization[]        @relation("OrganizationCreator")
+  organizationInvitesSent       OrganizationInvite[]  @relation("OrganizationInviteSender")
   instructorWithdrawals         InstructorWithdrawal[]
 }
 
@@ -831,6 +834,14 @@ model Organization {
   creditBalance   Int                     @default(0)
   creditTransactions OrganizationCreditTransaction[]
   classes         TeachingClass[]
+  /// Set when a person made the organisation themselves; null when a platform admin made it.
+  /// A self-made organisation gets no API credentials, credits or free access on its own.
+  createdById     String?
+  createdBy       User?                   @relation("OrganizationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  members         OrganizationMember[]
+  invites         OrganizationInvite[]
+
+  @@index([createdById])
 }
 
 /// Platform-admin-controlled allow-list for organizations that receive a paid course at no charge.
@@ -1971,4 +1982,43 @@ model TeachingClassDueDate {
   dueAt    DateTime
 
   @@unique([classId, moduleId])
+}
+
+/// What a person may do in an organisation. ADMIN runs the organisation and sees every class in it;
+/// TEACHER runs their own classes in it. Neither grants the platform instructor role.
+enum OrganizationRole {
+  ADMIN
+  TEACHER
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           OrganizationRole
+  createdAt      DateTime         @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+/// A single-use link that makes the person who opens it a member. Bound to one email when `email` is set.
+model OrganizationInvite {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  token          String           @unique
+  role           OrganizationRole
+  email          String?
+  invitedById    String?
+  invitedBy      User?            @relation("OrganizationInviteSender", fields: [invitedById], references: [id], onDelete: SetNull)
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  acceptedById   String?
+  revokedAt      DateTime?
+  createdAt      DateTime         @default(now())
+
+  @@index([organizationId])
 }

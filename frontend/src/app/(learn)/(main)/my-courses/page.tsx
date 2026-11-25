@@ -34,6 +34,13 @@ export default async function MenteeCoursesPage() {
         </p>
       ) : null}
 
+      <p className="mt-4 text-base text-muted-foreground">
+        Teach a class?{" "}
+        <Link href="/organizations" className="font-bold text-primary underline-offset-4 hover:underline">
+          Create an organisation.
+        </Link>
+      </p>
+
       {model.courses.length > 0 ? (
         <div className="mt-8">
           <MenteeCourseList courses={model.courses} showHeading={false} primaryCourseId={model.primaryCourse?.id} />

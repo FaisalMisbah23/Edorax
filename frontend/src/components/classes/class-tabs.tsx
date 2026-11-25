@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 export type ClassTabPanel = { key: string; label: string; node: ReactNode };
 
 // All panels stay mounted so a half-edited due date survives a switch of tab.
-export function ClassTabs({ panels }: { panels: ClassTabPanel[] }) {
+export function ClassTabs({ panels, label = "Class sections" }: { panels: ClassTabPanel[]; label?: string }) {
   const [active, setActive] = useState(panels[0]?.key ?? "");
 
   return (
     <div className="space-y-6">
-      <div role="tablist" aria-label="Class sections" className="flex gap-1 overflow-x-auto border-b">
+      <div role="tablist" aria-label={label} className="flex gap-1 overflow-x-auto border-b">
         {panels.map((panel) => {
           const selected = panel.key === active;
           return (

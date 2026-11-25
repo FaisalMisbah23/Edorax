@@ -9,6 +9,7 @@ import {
   Bot,
   Headphones,
   BookOpenText,
+  Building2,
   ChevronDown,
   ChevronsUpDown,
   CircleHelp,
@@ -68,6 +69,8 @@ type NavItem = {
   active: boolean;
   count?: number;
   disabled?: boolean;
+  /** Never fetch ahead: the target changes state when opened. */
+  noPrefetch?: boolean;
 };
 
 export function MentorWorkspaceSidebar({
@@ -191,6 +194,14 @@ export function MentorWorkspaceSidebar({
       href: "/classes",
       icon: GraduationCap,
       active: pathname.startsWith("/classes"),
+    },
+    {
+      label: "Organisations",
+      // Switches to the learner side, where the organisation pages live.
+      href: "/open-organizations",
+      noPrefetch: true,
+      icon: Building2,
+      active: pathname.startsWith("/organizations"),
     },
     {
       label: "Answers to check",
@@ -419,7 +430,7 @@ function SidebarItems({ items }: { items: NavItem[] }) {
             {content}
           </span>
         ) : (
-          <Link key={item.label} href={item.href} aria-current={item.active ? "page" : undefined} className={classes}>
+          <Link key={item.label} href={item.href} prefetch={item.noPrefetch ? false : undefined} aria-current={item.active ? "page" : undefined} className={classes}>
             {content}
           </Link>
         );

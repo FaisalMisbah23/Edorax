@@ -37,6 +37,7 @@ export default async function ClassPage({ params }: { params: Promise<{ classId:
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">{detail.name}</h1>
               {detail.archived ? <Badge variant="outline">Archived</Badge> : null}
             </div>
+            {detail.organization ? <p className="mt-0.5 text-xs text-muted-foreground">{detail.organization.name}</p> : null}
             <p className="mt-1 text-sm text-muted-foreground">
               {detail.memberCount} {detail.memberCount === 1 ? "learner" : "learners"}
               {detail.startsAt || detail.endsAt ? " · " : ""}

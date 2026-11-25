@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
 import { errorText, fromLocalInput } from "@/lib/classes";
+import { organizationClassHref } from "@/lib/organizations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CoursePicker } from "@/components/classes/course-picker";
 import type { ClassCourseRef, ClassSummary } from "@/shared/api/classes";
 
-export function NewClassForm({ options, startOpen }: { options: ClassCourseRef[]; startOpen: boolean }) {
+export function NewClassForm({ options, startOpen, organizationId }: { options: ClassCourseRef[]; startOpen: boolean; organizationId?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(startOpen);
   const [name, setName] = useState("");
@@ -41,9 +42,9 @@ export function NewClassForm({ options, startOpen }: { options: ClassCourseRef[]
     try {
       const created = await apiFetch<ClassSummary>("/api/v1/teach/classes", {
         method: "POST",
-        json: { name: name.trim(), courseIds, startsAt: start, endsAt: end },
+        json: { name: name.trim(), courseIds, startsAt: start, endsAt: end, ...(organizationId ? { organizationId } : {}) },
       });
-      router.push(`/classes/${created.id}`);
+      router.push(organizationId ? organizationClassHref(organizationId, created.id) : `/classes/${created.id}`);
     } catch (e) {
       setError(errorText(e));
       setBusy(false);
