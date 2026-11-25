@@ -1370,6 +1370,8 @@ model Response {
   aiDraft      Json?
   aiDraftModel String?
   aiDraftAt    DateTime?
+  /** What the draft cost, in millionths of a dollar. */
+  aiDraftCostMicroUsd Int?
 
   @@index([blockId, userId, attempt])
   @@index([enrollmentId])
@@ -1393,6 +1395,12 @@ model Review {
 enum HelpThreadKind {
   QUESTION
   LESSON_REPORT
+}
+
+// A mentor flags a thread as feedback for the team: a problem with the course or the platform.
+enum HelpFeedbackScope {
+  COURSE
+  PLATFORM
 }
 
 enum HelpThreadCategory {
@@ -1420,6 +1428,9 @@ model HelpThread {
   category   HelpThreadCategory?
   blockId    String?
   quote      String?            @db.Text
+  feedbackScope HelpFeedbackScope?
+  feedbackNote  String?           @db.Text
+  feedbackAt    DateTime?
   menteeLastReadAt DateTime?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt

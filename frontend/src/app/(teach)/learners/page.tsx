@@ -5,7 +5,7 @@ import { serverApiFetch } from "@/lib/api-server";
 import { AutoSubmitSelect } from "@/components/teach/auto-submit-select";
 import { CohortSummary } from "@/components/teach/mentees/cohort-summary";
 import { MenteesNeedingAttention } from "@/components/teach/mentees/needs-attention";
-import { MenteeRoster } from "@/components/teach/mentees/mentee-roster";
+import { LearnerDirectory } from "@/components/teach/mentees/learner-directory";
 
 // Every learner across the instructor's courses. All courses by default; the
 // course filter narrows it, and each course keeps its own mentees page for invites.
@@ -23,7 +23,9 @@ export default async function AllLearnersPage({ searchParams }: { searchParams: 
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Learners</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {selected ? `Learners in ${selected.title}.` : `Learners across all ${view.courses.length} of your courses.`}
+            {selected
+              ? `${view.learnerCount} learners in ${selected.title}.`
+              : `${view.learnerCount} learners across all ${view.courses.length} of your courses (${view.mentees.length} enrollments). Open a learner to see each course.`}
           </p>
         </div>
         {view.courses.length > 1 ? (
@@ -45,12 +47,12 @@ export default async function AllLearnersPage({ searchParams }: { searchParams: 
         ) : null}
       </div>
 
-      <CohortSummary summary={view.summary} />
+      <CohortSummary summary={view.summary} learnerCount={view.learnerCount} />
 
       {view.mentees.length ? (
         <>
           <MenteesNeedingAttention mentees={view.attentionMentees} />
-          <MenteeRoster mentees={view.mentees} />
+          <LearnerDirectory mentees={view.mentees} />
         </>
       ) : (
         <div className="flex flex-col items-center rounded-2xl border border-dashed bg-card/50 px-6 py-16 text-center">

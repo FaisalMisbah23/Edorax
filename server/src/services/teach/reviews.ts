@@ -1,4 +1,4 @@
-import type { AiReviewDraftResult, ReviewDetailView, ReviewQueueView } from "../../shared/api/teach.js";
+import type { AcceptAiDraftsResult, AiReviewDraftResult, ReviewDetailView, ReviewQueueView } from "../../shared/api/teach.js";
 import { loadIntegritySummaries } from "../integrity/review.js";
 import { TEACH_ERROR_CODES } from "../../shared/api/teach.js";
 import { OpenQuestionConfigSchema, OpenQuestionPayloadSchema } from "../../shared/blocks/open-question/schema.js";
@@ -72,12 +72,15 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string):
     blockType: response.block.type,
     maxScore: response.block.points,
     aiDraft: readStoredDraft(response.aiDraft, response.aiDraftModel)?.draft ?? null,
+    aiDraftModel: response.aiDraft ? response.aiDraftModel : null,
+    aiDraftCostUsd: response.aiDraft && response.aiDraftCostMicroUsd != null ? response.aiDraftCostMicroUsd / 1_000_000 : null,
     ...reviewContext(response.block.chapter, response.enrollmentId, progress),
   }));
   // Open answers without a draft yet get one in the background, oldest first.
   queueAutoDrafts(items.filter((item) => item.blockType === "OPEN_QUESTION" && !item.aiDraft).map((item) => item.id));
 
-  return { courses, items, autoDraft: aiReviewAutoDraftAvailable };
+  const draftCostUsd = items.reduce((sum, item) => sum + (item.aiDraftCostUsd ?? 0), 0);
+  return { courses, items, autoDraft: aiReviewAutoDraftAvailable, draftCostUsd };
 }
 
 type LearnerProgress = NonNullable<ReviewDetailView["learnerProgress"]>;
@@ -139,7 +142,7 @@ export async function loadReviewDetail(user: SessionUser, responseId: string): P
   // The first pass is usually ready from the queue; if not, make it now (a few seconds on Haiku).
   const aiDraft =
     response.status === "PENDING_REVIEW" && response.block.type === "OPEN_QUESTION"
-      ? (readStoredDraft(response.aiDraft, response.aiDraftModel) ?? (await ensureAutoDraft(response.id)))
+      ? (readStoredDraft(response.aiDraft, response.aiDraftModel, response.aiDraftCostMicroUsd) ?? (await ensureAutoDraft(response.id)))
       : null;
 
   const config = OpenQuestionConfigSchema.safeParse(response.block.config);
@@ -326,4 +329,19 @@ export async function acceptAiDraft(user: SessionUser, responseId: string): Prom
     feedback: stored.draft.feedback,
     score: Math.min(stored.draft.suggestedScore, response.block.points),
   });
+}
+
+/** Send many saved AI drafts in one go. Each is checked and sent on its own; one failure does not stop the rest. */
+export async function acceptAiDrafts(user: SessionUser, responseIds: string[]): Promise<AcceptAiDraftsResult> {
+  let sent = 0;
+  let failed = 0;
+  for (const responseId of [...new Set(responseIds)]) {
+    try {
+      await acceptAiDraft(user, responseId);
+      sent += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { sent, failed };
 }

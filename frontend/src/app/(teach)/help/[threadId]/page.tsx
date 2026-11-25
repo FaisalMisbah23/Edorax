@@ -2,7 +2,9 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { HelpThreadDetail } from "@/shared/api/help";
 import { requireTeachSurface } from "@/server/auth/guards";
-import { serverApiFetchOrNotFound } from "@/lib/api-server";
+import { serverApiFetch, serverApiFetchOrNotFound } from "@/lib/api-server";
+import type { ThreadFeedbackView } from "@/shared/api/teach";
+import { HelpAiPanel } from "@/components/teach/help-ai-panel";
 import { HelpThreadDetail as HelpThreadDetailPanel } from "@/components/help/help-thread-detail";
 import { helpUiCopy as copy } from "@/shared/lib/help-ui-copy";
 
@@ -18,6 +20,9 @@ export default async function MentorHelpThreadPage({
     `/api/v1/help/threads/${encodeURIComponent(threadId)}`,
   );
   const menteeName = thread.mentee.name ?? thread.mentee.email ?? "Learner";
+  const feedback = await serverApiFetch<ThreadFeedbackView>(`/api/v1/teach/help/threads/${encodeURIComponent(threadId)}/feedback`).catch(
+    (): ThreadFeedbackView => ({ scope: null, note: null })
+  );
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -44,6 +49,29 @@ export default async function MentorHelpThreadPage({
           )}
         </div>
       )}
+
+      <div className="mt-4 rounded-2xl border bg-card px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Asked in</p>
+        <p className="mt-1 text-sm font-medium text-foreground">{thread.course.title}</p>
+        <p className="text-sm text-muted-foreground">{thread.chapter?.title ?? "General course question, no chapter"}</p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          {thread.chapterId ? (
+            <Link
+              href={`/courses/${encodeURIComponent(thread.course.slug)}/preview?chapter=${encodeURIComponent(thread.chapterId)}`}
+              className="inline-flex h-8 items-center rounded-full border bg-background px-3 font-medium text-foreground hover:bg-muted/50"
+            >
+              Open chapter
+            </Link>
+          ) : null}
+          <Link href={`/learners`} className="inline-flex h-8 items-center rounded-full border bg-background px-3 font-medium text-foreground hover:bg-muted/50">
+            All learners
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <HelpAiPanel threadId={thread.id} canDraft={thread.status === "OPEN"} initialFeedback={feedback} />
+      </div>
 
       <div className="mt-4">
         <HelpThreadDetailPanel

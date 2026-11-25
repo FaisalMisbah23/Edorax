@@ -56,6 +56,7 @@ export async function loadMentorHelpInbox(user: SessionUser, query: HelpInboxQue
         chapterTitle: thread.chapter?.title ?? null,
         preview: preview ? { body: preview.body, createdAt: preview.createdAt.toISOString() } : null,
         ageHours: preview ? (now - preview.createdAt.getTime()) / (1000 * 60 * 60) : 0,
+        feedbackScope: thread.feedbackScope,
       };
     }),
   };

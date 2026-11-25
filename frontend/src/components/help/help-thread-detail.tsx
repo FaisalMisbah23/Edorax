@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import {
   askMentorFromChapter,
@@ -97,6 +97,16 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
   useRealtimeEvent("help-thread", (event) => {
     if (event.threadId === props.threadId) router.refresh();
   });
+
+  // The mentor's AI panel hands a suggested reply to the typing bar with this event.
+  useEffect(() => {
+    function onDraft(event: Event) {
+      const text = (event as CustomEvent<string>).detail;
+      if (typeof text === "string" && text.trim()) setBody(text);
+    }
+    window.addEventListener("edorax:help-reply-draft", onDraft);
+    return () => window.removeEventListener("edorax:help-reply-draft", onDraft);
+  }, []);
 
   function cancelReply() {
     setReplyingTo(null);

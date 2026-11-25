@@ -12,6 +12,8 @@ import * as enrollments from "../services/teach/enrollments.js";
 import * as reports from "../services/teach/reports.js";
 import * as reviews from "../services/teach/reviews.js";
 import * as helpInbox from "../services/teach/help-inbox.js";
+import * as feedback from "../services/teach/feedback.js";
+import * as helpReplyDraft from "../services/teach/ai/help-reply-draft.js";
 import * as courseTeam from "../services/teach/course-team.js";
 import type {
   ChapterSettingsBody,
@@ -284,6 +286,29 @@ export async function generateAiReviewDraft(req: Request, res: Response) {
 }
 
 // GET /api/v1/teach/help/threads?courseId=&status=
+// POST /api/v1/teach/review/accept-ai-drafts
+export async function acceptAiDrafts(req: Request, res: Response) {
+  ok(res, await reviews.acceptAiDrafts(req.user!, (req.body as { responseIds: string[] }).responseIds));
+}
+
+// POST /api/v1/teach/help/threads/:threadId/ai-draft
+export async function draftHelpReply(req: Request, res: Response) {
+  ok(res, await helpReplyDraft.draftHelpReply(req.user!, param(req, "threadId")));
+}
+
+// GET and PUT /api/v1/teach/help/threads/:threadId/feedback
+export async function getThreadFeedback(req: Request, res: Response) {
+  ok(res, await feedback.loadThreadFeedback(req.user!, param(req, "threadId")));
+}
+export async function setThreadFeedback(req: Request, res: Response) {
+  ok(res, await feedback.setThreadFeedback(req.user!, param(req, "threadId"), req.body as { scope: "COURSE" | "PLATFORM" | null; note?: string | null }));
+}
+
+// GET /api/v1/teach/feedback
+export async function getFeedback(req: Request, res: Response) {
+  ok(res, await feedback.loadFeedback(req.user!));
+}
+
 export async function getHelpInbox(req: Request, res: Response) {
   ok(res, await helpInbox.loadMentorHelpInbox(req.user!, req.query as HelpInboxQuery));
 }

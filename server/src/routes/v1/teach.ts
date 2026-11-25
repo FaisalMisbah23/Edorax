@@ -33,6 +33,9 @@ import {
   deleteCourseBody,
   enrollmentIdParams,
   helpInboxQuery,
+  acceptAiDraftsBody,
+  threadIdParams,
+  threadFeedbackBody,
   inviteParams,
   menteeParams,
   moduleIdParams,
@@ -138,6 +141,7 @@ router.get("/courses/:courseSlug/reports/export", validateParams(courseSlugParam
 router.get("/courses/:courseSlug/activity", validateParams(courseSlugParams), teach.getCourseActivity);
 
 router.get("/review", validate({ query: reviewQueueQuery }), teach.getReviewQueue);
+router.post("/review/accept-ai-drafts", validate({ body: acceptAiDraftsBody }), teach.acceptAiDrafts);
 router.get("/review/:responseId", validateParams(responseIdParams), teach.getReviewDetail);
 router.post("/review/:responseId", validate({ params: responseIdParams, body: submitReviewBody }), teach.submitReview);
 router.post("/review/:responseId/ai-draft", validateParams(responseIdParams), teach.generateAiReviewDraft);
@@ -146,5 +150,9 @@ router.post("/review/:responseId/accept-ai-draft", validateParams(responseIdPara
 router.get("/integrity/attempts/:attemptId", validateParams(attemptParams), integrity.attemptDetail);
 
 router.get("/help/threads", validate({ query: helpInboxQuery }), teach.getHelpInbox);
+router.post("/help/threads/:threadId/ai-draft", validateParams(threadIdParams), teach.draftHelpReply);
+router.get("/help/threads/:threadId/feedback", validateParams(threadIdParams), teach.getThreadFeedback);
+router.put("/help/threads/:threadId/feedback", validate({ params: threadIdParams, body: threadFeedbackBody }), teach.setThreadFeedback);
+router.get("/feedback", teach.getFeedback);
 
 export default router;

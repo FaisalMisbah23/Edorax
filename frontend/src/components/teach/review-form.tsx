@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { formatUsd } from "@/components/teach/format-usd";
 
 type ReviewFormProps = {
   responseId: string;
@@ -61,7 +62,7 @@ export function ReviewForm({
       }
 
       setDraft(result.draft);
-      setModel(result.model);
+      setModel(result.costUsd != null ? `${result.model} · ${formatUsd(result.costUsd)}` : result.model);
       setFeedback(result.draft.feedback);
       setScore(String(result.draft.suggestedScore));
     });

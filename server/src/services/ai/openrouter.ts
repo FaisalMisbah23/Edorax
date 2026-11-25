@@ -65,6 +65,8 @@ export type ChatRequest = {
   responseFormat?: { type: "json_schema"; json_schema: unknown };
   timeoutMs?: number;
   fetchImpl?: FetchImpl;
+  /** Token counts for the call, when the provider reports them (Anthropic only for now). */
+  onUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
 };
 
 const chatResponseSchema = z.object({
@@ -173,6 +175,7 @@ async function anthropicCompletion(request: ChatRequest): Promise<string> {
   } catch (error) {
     throw errorForAnthropic(error);
   }
+  request.onUsage?.({ inputTokens: message.usage.input_tokens, outputTokens: message.usage.output_tokens });
   if (message.stop_reason === "refusal") throw new AiError("AI_BAD_OUTPUT");
   const content = message.content.flatMap((block) => (block.type === "text" ? [block.text] : [])).join("").trim();
   if (!content) throw new AiError("AI_PROVIDER_ERROR");

@@ -33,6 +33,8 @@ export type ReviewDraftContext = {
   maxScore: number;
 };
 
+export type DraftUsage = { inputTokens: number; outputTokens: number };
+
 type GenerateOptions = {
   provider?: AiProviderName;
   apiKey?: string;
@@ -126,8 +128,12 @@ function fitDraft(value: unknown): unknown {
 /** Claude path: the shared provider client handles structured output, retries and safe errors. */
 async function generateWithAnthropic(context: ReviewDraftContext, apiKey: string, model: string, fetchImpl?: typeof fetch) {
   let content: string;
+  let usage: DraftUsage | undefined;
   try {
     content = await createChatCompletion({
+      onUsage: (value) => {
+        usage = value;
+      },
       provider: "ANTHROPIC",
       apiKey,
       model,
@@ -152,13 +158,13 @@ async function generateWithAnthropic(context: ReviewDraftContext, apiKey: string
   }
   const parsed = AiReviewDraftSchema.safeParse(fitDraft(decoded));
   if (!parsed.success) throw new Error("Claude returned an unreadable review draft.");
-  return { draft: parsed.data, model };
+  return { draft: parsed.data, model, usage };
 }
 
 export async function generateReviewDraft(
   context: ReviewDraftContext,
   options: GenerateOptions = {},
-): Promise<{ draft: AiReviewDraft; model: string }> {
+): Promise<{ draft: AiReviewDraft; model: string; usage?: DraftUsage }> {
   // Bring-your-own-key only: the instructor's saved key is passed in.
   const apiKey = options.apiKey;
   if (!apiKey) {

@@ -5,6 +5,7 @@ import { aiReviewAutoDraftAvailable, env } from "../../../config/env.js";
 import { prisma } from "../../../db/prisma.js";
 import { logger } from "../../../utils/logger.js";
 import { startOfUtcDay } from "../../ai/chapter-qa/usage.js";
+import { costMicroUsd } from "../../capstone/grade.js";
 import { AiReviewDraftSchema, generateReviewDraft, type ReviewDraftContext } from "./review-draft.js";
 
 // Automatic first-pass reviews. Every pending open answer gets one AI draft on the
@@ -12,16 +13,20 @@ import { AiReviewDraftSchema, generateReviewDraft, type ReviewDraftContext } fro
 // sees it prefilled and approves, edits or rejects it: nothing reaches the learner
 // until a mentor sends it. A daily platform cap bounds the bill.
 
-export type StoredAiDraft = { draft: AiReviewDraft; model: string };
+export type StoredAiDraft = { draft: AiReviewDraft; model: string; costUsd: number | null };
 
 const inFlight = new Set<string>();
 const BACKGROUND_BATCH = 10;
 
 /** Read a saved draft; null when missing or no longer valid. */
-export function readStoredDraft(raw: Prisma.JsonValue | null | undefined, model: string | null | undefined): StoredAiDraft | null {
+export function readStoredDraft(
+  raw: Prisma.JsonValue | null | undefined,
+  model: string | null | undefined,
+  costMicro?: number | null
+): StoredAiDraft | null {
   if (!raw || !model) return null;
   const parsed = AiReviewDraftSchema.safeParse(raw);
-  return parsed.success ? { draft: parsed.data, model } : null;
+  return parsed.success ? { draft: parsed.data, model, costUsd: costMicro == null ? null : costMicro / 1_000_000 } : null;
 }
 
 /** The prompt context for one open answer, or null when the block or payload is not an open question. */
@@ -76,9 +81,9 @@ type Deps = { generate?: typeof generateReviewDraft; force?: boolean };
  */
 export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Promise<StoredAiDraft | null> {
   if (!aiReviewAutoDraftAvailable || inFlight.has(responseId)) return null;
-  const row = await prisma.response.findUnique({ where: { id: responseId }, select: { status: true, aiDraft: true, aiDraftModel: true } });
+  const row = await prisma.response.findUnique({ where: { id: responseId }, select: { status: true, aiDraft: true, aiDraftModel: true, aiDraftCostMicroUsd: true } });
   if (!row || row.status !== "PENDING_REVIEW") return null;
-  const existing = readStoredDraft(row.aiDraft, row.aiDraftModel);
+  const existing = readStoredDraft(row.aiDraft, row.aiDraftModel, row.aiDraftCostMicroUsd);
   if (existing && !deps.force) return existing;
   if (!(await underDailyCap())) return null;
 
@@ -92,11 +97,12 @@ export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Prom
       model: env.AI_REVIEW_MODEL,
     });
     const draft = { ...result.draft, suggestedScore: Math.min(result.draft.suggestedScore, context.maxScore) };
+    const costMicro = result.usage ? costMicroUsd(result.model, result.usage.inputTokens, result.usage.outputTokens) : null;
     await prisma.response.update({
       where: { id: responseId },
-      data: { aiDraft: draft as Prisma.InputJsonValue, aiDraftModel: result.model, aiDraftAt: new Date() },
+      data: { aiDraft: draft as Prisma.InputJsonValue, aiDraftModel: result.model, aiDraftAt: new Date(), aiDraftCostMicroUsd: costMicro },
     });
-    return { draft, model: result.model };
+    return { draft, model: result.model, costUsd: costMicro == null ? null : costMicro / 1_000_000 };
   } catch (error) {
     logger.warn({ err: error instanceof Error ? error.message : "unknown", responseId }, "automatic review draft failed");
     return null;

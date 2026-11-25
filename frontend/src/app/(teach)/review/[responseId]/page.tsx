@@ -8,6 +8,7 @@ import { ReviewForm } from "@/components/teach/review-form";
 import { QuizIntegrity } from "@/components/teach/evaluation/quiz-integrity";
 import { CapstoneReport, capstoneDraftFeedback } from "@/components/teach/evaluation/capstone-report";
 import { ReviewContextLinks } from "@/components/teach/review-context-links";
+import { formatUsd } from "@/components/teach/format-usd";
 
 export default async function ReviewDetailPage({
   params,
@@ -160,7 +161,9 @@ export default async function ReviewDetailPage({
                   }
                 : {
                     initialDraft: response.aiDraft?.draft ?? null,
-                    initialModel: response.aiDraft?.model ?? null,
+                    initialModel: response.aiDraft
+                      ? `${response.aiDraft.model}${response.aiDraft.costUsd != null ? ` · ${formatUsd(response.aiDraft.costUsd)}` : ""}`
+                      : null,
                     platformDraft: response.platformDraft,
                     ...(response.aiDraft ? { note: "Prefilled from Claude's first pass. Check it, edit if needed, then approve or send it back." } : {}),
                   })}
