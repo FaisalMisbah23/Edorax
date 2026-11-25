@@ -375,21 +375,19 @@
     font-size: 40px;
   }
 
-  /* Tabs become a row you swipe, each one a full tap target. */
+  /* Tabs wrap onto two rows, so every one shows on a phone and is a full tap target. */
   .tabs {
-    display: flex;
-    gap: 20px;
-    margin-right: -24px;
-    padding-right: 24px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 16px;
   }
 
   .tab,
   .tabOn {
-    flex: none;
+    min-width: 0;
     font-size: 16px;
-    white-space: nowrap;
+    line-height: 1.25;
+    padding: 0 2px 12px;
   }
 
   .panel {
