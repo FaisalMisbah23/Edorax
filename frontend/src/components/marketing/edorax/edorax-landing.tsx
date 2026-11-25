@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { HeroLab } from "./hero-lab/hero-lab";
 import { HomeAi } from "./home-ai";
 import { HomeDemos } from "./home-demos";
+import { ExploreFeatures } from "./feature-page";
+import { FEATURE_PAGES, featurePath } from "./feature-pages";
 import { StartFreeMenu } from "./start-free-menu";
 import { CatalogSections, CatalogSectionsFallback, Certificates, Faq, FinalCall, Pricing, ShellLabs } from "./home-sections";
 import { Wordmark } from "@/components/brand/wordmark";
@@ -82,6 +84,7 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
       </Suspense>
       <HomeDemos />
       <HomeAi />
+      <ExploreFeatures />
       <ShellLabs />
       <Certificates />
       <Pricing />
@@ -100,6 +103,9 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
             <a href="#certificates" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Certificates</a>
             <a href="#pricing" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Pricing</a>
             <a href="#faq" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Questions</a>
+            {FEATURE_PAGES.map((page) => (
+              <Link key={page.slug} href={featurePath(page.slug)} style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>{page.name}</Link>
+            ))}
             <Link href="/catalog" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Courses</Link>
             <Link href="/labs" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>Labs</Link>
             <Link href="/learn" style={{ color: "#C9CFF0", textDecoration: "none", padding: "10px 0" }}>All areas</Link>

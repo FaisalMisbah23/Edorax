@@ -25,6 +25,7 @@ import {
 import type { BuildState } from "./build-model";
 import type { Selection } from "./BuildCanvas";
 import { BuildCanvas } from "./BuildCanvas";
+import { TestsDock, TestsDockClose } from "../../lab-ui";
 import { BuildGoals } from "./BuildGoals";
 import { BuildPalette } from "./BuildPalette";
 import { BuildSettings } from "./BuildSettings";
@@ -50,6 +51,8 @@ export function BuildBoard({ spec }: { spec: NetLabSpec }) {
   const [runId, setRunId] = useState(0);
   const [shell, setShell] = useState("");
   const [note, setNote] = useState("");
+  // On a board too narrow for a goals column, the goals open over the canvas when a run starts.
+  const [goalsOpen, setGoalsOpen] = useState(false);
 
   const results: GoalResult[] | null = useMemo(() => (world ? evaluateGoals(world, goals, names) : null), [world, goals, names]);
   const allPass = !!results && results.length > 0 && results.every((r) => r.pass);
@@ -157,6 +160,7 @@ export function BuildBoard({ spec }: { spec: NetLabSpec }) {
     const scored = evaluateGoals(next, goals, names);
     clearPicks();
     setSelected(null);
+    setGoalsOpen(true);
     setWorld(next);
     setShell(first?.id ?? "");
     setRunId((n) => n + 1);
@@ -165,6 +169,7 @@ export function BuildBoard({ spec }: { spec: NetLabSpec }) {
   }
 
   function edit() {
+    setGoalsOpen(false);
     setPhase("edit");
     setWorld(null);
     setNote("Back to editing. Your canvas is as you left it.");
@@ -190,6 +195,8 @@ export function BuildBoard({ spec }: { spec: NetLabSpec }) {
     setNote("The solution is on the canvas. Press Run to check it.");
   }
 
+  // Goals are scored only while the network is running.
+  const shownResults = running && world ? results : null;
   const armedPart = armed ? partById(parts, armed) : undefined;
   const pendingDevice = pending ? deviceById(state, pending) : undefined;
 
@@ -239,6 +246,9 @@ export function BuildBoard({ spec }: { spec: NetLabSpec }) {
                 : "Drag a part onto the canvas, or select a part and then the canvas.")}
       </p>
 
+      {/* The canvas with the goals beside it: a column on a wide board, an edge tab that opens over the canvas on a narrower one. */}
+      {/* On a phone the open goals are a bottom sheet, so the area grows to keep the canvas in view above the sheet. */}
+      <div className={`relative grid items-start gap-3 @4xl:grid-cols-[minmax(0,1fr)_18rem] ${goalsOpen ? "@max-2xl:min-h-[40rem]" : ""}`}>
       <BuildCanvas
         state={state}
         selected={selected}
@@ -262,6 +272,20 @@ export function BuildBoard({ spec }: { spec: NetLabSpec }) {
         onCancel={cancel}
         onNote={setNote}
       />
+        <TestsDock
+          open={goalsOpen ? true : null}
+          columnFrom="4xl"
+          label="Goals"
+          panelLabel="Goals"
+          badge={shownResults ? `${shownResults.filter((r) => r.pass).length}/${goals.length}` : String(goals.length)}
+          tone={shownResults ? (shownResults.every((r) => r.pass) ? "pass" : "fail") : "idle"}
+          onOpen={() => setGoalsOpen(true)}
+          className="@4xl:rounded-xl @4xl:border"
+          testId="goals-dock"
+        >
+          <BuildGoals goals={goals} results={shownResults} action={<TestsDockClose label="goals" onClose={() => setGoalsOpen(false)} className="@4xl:hidden" />} />
+        </TestsDock>
+      </div>
 
       {!running && state.cables.length > 0 && (
         <ul className="flex flex-wrap gap-2" aria-label="Cables">
@@ -281,27 +305,19 @@ export function BuildBoard({ spec }: { spec: NetLabSpec }) {
         </ul>
       )}
 
-      <div className="grid gap-3 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        {running && world ? (
-          <>
-            <BuildGoals goals={goals} results={results} />
-            <BuildTerminal key={runId} world={world} selected={shell} suggested={spec.suggested} onSelect={setShell} onWorld={setWorld} />
-          </>
-        ) : (
-          <>
-            <section className="rounded-xl border border-border bg-card p-3" aria-label="Settings">
-              <BuildSettings
-                state={state}
-                selected={selected}
-                onChange={setState}
-                onRemoveDevice={dropDevice}
-                onRemoveCable={dropCable}
-              />
-            </section>
-            <BuildGoals goals={goals} results={null} />
-          </>
-        )}
-      </div>
+      {running && world ? (
+        <BuildTerminal key={runId} world={world} selected={shell} suggested={spec.suggested} onSelect={setShell} onWorld={setWorld} />
+      ) : (
+        <section className="rounded-xl border border-border bg-card p-3" aria-label="Settings">
+          <BuildSettings
+            state={state}
+            selected={selected}
+            onChange={setState}
+            onRemoveDevice={dropDevice}
+            onRemoveCable={dropCable}
+          />
+        </section>
+      )}
 
       {spec.solution?.build && <BuildSolutionPanel solution={spec.solution} onLoad={loadSolution} />}
     </div>

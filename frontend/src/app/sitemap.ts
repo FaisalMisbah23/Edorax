@@ -4,6 +4,7 @@ import { serverApiFetch } from "@/lib/api-server";
 import { SITE_URL } from "@/lib/site";
 import { LAB_KINDS, LEARN_AREAS } from "@/lib/learn-areas";
 import { LAB_SLUGS } from "@/shared/lab/slugs";
+import { FEATURE_PAGES, featurePath } from "@/components/marketing/edorax/feature-pages";
 
 // Built on request from the live catalog, so a newly published course is listed without a deploy.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -11,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${SITE_URL}/catalog`, changeFrequency: "daily", priority: 0.9 },
     { url: `${SITE_URL}/learn`, changeFrequency: "weekly", priority: 0.8 },
+    ...FEATURE_PAGES.map((page) => ({ url: `${SITE_URL}${featurePath(page.slug)}`, changeFrequency: "monthly" as const, priority: 0.8 })),
     ...LEARN_AREAS.filter((area) => area.href !== "/catalog").map((area) => ({ url: `${SITE_URL}${area.href}`, changeFrequency: "weekly" as const, priority: 0.7 })),
     // A filter such as /labs?kind=visual is the same page as /labs (its canonical), so only plain paths are listed.
     ...LAB_KINDS.filter((kind) => !kind.href.includes("?")).map((kind) => ({ url: `${SITE_URL}${kind.href}`, changeFrequency: "weekly" as const, priority: 0.6 })),

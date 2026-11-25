@@ -1,19 +1,14 @@
 "use client";
 
-// The lab's right-hand test panel: brief, scenarios, live numbers and verification
-// checks. It is never below the canvas, so nobody scrolls to find the tests.
-// - Wide board (72rem and up): a column beside the canvas, always there.
-// - Medium board (56rem to 72rem): closed to a tab on the right edge; it opens as a
-//   column when a run starts, taking the room of the components list.
-// - Narrow board: a drawer that slides in over the canvas from the right.
-// - Full screen: a card that floats over the work area.
-// Every check shows its target before a run and its measurement plus an actionable
-// explanation afterwards.
+// The system design lab's tests: brief, scenarios, live numbers and verification
+// checks. Where the panel sits (edge tab, bottom sheet, drawer, column) is the shared
+// TestsDock, the same one the networking labs use. Every check shows its target
+// before a run and its measurement plus an actionable explanation afterwards.
 
 import type { ChallengeReport, CheckResult } from "./challenge";
 import type { HldLabSpec } from "./types";
 import type { ModelResult } from "./tiered-architecture";
-import { CheckSlot, PHASE_MS, PhaseTimeline, okText } from "../lab-ui";
+import { CheckSlot, PHASE_MS, PhaseTimeline, TestsDock, TestsDockClose, okText, type TestsDockColumnFrom } from "../lab-ui";
 import { useNames } from "./names-context";
 
 export type RunState = "idle" | "running" | "done" | "stale";
@@ -246,29 +241,18 @@ export function ResultsDialog({
   );
 }
 
-/**
- * How the panel sits on the board.
- * - "dock": part of the board. A drawer over the canvas while the board is narrower than
- *   `columnFrom`, a column of the board's grid from there up.
- * - "float": a card over the work area (full screen).
- */
-export type RunPanelPlacement = "dock" | "float";
-/** The container width from which a docked panel is a grid column: 72rem, or 56rem when the components list is folded away. */
-export type RunPanelColumnFrom = "4xl" | "6xl";
+export type RunPanelColumnFrom = TestsDockColumnFrom;
 
-const PANEL_BASE = "custom-scrollbar min-h-0 overflow-y-auto";
-const PANEL_DRAWER = `${PANEL_BASE} absolute inset-y-0 right-0 z-30 w-[min(370px,calc(100%-40px))] border-l-[1.5px] border-border bg-[color:var(--lab-module)] shadow-[-14px_0_32px_-14px_rgba(15,23,42,0.45)]`;
-// As a column the panel must not set the height of the row (its content is long), so it is
-// sized by the canvas beside it (contain: size) and scrolls inside.
-const PANEL_DOCK: Record<RunPanelColumnFrom, string> = {
-  "6xl": `${PANEL_DRAWER} lab-drawer-from-6xl @6xl:static @6xl:z-auto @6xl:h-full @6xl:w-auto @6xl:bg-[color:var(--lab-recessed)]/45 @6xl:shadow-none`,
-  "4xl": `${PANEL_DRAWER} lab-drawer-from-4xl @4xl:static @4xl:z-auto @4xl:w-auto @4xl:[contain:size] @4xl:bg-[color:var(--lab-recessed)]/45 @4xl:shadow-none @6xl:h-full`,
+// As a column the panel must not set the height of the row (its content is long): on a wide
+// board the grid has a fixed height, and on a medium one the panel is sized by the canvas
+// beside it (contain: size). Either way it scrolls inside.
+const COLUMN_LOOK: Record<RunPanelColumnFrom, string> = {
+  "6xl": "@6xl:h-full @6xl:bg-muted/45",
+  "4xl": "@4xl:[contain:size] @4xl:bg-muted/45 @6xl:h-full",
 };
-const PANEL_FLOAT = `${PANEL_BASE} absolute right-3 top-3 z-40 max-h-[calc(100%-24px)] w-[min(390px,calc(100%-24px))] rounded-[12px] border border-slate-600 bg-[color:var(--lab-module)] shadow-2xl`;
-const TAB_DOCK = "absolute right-0 top-1/2 z-20 -translate-y-1/2 @6xl:static @6xl:h-full @6xl:translate-y-0 @6xl:border-l-[1.5px] @6xl:border-border @6xl:bg-[color:var(--lab-recessed)]/55";
 
 export function RunPanel({
-  spec, result, report, state, running, ran, load, previewId, open, placement = "dock", columnFrom = "6xl", onLoad, onShow, onBack, onToggle, onOpenResults,
+  spec, result, report, state, running, ran, load, previewId, open, fullscreen = false, columnFrom = "6xl", onLoad, onShow, onBack, onToggle, onOpenResults,
 }: {
   spec: HldLabSpec;
   /** The design as it stands, at the offered load. */
@@ -283,7 +267,8 @@ export function RunPanel({
   previewId: string | null;
   /** true: shown. false: closed to a tab on the edge. null: not chosen yet, so a wide board shows it and a narrower one shows the tab. */
   open: boolean | null;
-  placement?: RunPanelPlacement;
+  /** Full screen has no rail and never opens by itself: closed is always the edge tab. */
+  fullscreen?: boolean;
   columnFrom?: RunPanelColumnFrom;
   onLoad: (n: number) => void;
   onShow: (scenario: string) => void;
@@ -319,31 +304,19 @@ export function RunPanel({
           ? "Running the design through every scenario..."
           : `${report.total} checks will run${functional.length > 0 ? `: ${functional.length} on what it does (functional) and ${nonFunctional.length} on how well it does it (non-functional)` : ""}. Press Run.`;
 
-  // Closed: a tab on the right edge of the board. It carries the score, so a learner sees it without opening anything.
-  const tab = (extra: string) => (
-    <aside className={`${TAB_DOCK} ${extra}`} aria-label="Collapsed test suite" data-testid="run-panel-tab">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex flex-col items-center gap-2 rounded-l-[8px] border-[1.5px] border-r-0 border-border bg-[color:var(--lab-module)] px-1.5 py-3 text-muted-foreground shadow-[-4px_3px_12px_-4px_rgba(15,23,42,0.35)] hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--lab-accent)] @6xl:h-full @6xl:w-full @6xl:justify-center @6xl:rounded-none @6xl:border-0 @6xl:bg-transparent @6xl:px-2 @6xl:shadow-none"
-        title="Open the tests"
-        aria-label="Open the tests"
-        aria-expanded={false}
-      >
-        <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m15 18-6-6 6-6" /></svg>
-        <span className="lab-mono text-[9px] font-bold uppercase tracking-[0.16em] [writing-mode:vertical-rl]">Tests</span>
-        <span className={`lab-mono rounded-full px-1.5 py-0.5 text-[9px] font-bold ${ran ? (report.allPass ? "bg-[color:var(--lab-ok)]/15 text-[color:var(--lab-ok-ink)]" : "bg-[color:var(--lab-down-fill)] text-[color:var(--lab-down-ink)]") : "bg-muted text-muted-foreground"}`}>{ran ? `${report.passed}/${report.total}` : report.total}</span>
-      </button>
-    </aside>
-  );
-
-  const panel = (extra: string) => (
-    <aside
-      className={`${placement === "float" ? PANEL_FLOAT : PANEL_DOCK[columnFrom]} ${extra}`}
-      data-testid="run-panel"
-      aria-label="Test suite"
+  return (
+    <TestsDock
+      // Full screen has no rail and never opens by itself: closed is always the edge tab.
+      open={fullscreen ? open === true : open}
+      columnFrom={columnFrom}
+      closedAs={fullscreen ? "tab" : "rail"}
+      badge={ran ? `${report.passed}/${report.total}` : String(report.total)}
+      tone={ran ? (report.allPass ? "pass" : "fail") : "idle"}
+      onOpen={onToggle}
+      className={COLUMN_LOOK[columnFrom]}
+      testId="run-panel"
     >
-      <div className="sticky top-0 z-10 border-b border-border bg-[color:var(--lab-module)]/95 px-3.5 py-3 backdrop-blur">
+      <div className="sticky top-0 z-10 border-b border-border bg-card/95 px-3.5 py-3 backdrop-blur">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="lab-mono text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Test suite</div>
@@ -355,9 +328,7 @@ export function RunPanel({
             <button type="button" onClick={onOpenResults} disabled={!ran} className={`lab-mono rounded-full border px-2.5 py-1 text-[11px] font-bold tabular-nums disabled:cursor-default ${state === "done" ? (report.allPass ? "border-[color:var(--lab-ok)]/60 bg-[color:var(--lab-ok)]/10 text-[color:var(--lab-ok-ink)]" : "border-[color:var(--lab-down)]/60 bg-[color:var(--lab-down-fill)]/50 text-[color:var(--lab-down-ink)]") : "border-border bg-muted text-muted-foreground"}`} title={ran ? "Open detailed results" : undefined}>
               {state === "done" ? `${report.passed}/${report.total} passed` : `${report.total} checks`}
             </button>
-            <button type="button" onClick={onToggle} className="flex size-7 items-center justify-center rounded-[5px] border border-border text-muted-foreground hover:bg-muted hover:text-foreground" title="Close the tests" aria-label="Close the tests">
-              <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m9 18 6-6-6-6" /></svg>
-            </button>
+            <TestsDockClose onClose={onToggle} />
           </div>
         </div>
         <p
@@ -469,11 +440,6 @@ export function RunPanel({
           </div>
         </section>
         </div>
-    </aside>
+    </TestsDock>
   );
-
-  if (placement === "float") return open ? panel("lab-drawer-in") : null;
-  // Not chosen yet: the width of the board decides, in CSS, so nothing jumps after the first paint.
-  if (open === null) return <>{tab("@6xl:hidden")}{panel("hidden @6xl:block")}</>;
-  return open ? panel("lab-drawer-in") : tab("");
 }
