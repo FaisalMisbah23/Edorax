@@ -5,7 +5,8 @@
 // time with its headers in the inspector. In fault mode the checks re-run
 // after every command that changes the network.
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
+import { TestsDock, TestsDockClose } from "../../lab-ui";
 import type { NetLabSpec } from "../types";
 import type { NetCheck, NetCheckResult } from "./checks";
 import { describeCheck, runChecks } from "./checks";
@@ -227,15 +228,16 @@ function Inspector({ frame }: { frame?: Frame }) {
   );
 }
 
-function Checks({ checks, results }: { checks: NetCheck[]; results: NetCheckResult[] }) {
+function Checks({ checks, results, action }: { checks: NetCheck[]; results: NetCheckResult[]; /** A control shown beside the score, for example the dock's close button. */ action?: ReactNode }) {
   const passed = results.filter((r) => r.pass).length;
   return (
-    <section className="rounded-xl border border-border bg-card p-3">
-      <div className="mb-2 flex items-center justify-between">
+    <section className="p-3" aria-label="Checks">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Checks</h3>
-        <span className={`text-xs font-semibold ${passed === checks.length ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+        <span className={`ml-auto text-xs font-semibold ${passed === checks.length ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
           {passed} of {checks.length} pass
         </span>
+        {action}
       </div>
       <ul className="space-y-1.5">
         {checks.map((c, i) => {
@@ -272,6 +274,8 @@ export function NetBoard({ spec }: { spec: NetLabSpec }) {
   const [history, setHistory] = useState<string[]>([]);
   const [historyAt, setHistoryAt] = useState(-1);
   const [stepper, setStepper] = useState<Stepper | null>(null);
+  // On a board too narrow for a checks column, the checks open over the map from their edge tab.
+  const [checksOpen, setChecksOpen] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
 
   const results = useMemo(() => (spec.checks ? runChecks(world, spec.checks) : []), [world, spec.checks]);
@@ -348,13 +352,32 @@ export function NetBoard({ spec }: { spec: NetLabSpec }) {
           Every check passes. The network works.
         </div>
       )}
-      <div className="mb-3 overflow-x-auto rounded-xl border border-border bg-card p-2">
-        <div className="min-w-[36rem]">
-          <Topology spec={topology} world={world} selected={selected} focus={focus} onSelect={(id) => world.devices[id]?.kind !== "switch" && setSelected(id)} />
+      {/* The map with the checks beside it: a column on a wide board, an edge tab that opens over the map on a narrower one. */}
+      {/* On a phone the open checks are a bottom sheet, and the map is short, so the area grows to keep the map in view above the sheet. */}
+      <div className={`relative mb-3 grid items-start gap-3 ${spec.checks ? "@4xl:grid-cols-[minmax(0,1fr)_18rem]" : ""} ${checksOpen ? "@max-2xl:min-h-[28rem]" : ""}`}>
+        <div className="min-w-0 overflow-x-auto rounded-xl border border-border bg-card p-2">
+          <div className="min-w-[36rem]">
+            <Topology spec={topology} world={world} selected={selected} focus={focus} onSelect={(id) => world.devices[id]?.kind !== "switch" && setSelected(id)} />
+          </div>
         </div>
+        {spec.checks && (
+          <TestsDock
+            open={checksOpen ? true : null}
+            columnFrom="4xl"
+            label="Checks"
+            panelLabel="Checks"
+            badge={`${results.filter((r) => r.pass).length}/${spec.checks.length}`}
+            tone={allPass ? "pass" : "fail"}
+            onOpen={() => setChecksOpen(true)}
+            className="@4xl:rounded-xl @4xl:border"
+            testId="checks-dock"
+          >
+            <Checks checks={spec.checks} results={results} action={<TestsDockClose label="checks" onClose={() => setChecksOpen(false)} className="@4xl:hidden" />} />
+          </TestsDock>
+        )}
       </div>
-      <div className="grid gap-3 @4xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        <div className="space-y-3">
+      <div className={`grid gap-3 ${stepper || spec.solution?.steps ? "@4xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]" : ""}`}>
+        <div className={stepper || spec.solution?.steps ? "space-y-3" : "hidden"}>
           {stepper && (
             <section className="rounded-xl border border-border bg-card p-3" aria-label="Packet steps">
               <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -387,7 +410,6 @@ export function NetBoard({ spec }: { spec: NetLabSpec }) {
               <Inspector frame={focus?.frame} />
             </section>
           )}
-          {spec.checks && <Checks checks={spec.checks} results={results} />}
           {spec.solution?.steps && <FaultSolution solution={spec.solution} onApply={applySolution} />}
         </div>
         <div className="flex min-h-[22rem] flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-100">
