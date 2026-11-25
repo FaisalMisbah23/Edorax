@@ -23,6 +23,7 @@ import publicRoutes from "./public.js";
 import certificateRoutes from "./certificates.js";
 import shellLabRoutes from "./shell-labs.js";
 import desktopRoutes from "./desktop.js";
+import classRoutes from "./classes.js";
 import { enforceDesktopMinVersion } from "../../middlewares/desktop-version.js";
 
 // First-party API, versioned. JSON routes use the { success, data } envelope;
@@ -56,5 +57,6 @@ router.use("/public", publicRoutes);
 router.use("/certificates", certificateRoutes);
 router.use("/shell-labs", shellLabRoutes);
 router.use("/desktop", desktopRoutes);
+router.use("/classes", classRoutes);
 
 export default router;
