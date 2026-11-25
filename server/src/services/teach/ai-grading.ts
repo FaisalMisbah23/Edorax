@@ -1,4 +1,4 @@
-import type { AiGradingCourseRow, AiGradingUpdateInput, AiGradingView } from "../../shared/api/teach.js";
+import type { AiGradingCourseRow, AiGradingUpdateInput, AiGradingView, BulkCourseSettingsInput } from "../../shared/api/teach.js";
 import {
   AI_GRADING_MODELS,
   AI_GRADING_MODEL_LABELS,
@@ -89,26 +89,53 @@ export async function loadAiGrading(user: SessionUser): Promise<AiGradingView> {
 }
 
 /**
+ * Every course must exist and be one the caller owns or co-creates, the same scope the
+ * other teach endpoints use: 404 for an unknown course, 403 for one outside the scope.
+ */
+export async function assertCoursesInScope(user: SessionUser, courseIds: string[]): Promise<void> {
+  if (user.role !== "MENTOR" && user.role !== "ADMIN") throw new ForbiddenError("You do not have access to this course.", "NOT_COURSE_MENTOR");
+  const ids = [...new Set(courseIds)];
+  if (ids.length === 0) return;
+  const [existing, allowed] = await Promise.all([
+    prisma.course.count({ where: { id: { in: ids } } }),
+    prisma.course.count({ where: { AND: [{ id: { in: ids } }, mentoredCoursesWhere(user)] } }),
+  ]);
+  if (existing < ids.length) throw new NotFoundError("Course not found");
+  if (allowed < ids.length) throw new ForbiddenError("You do not mentor this course.", "NOT_COURSE_MENTOR");
+}
+
+/**
+ * Change several courses at once from the My courses page: chapters in order, quiz camera
+ * photos and the AI grading choices. One transaction; one course outside the caller's
+ * scope refuses the whole request and nothing is written.
+ */
+export async function updateCoursesInBulk(user: SessionUser, input: BulkCourseSettingsInput): Promise<{ updated: number }> {
+  const ids = [...new Set(input.courseIds)];
+  await assertCoursesInScope(user, ids);
+  const data = {
+    ...(input.sequential !== undefined ? { sequential: input.sequential } : {}),
+    ...(input.integritySnapshots !== undefined ? { integritySnapshots: input.integritySnapshots } : {}),
+    ...(input.reviewDraft !== undefined ? { aiReviewDraft: input.reviewDraft } : {}),
+    ...(input.instantGrading !== undefined ? { aiInstantGrading: input.instantGrading } : {}),
+    ...(input.model !== undefined ? { aiGradingModel: input.model } : {}),
+  };
+  if (Object.keys(data).length === 0) return { updated: 0 };
+  const result = await prisma.course.updateMany({ where: { id: { in: ids } }, data });
+  return { updated: result.count };
+}
+
+/**
  * Change the caller's default, any number of their courses, or both, in one go.
  * Every course must be one the caller owns or co-creates: one course outside that
  * scope refuses the whole request and nothing is written.
  */
 export async function updateAiGrading(user: SessionUser, input: AiGradingUpdateInput): Promise<AiGradingView> {
-  if (user.role !== "MENTOR" && user.role !== "ADMIN") throw new ForbiddenError("You do not have access to this course.", "NOT_COURSE_MENTOR");
-
   // The last entry for a course wins, so a repeated id cannot half-apply.
   const changes = new Map<string, Partial<AiGradingOverrides>>();
   for (const { courseId, ...change } of input.courses ?? []) changes.set(courseId, { ...changes.get(courseId), ...change });
   const ids = [...changes.keys()];
 
-  if (ids.length > 0) {
-    const [existing, allowed] = await Promise.all([
-      prisma.course.count({ where: { id: { in: ids } } }),
-      prisma.course.count({ where: { AND: [{ id: { in: ids } }, mentoredCoursesWhere(user)] } }),
-    ]);
-    if (existing < ids.length) throw new NotFoundError("Course not found");
-    if (allowed < ids.length) throw new ForbiddenError("You do not mentor this course.", "NOT_COURSE_MENTOR");
-  }
+  await assertCoursesInScope(user, ids);
 
   const defaults = input.defaults;
   const hasDefaults = Boolean(defaults && Object.values(defaults).some((value) => value !== undefined));

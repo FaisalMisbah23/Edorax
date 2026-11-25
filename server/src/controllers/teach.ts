@@ -23,6 +23,7 @@ import type {
   CreateCourseBody,
   HelpInboxQuery,
   AiGradingBody,
+  BulkCourseSettingsBody,
   MoveDirection,
   SubmitReviewBody,
   courseInstructorInviteBody,
@@ -325,6 +326,11 @@ export async function getAiGrading(req: Request, res: Response) {
 // PUT /api/v1/teach/ai-grading
 export async function updateAiGrading(req: Request, res: Response) {
   ok(res, await aiGrading.updateAiGrading(req.user!, req.body as AiGradingBody));
+}
+
+// PUT /api/v1/teach/courses/bulk-settings
+export async function updateCoursesInBulk(req: Request, res: Response) {
+  ok(res, await aiGrading.updateCoursesInBulk(req.user!, req.body as BulkCourseSettingsBody));
 }
 
 // GET /api/v1/teach/feedback

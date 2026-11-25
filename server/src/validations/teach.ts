@@ -151,6 +151,18 @@ export const aiGradingBody = z
   .strict();
 export type AiGradingBody = z.infer<typeof aiGradingBody>;
 
+export const bulkCourseSettingsBody = z
+  .object({
+    courseIds: z.array(id).min(1).max(500),
+    sequential: z.boolean().optional(),
+    integritySnapshots: z.boolean().optional(),
+    reviewDraft: z.boolean().nullable().optional(),
+    instantGrading: z.boolean().nullable().optional(),
+    model: aiGradingModel.nullable().optional(),
+  })
+  .strict();
+export type BulkCourseSettingsBody = z.infer<typeof bulkCourseSettingsBody>;
+
 export const helpInboxQuery = z.object({
   courseId: z.string().optional(),
   status: z.enum(["open", "resolved", "all"]).optional(),

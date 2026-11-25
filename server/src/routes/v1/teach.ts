@@ -36,6 +36,7 @@ import {
   nudgeManyBody,
   acceptAiDraftsBody,
   aiGradingBody,
+  bulkCourseSettingsBody,
   threadIdParams,
   threadFeedbackBody,
   inviteParams,
@@ -95,6 +96,7 @@ router.post("/courses/import", requireZipImport, raw({ type: "application/zip", 
 router.post("/courses/:courseId/import/preview", requireZipImport, validateParams(courseIdParams), raw({ type: "application/zip", limit: "5mb" }), teach.previewCourseZipUpdate);
 router.post("/courses/:courseId/import/approve", requireZipImport, validate({ params: courseIdParams, body: approveCourseZipUpdateBody }), teach.approveCourseZipUpdate);
 router.post("/courses", validateBody(createCourseBody), teach.createCourse);
+router.put("/courses/bulk-settings", validate({ body: bulkCourseSettingsBody }), teach.updateCoursesInBulk);
 router.get("/courses/:courseSlug/builder", validateParams(courseSlugParams), teach.getCourseBuilder);
 router.get("/courses/:courseSlug/settings", validateParams(courseSlugParams), teach.getCourseSettings);
 router.get("/courses/:courseSlug/coupons", validateParams(courseSlugParams), teach.listCourseCoupons);

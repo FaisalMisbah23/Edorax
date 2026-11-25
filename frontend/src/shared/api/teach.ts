@@ -82,6 +82,24 @@ export type MentorCourseCard = {
   openHelpRequests: number;
   inactiveLearners: number;
   updatedAt: string;
+  /** The settings that can be changed for several courses at once. Missing from an older API. */
+  settings?: {
+    sequential: boolean;
+    integritySnapshots: boolean;
+    aiGrading: AiGradingValues;
+    /** True when the course has an AI grading value of its own instead of the default. */
+    aiGradingOwn: boolean;
+  };
+};
+
+/** PUT /api/v1/teach/courses/bulk-settings. Omitted settings are left alone; a null AI value resets it to the default. */
+export type BulkCourseSettingsInput = {
+  courseIds: string[];
+  sequential?: boolean;
+  integritySnapshots?: boolean;
+  reviewDraft?: boolean | null;
+  instantGrading?: boolean | null;
+  model?: AiGradingModel | null;
 };
 
 export type MentorCoursesView = {

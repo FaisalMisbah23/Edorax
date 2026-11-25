@@ -210,6 +210,51 @@ describe("PUT /api/v1/teach/ai-grading", () => {
   });
 });
 
+describe("PUT /api/v1/teach/courses/bulk-settings", () => {
+  const BULK = "/api/v1/teach/courses/bulk-settings";
+  const columns = (id: string) =>
+    prisma.course.findUniqueOrThrow({ where: { id }, select: { sequential: true, integritySnapshots: true, aiGradingModel: true, aiInstantGrading: true } });
+
+  it("changes chapter order, quiz camera and AI grading for several courses, leaving the rest alone", async () => {
+    await resetAll();
+    await prisma.course.updateMany({ where: { id: { in: [fx.course.id, secondCourseId] } }, data: { sequential: true, integritySnapshots: false } });
+    const res = await request(app).put(BULK).set(mentor()).send({ courseIds: [fx.course.id, secondCourseId], integritySnapshots: true, model: SONNET });
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ updated: 2 });
+    for (const id of [fx.course.id, secondCourseId]) {
+      expect(await columns(id)).toEqual({ sequential: true, integritySnapshots: true, aiGradingModel: SONNET, aiInstantGrading: null });
+    }
+
+    await request(app).put(BULK).set(mentor()).send({ courseIds: [secondCourseId], sequential: false, model: null });
+    expect(await columns(secondCourseId)).toEqual({ sequential: false, integritySnapshots: true, aiGradingModel: null, aiInstantGrading: null });
+    expect((await columns(fx.course.id)).sequential).toBe(true);
+
+    // The My courses list shows the same values.
+    const list = await request(app).get("/api/v1/teach/courses").set(mentor());
+    const card = list.body.data.courses.find((course: { id: string }) => course.id === fx.course.id);
+    expect(card.settings).toEqual({ sequential: true, integritySnapshots: true, aiGrading: { reviewDraft: true, instantGrading: false, model: SONNET }, aiGradingOwn: true });
+  });
+
+  it("refuses everything when one course is outside the caller's courses", async () => {
+    await prisma.course.updateMany({ where: { id: { in: [fx.course.id, otherCourseId] } }, data: { integritySnapshots: false } });
+    const res = await request(app).put(BULK).set(mentor()).send({ courseIds: [fx.course.id, otherCourseId], integritySnapshots: true });
+    expect(res.status).toBe(403);
+    expect((await columns(fx.course.id)).integritySnapshots).toBe(false);
+    expect((await columns(otherCourseId)).integritySnapshots).toBe(false);
+
+    expect((await request(app).put(BULK).set(as(evaluatorToken)).send({ courseIds: [fx.course.id], sequential: false })).status).toBe(403);
+    expect((await request(app).put(BULK).set(as(fx.learnerToken)).send({ courseIds: [fx.course.id], sequential: false })).status).toBe(403);
+    expect((await request(app).put(BULK).set(mentor()).send({ courseIds: ["no-such-course"], sequential: false })).status).toBe(404);
+    expect((await columns(fx.course.id)).sequential).toBe(true);
+  });
+
+  it("rejects an empty list, unknown settings and other models", async () => {
+    for (const body of [{ courseIds: [], sequential: true }, { courseIds: [fx.course.id], status: "ARCHIVED" }, { courseIds: [fx.course.id], model: "claude-opus-5-5" }]) {
+      expect((await request(app).put(BULK).set(mentor()).send(body)).status).toBe(400);
+    }
+  });
+});
+
 describe("automatic review drafts follow the settings", () => {
   const draft = { summary: "Fine.", strengths: ["Clear."], improvements: ["Compare."], feedback: "Compare one alternative.", suggestedVerdict: "NEEDS_REVISION" as const, suggestedScore: 3, confidence: "MEDIUM" as const };
   const generator = () =>
