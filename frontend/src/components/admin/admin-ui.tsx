@@ -96,8 +96,10 @@ export function AdminTable({
   children: ReactNode;
   minWidth?: string;
 }) {
+  // relative: screen-reader-only labels in the cells are absolutely placed. Without a positioned
+  // box here they escape this scroll area and make the whole page scroll sideways on a phone.
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgb(10_15_44/4%)]">
+    <div className="relative overflow-x-auto rounded-2xl border border-border/80 bg-card shadow-[0_1px_2px_rgb(10_15_44/4%)]">
       <table
         className="w-full text-left text-sm"
         style={minWidth ? { minWidth } : undefined}
