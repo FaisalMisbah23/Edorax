@@ -173,7 +173,7 @@
 .needGot {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  margin-top: 24px;
+  margin-top: 8px;
   border: 1px solid #dce0f2;
   border-radius: 6px;
   background: #f6f7fb;
@@ -206,7 +206,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 25px !important;
+  margin-top: 9px !important;
   font-size: 12px;
   font-weight: 700;
   color: #12805c;
@@ -242,7 +242,7 @@
 .track {
   display: block;
   height: 4px;
-  margin-top: 23px;
+  margin-top: 7px;
   border-radius: 2px;
   background: #dce0f2;
   overflow: hidden;
