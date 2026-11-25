@@ -220,6 +220,10 @@ export async function submitReview(user: SessionUser, responseId: string, input:
       data: { responseId: response.id, reviewerId: user.id, feedback: input.feedback, verdict: input.verdict, score },
     });
     await resolvePendingBlockReview(tx, response.blockId);
+    // An old answer can outlive its enrollment (the learner left or was removed). The review
+    // is still recorded; there is just no enrollment left to update.
+    const enrolled = await tx.enrollment.findUnique({ where: { id: response.enrollmentId }, select: { id: true } });
+    if (!enrolled) return;
     await adjustEnrollmentPendingReviews(tx, response.enrollmentId, -1);
     await recomputeChapterProgress(tx, response.enrollmentId, response.block.chapter.id);
     if (input.verdict === "APPROVED") {

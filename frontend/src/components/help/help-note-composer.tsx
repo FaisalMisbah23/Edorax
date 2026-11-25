@@ -144,7 +144,7 @@ export function HelpNoteComposer({
                 if (canSubmit) onSubmit();
               }
             }}
-            className="max-h-32 min-h-10 flex-1 resize-none overflow-y-auto bg-transparent py-2 text-[15px] leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-60"
+            className="max-h-60 min-h-10 flex-1 resize-none overflow-y-auto bg-transparent py-2 text-[15px] leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-60"
           />
           {trailing}
           <button

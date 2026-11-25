@@ -62,7 +62,7 @@ export default async function ReviewQueuePage({
       </div>
 
       {sendable.length > 0 ? (
-        <div className="mt-4 flex flex-col gap-2 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4 flex flex-col gap-2 rounded-xl border bg-card p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             {sendable.length} drafted reviews are ready to send.
             {unsure > 0 ? ` ${unsure} more are low confidence and stay for you to read.` : ""}
