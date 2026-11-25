@@ -4,7 +4,7 @@ import type { HelpThreadDetail } from "@/shared/api/help";
 import { requireTeachSurface } from "@/server/auth/guards";
 import { serverApiFetch, serverApiFetchOrNotFound } from "@/lib/api-server";
 import type { ThreadFeedbackView } from "@/shared/api/teach";
-import { HelpAiPanel } from "@/components/teach/help-ai-panel";
+import { HelpFeedbackFlags } from "@/components/teach/help-feedback-flags";
 import { HelpThreadDetail as HelpThreadDetailPanel } from "@/components/help/help-thread-detail";
 import { helpUiCopy as copy } from "@/shared/lib/help-ui-copy";
 
@@ -70,7 +70,7 @@ export default async function MentorHelpThreadPage({
       </div>
 
       <div className="mt-4">
-        <HelpAiPanel threadId={thread.id} canDraft={thread.status === "OPEN"} initialFeedback={feedback} />
+        <HelpFeedbackFlags threadId={thread.id} initialFeedback={feedback} />
       </div>
 
       <div className="mt-4">

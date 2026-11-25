@@ -33,6 +33,7 @@ export function HelpNoteComposer({
   onCancelReply,
   autoFocus = false,
   leading,
+  trailing,
 }: {
   id: string;
   /** Accessible name for the text field (not shown). */
@@ -55,6 +56,8 @@ export function HelpNoteComposer({
   autoFocus?: boolean;
   /** An optional round control shown inside the bar, on the left (e.g. the mentor's quick replies). */
   leading?: React.ReactNode;
+  /** Sits just before the send button, for example the mentor's AI draft button. */
+  trailing?: React.ReactNode;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const length = body.trim().length;
@@ -143,6 +146,7 @@ export function HelpNoteComposer({
             }}
             className="max-h-32 min-h-10 flex-1 resize-none overflow-y-auto bg-transparent py-2 text-[15px] leading-6 text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-60"
           />
+          {trailing}
           <button
             type="button"
             onClick={onSubmit}
