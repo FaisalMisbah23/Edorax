@@ -6,12 +6,15 @@ import { prisma } from "../../../db/prisma.js";
 import { logger } from "../../../utils/logger.js";
 import { startOfUtcDay } from "../../ai/chapter-qa/usage.js";
 import { costMicroUsd } from "../../capstone/grade.js";
+import { AI_GRADING_COURSE_SELECT, effectiveAiGrading } from "../ai-grading.js";
 import { AiReviewDraftSchema, generateReviewDraft, type ReviewDraftContext } from "./review-draft.js";
 
 // Automatic first-pass reviews. Every pending open answer gets one AI draft on the
 // platform's Anthropic key (Claude Haiku by default), saved on the Response. The mentor
 // sees it prefilled and approves, edits or rejects it: nothing reaches the learner
 // until a mentor sends it. A daily platform cap bounds the bill.
+// Whether a course gets drafts, and on which model, comes from the AI grading settings:
+// the course's own choice, else its owner's default, else the environment default.
 
 export type StoredAiDraft = { draft: AiReviewDraft; model: string; costUsd: number | null };
 
@@ -76,15 +79,27 @@ type Deps = { generate?: typeof generateReviewDraft; force?: boolean };
 
 /**
  * Make and save the platform draft for one pending open answer. Returns the saved draft,
- * or null when drafting is off, capped, not an open question, or the call failed.
+ * or null when drafting is off (for the platform or for this course), capped, not an
+ * open question, or the call failed.
  * `force` replaces an existing draft (the mentor's "Draft again").
  */
 export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Promise<StoredAiDraft | null> {
   if (!aiReviewAutoDraftAvailable || inFlight.has(responseId)) return null;
-  const row = await prisma.response.findUnique({ where: { id: responseId }, select: { status: true, aiDraft: true, aiDraftModel: true, aiDraftCostMicroUsd: true } });
+  const row = await prisma.response.findUnique({
+    where: { id: responseId },
+    select: {
+      status: true,
+      aiDraft: true,
+      aiDraftModel: true,
+      aiDraftCostMicroUsd: true,
+      block: { select: { chapter: { select: { course: { select: AI_GRADING_COURSE_SELECT } } } } },
+    },
+  });
   if (!row || row.status !== "PENDING_REVIEW") return null;
   const existing = readStoredDraft(row.aiDraft, row.aiDraftModel, row.aiDraftCostMicroUsd);
   if (existing && !deps.force) return existing;
+  const settings = effectiveAiGrading(row.block.chapter.course);
+  if (!settings.reviewDraft) return null;
   if (!(await underDailyCap())) return null;
 
   inFlight.add(responseId);
@@ -94,7 +109,7 @@ export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Prom
     const result = await (deps.generate ?? generateReviewDraft)(context, {
       provider: "ANTHROPIC",
       apiKey: env.ANTHROPIC_API_KEY,
-      model: env.AI_REVIEW_MODEL,
+      model: settings.model,
     });
     const draft = { ...result.draft, suggestedScore: Math.min(result.draft.suggestedScore, context.maxScore) };
     const costMicro = result.usage ? costMicroUsd(result.model, result.usage.inputTokens, result.usage.outputTokens) : null;

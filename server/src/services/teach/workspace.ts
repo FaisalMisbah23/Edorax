@@ -5,6 +5,7 @@ import { loadInstructorAccessState } from "../instructor-access/status.js";
 import { CONFIRMED_ENROLLMENT_WHERE } from "../enrollment/lifecycle.js";
 import { mentoredCoursesWhere } from "./access.js";
 import { activityState, average } from "./helpers.js";
+import { AI_GRADING_COURSE_SELECT, effectiveAiGrading } from "./ai-grading.js";
 
 /** Sidebar data for the instructor shell: one row per mentored course plus the access state. */
 export async function loadTeachWorkspace(user: SessionUser): Promise<TeachWorkspace> {
@@ -60,6 +61,9 @@ export async function loadMentorCourses(user: SessionUser): Promise<MentorCourse
       coverUrl: true,
       status: true,
       updatedAt: true,
+      sequential: true,
+      integritySnapshots: true,
+      ...AI_GRADING_COURSE_SELECT,
       _count: { select: { chapters: { where: { archivedAt: null } } } },
       enrollments: {
         where: CONFIRMED_ENROLLMENT_WHERE,
@@ -86,6 +90,12 @@ export async function loadMentorCourses(user: SessionUser): Promise<MentorCourse
       (item) => item.status === "IN_PROGRESS" && activityState(item.lastActiveAt, now) === "inactive"
     ).length,
     updatedAt: course.updatedAt.toISOString(),
+    settings: {
+      sequential: course.sequential,
+      integritySnapshots: course.integritySnapshots,
+      aiGrading: effectiveAiGrading(course),
+      aiGradingOwn: course.aiReviewDraft !== null || course.aiInstantGrading !== null || course.aiGradingModel !== null,
+    },
   }));
 
   return {

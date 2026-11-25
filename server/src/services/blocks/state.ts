@@ -16,6 +16,7 @@ import { PredictConfigSchema, type SanitizedPredictConfig } from "../../shared/b
 import { QuizConfigSchema, type SanitizedQuizConfig } from "../../shared/blocks/quiz/schema.js";
 import { applyTokens, applyTokensDeep, contentTokenValues, type ContentTokenValues } from "../../shared/lib/content-tokens.js";
 import { prisma } from "../../db/prisma.js";
+import { AI_GRADING_COURSE_SELECT, effectiveAiGrading } from "../teach/ai-grading.js";
 import type { Block } from "../../generated/prisma/index.js";
 import { findEnrollmentForBlockState, requireBlockSubmissionAccess } from "../enrollment/api-learn-access.js";
 import { loadAiInterviewInitialState } from "../ai/interview/service.js";
@@ -47,7 +48,7 @@ export async function loadBlockState(blockId: string, user: SessionUser | undefi
           id: true,
           archivedAt: true,
           order: true,
-          course: { select: { id: true, familySlug: true, variantFamily: true, autoGradeOpenQuestions: true, pricingType: true, mentorId: true } },
+          course: { select: { id: true, familySlug: true, variantFamily: true, pricingType: true, mentorId: true, ...AI_GRADING_COURSE_SELECT } },
         },
       },
     },
@@ -68,7 +69,7 @@ export async function loadBlockState(blockId: string, user: SessionUser | undefi
   }
   if (enrollment && !(await releaseContainsChapter(course.id, enrollment, course.familySlug, block.chapter.id))) throw new NotFoundError("Block not found");
   const state = withTokens(
-    await blockStateFor(block, user, { autoGradeOpenQuestions: course.autoGradeOpenQuestions }),
+    await blockStateFor(block, user, { autoGradeOpenQuestions: effectiveAiGrading(course).instantGrading }),
     contentTokenValues(resolveCourseFamily(course.familySlug, course.variantFamily), enrollment?.variantSlug),
   );
   if (state.type !== "OPEN_QUESTION" || !state.config.personalize || !user || !enrollment) return state;

@@ -14,6 +14,7 @@ import { readReleaseContent, variantForRelease } from "../courses/releases.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
 import { CONFIRMED_ENROLLMENT_WHERE } from "../enrollment/lifecycle.js";
 import { publishDashboardStructureRelease } from "./publish-course-release.js";
+import { AI_GRADING_COURSE_SELECT, courseAiGradingOverrides, effectiveAiGrading } from "./ai-grading.js";
 
 // Course lifecycle: DRAFT → PUBLISHED → (ARCHIVED when learners exist | DRAFT when none).
 // Publishing is the only transition with rules; see shared/lib/course-publish-rules.
@@ -145,7 +146,8 @@ export async function loadCourseSettings(user: SessionUser, courseSlug: string):
     where: { id: owned.id },
     select: {
       id: true, slug: true, title: true, description: true, projectGoal: true,
-      difficulty: true, estimatedHours: true, category: true, subcategory: true, tags: true, sequential: true, autoGradeOpenQuestions: true, coverUrl: true,
+      difficulty: true, estimatedHours: true, category: true, subcategory: true, tags: true, sequential: true, coverUrl: true,
+      ...AI_GRADING_COURSE_SELECT,
       status: true, pricingType: true, priceCents: true, currency: true, integritySnapshots: true,
       familySlug: true, variantFamily: true, variantAssignment: true, certificate: true, certificateTemplate: true,
       _count: {
@@ -157,9 +159,11 @@ export async function loadCourseSettings(user: SessionUser, courseSlug: string):
     },
   });
   const account = await prisma.user.findUnique({ where: { id: user.id }, select: { zipImportEnabled: true } });
-  const { variantFamily, certificate, certificateTemplate, ...settings } = course;
+  const { variantFamily, certificate, certificateTemplate, aiReviewDraft, aiInstantGrading, aiGradingModel, mentor, ...settings } = course;
+  const aiFields = { aiReviewDraft, aiInstantGrading, aiGradingModel, mentor };
+  const aiGrading = { own: courseAiGradingOverrides(aiFields), effective: effectiveAiGrading(aiFields) };
   const yamlTemplate = certificate && typeof certificate === "object" && !Array.isArray(certificate) ? (certificate as { template?: unknown }).template : undefined;
-  return { ...settings, certificateTemplate: certificateTemplateId(certificateTemplate ?? yamlTemplate), hasVariants: Boolean(resolveCourseFamily(course.familySlug, variantFamily)), enrollmentCount: _count.enrollments, chapterCount: _count.chapters, zipImportEnabled: account?.zipImportEnabled ?? false };
+  return { ...settings, autoGradeOpenQuestions: aiGrading.effective.instantGrading, aiGrading, certificateTemplate: certificateTemplateId(certificateTemplate ?? yamlTemplate), hasVariants: Boolean(resolveCourseFamily(course.familySlug, variantFamily)), enrollmentCount: _count.enrollments, chapterCount: _count.chapters, zipImportEnabled: account?.zipImportEnabled ?? false };
 }
 
 /** The certificate design learners of this course receive from now on. Issued certificates keep theirs. */
@@ -254,7 +258,10 @@ export async function updateCourseSettings(user: SessionUser, courseId: string, 
     }
   }
 
-  const managed = await prisma.course.findUniqueOrThrow({ where: { id: courseId }, select: { repositorySourceHash: true } });
+  const managed = await prisma.course.findUniqueOrThrow({ where: { id: courseId }, select: { repositorySourceHash: true, ...AI_GRADING_COURSE_SELECT } });
+  // Older screens send the instant grading checkbox. It becomes the course's own value only
+  // when it differs from what applies today, so echoing the current value changes nothing.
+  const instantGradingChanged = input.autoGradeOpenQuestions !== undefined && input.autoGradeOpenQuestions !== effectiveAiGrading(managed).instantGrading;
   if (managed.repositorySourceHash && (input.pricingType !== "PAID" || priceCents !== 1000 || input.currency.toUpperCase() !== "USD")) {
     throw new UnprocessableError("Repository-managed courses must be priced at $10 USD.");
   }
@@ -272,7 +279,7 @@ export async function updateCourseSettings(user: SessionUser, courseId: string, 
       ...(input.subcategory !== undefined ? { subcategory: input.subcategory || null } : {}),
       ...(input.tags ? { tags: [...new Set(input.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean))] } : {}),
       sequential: input.sequential,
-      autoGradeOpenQuestions: input.autoGradeOpenQuestions,
+      ...(instantGradingChanged ? { aiInstantGrading: input.autoGradeOpenQuestions } : {}),
       ...(input.variantAssignment ? { variantAssignment: input.variantAssignment } : {}),
       pricingType: input.pricingType,
       priceCents,

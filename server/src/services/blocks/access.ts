@@ -1,5 +1,6 @@
 import { isRegisteredBlockType } from "../../shared/blocks/definitions.js";
 import { prisma } from "../../db/prisma.js";
+import { AI_GRADING_COURSE_SELECT } from "../teach/ai-grading.js";
 import { ForbiddenError, NotFoundError, NotImplementedError } from "../../utils/errors.js";
 import type { SessionUser } from "../../types/auth.js";
 import { requireBlockSubmissionAccess } from "../enrollment/api-learn-access.js";
@@ -24,7 +25,7 @@ export async function loadBlockForSubmission(
           id: true,
           courseId: true,
           readerMode: true,
-          course: { select: { familySlug: true, variantFamily: true, autoGradeOpenQuestions: true } },
+          course: { select: { familySlug: true, variantFamily: true, ...AI_GRADING_COURSE_SELECT } },
         },
       },
     },

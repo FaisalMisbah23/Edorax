@@ -314,6 +314,7 @@ model User {
   profile       UserProfile?
   learnerProfile LearnerProfile?
   coursesOwned  Course[]     @relation("CourseMentor")
+  aiGradingDefault AiGradingDefault?
   instructorCouponsCreated InstructorCoupon[] @relation("InstructorCouponCreator")
   discountCampaignsCreated CourseDiscountCampaign[]
   instructorCouponRedemptions InstructorCouponRedemption[]
@@ -444,6 +445,17 @@ model LearnerProfile {
   enrollments Enrollment[]
 }
 
+/// One instructor's AI grading default for every course they own. A course follows it
+/// wherever its own aiReviewDraft, aiInstantGrading or aiGradingModel is null.
+model AiGradingDefault {
+  userId         String   @id
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewDraft    Boolean  @default(true)
+  instantGrading Boolean  @default(false)
+  model          String   @default("claude-haiku-5-5")
+  updatedAt      DateTime @updatedAt
+}
+
 model Course {
   id             String       @id @default(cuid())
   slug           String       @unique
@@ -466,7 +478,15 @@ model Course {
   instructorPayoutPercent Int  @default(70)
   sequential     Boolean      @default(true)
   /// When true, text open questions grade instantly with the learner's OpenRouter key instead of the mentor queue.
+  /// Legacy switch, no longer read. `aiInstantGrading` plus the owner's default replaced it (2026-11-25).
   autoGradeOpenQuestions Boolean @default(false)
+  /// AI grading choices for this course. Null means "use the course owner's default" (AiGradingDefault).
+  /// First-pass AI review drafts for pending open answers, on the platform key.
+  aiReviewDraft Boolean?
+  /// Text short answers grade instantly with the learner's own key instead of the mentor queue.
+  aiInstantGrading Boolean?
+  /// Model for the review drafts; only the ids in shared/lib/ai-grading.ts are accepted.
+  aiGradingModel String?
   familySlug     String? // course family in src/shared/lib/course-tracks.ts; null = no variants
   variantFamily  Json? // creator-defined variant catalog; null uses a built-in family
   assistant      Json? // tutor settings from course.yaml (effort, guidance, starters); null means defaults
