@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { RubricPackSchema, CapstoneSubmitSchema, capstoneClientConfig, type RubricPack } from "../../../../src/shared/blocks/capstone-check/schema.js";
 import type { AutomatedCheckResult } from "../../../../src/shared/blocks/capstone-check/report.js";
 import { globToRegExp, normaliseText, parseTemplateRef, runAutomatedChecks } from "../../../../src/services/capstone/automated.js";
-import { githubRepoSource, summariseCheckRun, summariseRuns, parseRepoUrl, type CapstoneRepoSource } from "../../../../src/services/capstone/github.js";
+import { githubRepoSource, summariseCheckRun, summariseRuns, parseRepoUrl, type CapstoneRepoSource, type CiStatus } from "../../../../src/services/capstone/github.js";
 import { anthropicGrader, buildGradePrompt, costMicroUsd, GraderError, recomputeReport, type ModelGrade } from "../../../../src/services/capstone/grade.js";
 import { calibrationDir, loadCalibrationExamples, loadRubricPackFile, parseRubricPack } from "../../../../src/services/capstone/pack-loader.js";
 import { assertFetchableUrl, isPublicAddress } from "../../../../src/services/capstone/safe-fetch.js";
@@ -158,6 +158,17 @@ describe("GitHub reads", () => {
     ]);
     expect(calls.every((c) => c.auth === undefined)).toBe(true);
   });
+
+  it("leaves out the runs started by the tags it is told to ignore", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ workflow_runs: [
+      { name: "capstone", workflow_id: 7, status: "completed", conclusion: "failure", created_at: "2026-11-25T02:17:14Z", head_branch: "capstone-2" },
+      { name: "capstone", workflow_id: 7, status: "completed", conclusion: "success", created_at: "2026-11-24T21:44:16Z", head_branch: "main" },
+    ] }), { status: 200 }));
+    const source = githubRepoSource({ fetchImpl: fetchImpl as unknown as typeof fetch });
+    const repo = { owner: "me", repo: "errand-tracker" };
+    expect(await source.ci(repo, "7b50975")).toEqual({ state: "failure", failed: ["capstone"] });
+    expect(await source.ci(repo, "7b50975", ["capstone-2"])).toEqual({ state: "success", runs: 1 });
+  });
 });
 
 describe("GitHub Actions summary", () => {
@@ -168,6 +179,25 @@ describe("GitHub Actions summary", () => {
     expect(summariseRuns([run(1, "completed", "success"), run(2, "in_progress", null)])).toEqual({ state: "pending", running: ["wf2"] });
     expect(summariseRuns([run(1, "completed", "success"), run(2, "completed", "failure")])).toEqual({ state: "failure", failed: ["wf2"] });
     expect(summariseRuns([run(1, "completed", "skipped")])).toEqual({ state: "success", runs: 1 });
+  });
+
+  // One workflow, one commit, as seen on a real Level 1 repo: the push to main passed, then the
+  // capstone-2 tag was pushed on the same commit and the run it started failed.
+  const onRef = (head_branch: string, conclusion: string, created_at: string) => ({ ...run(1, "completed", conclusion, created_at), head_branch });
+  const mainPassed = onRef("main", "success", "2026-11-24T21:44:16Z");
+  const capstone2Failed = onRef("capstone-2", "failure", "2026-11-25T02:17:14Z");
+
+  it("does not let a run started by another capstone's tag decide", () => {
+    expect(summariseRuns([capstone2Failed, mainPassed])).toEqual({ state: "failure", failed: ["wf1"] });
+    expect(summariseRuns([capstone2Failed, mainPassed], ["capstone-2"])).toEqual({ state: "success", runs: 1 });
+  });
+
+  it("still counts the run started by the capstone's own tag", () => {
+    expect(summariseRuns([capstone2Failed, mainPassed], ["capstone-1"])).toEqual({ state: "failure", failed: ["wf1"] });
+  });
+
+  it("judges by every run, as before, when the commit has only another capstone's runs", () => {
+    expect(summariseRuns([capstone2Failed], ["capstone-2"])).toEqual({ state: "failure", failed: ["wf1"] });
   });
 });
 
@@ -225,6 +255,38 @@ describe("automated checks", () => {
     expect(noReadme.results.find((r) => r.id === "files")!.message).toBe("Missing from the repo: README.md.");
     expect(noReadme.results.find((r) => r.id === "live_contains")!.status).toBe("fail");
     expect(noReadme.stopped).toBe(false);
+  });
+
+  it("judges a capstone by its own runs, not by a run another capstone's tag started on the same commit", async () => {
+    // Level 1 keeps four capstones in one repo, each with its own tag. Here capstone-2 was tagged
+    // on the newest commit and its run failed, while the push to main passed.
+    const pack = (pattern: string): RubricPack => ({ ...samplePack(), automated: [{ check: "repo_public" }, { check: "tag", pattern }, { check: "ci_green" }] });
+    const ci = vi.fn(async (_ref: unknown, _sha: string, ignore: string[] = []): Promise<CiStatus> =>
+      ignore.includes("capstone-2") ? { state: "success", runs: 1 } : { state: "failure", failed: ["capstone"] });
+    // A tag named like the default branch is never treated as another capstone.
+    const tags = vi.fn(async () => ["capstone-2", "capstone-1", "main"]);
+    const source = fakeSource({ ci, tags });
+
+    const first = await runAutomatedChecks(pack("capstone-1"), { ref, liveUrl: null }, { source, fetchPage: page("") });
+    expect(ci).toHaveBeenLastCalledWith(ref, "abc123", ["capstone-2"]);
+    expect(first.results.find((r) => r.id === "ci_green")).toMatchObject({ status: "pass" });
+    expect(first.results.find((r) => r.id === "tag")).toMatchObject({ status: "pass", message: "Found the tag capstone-1." });
+    expect(first.stopped).toBe(false);
+    // One GitHub call serves both the tag check and the CI check.
+    expect(tags).toHaveBeenCalledTimes(1);
+
+    const second = await runAutomatedChecks(pack("capstone-2"), { ref, liveUrl: null }, { source, fetchPage: page("") });
+    expect(ci).toHaveBeenLastCalledWith(ref, "abc123", ["capstone-1"]);
+    expect(second.results.find((r) => r.id === "ci_green")).toMatchObject({ status: "fail" });
+    expect(second.stopped).toBe(true);
+  });
+
+  it("asks GitHub for nothing extra when the pack has no tag check", async () => {
+    const ci = vi.fn(async (): Promise<CiStatus> => ({ state: "success", runs: 2 }));
+    const tags = vi.fn(async () => ["v1.0.0"]);
+    await runAutomatedChecks(samplePack(), { ref, liveUrl: "https://example.dev" }, { source: fakeSource({ ci, tags }), fetchPage: page("data-analytics") });
+    expect(ci).toHaveBeenCalledWith(ref, "abc123", []);
+    expect(tags).not.toHaveBeenCalled();
   });
 
   it("matches tags and paths with globs", () => {

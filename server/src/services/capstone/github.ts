@@ -19,7 +19,11 @@ export interface CapstoneRepoSource {
   tree(ref: RepoRef, sha: string): Promise<{ entries: RepoTreeEntry[]; truncated: boolean }>;
   /** Raw file text, or null when missing or binary. Reads at most maxBytes. */
   file(ref: RepoRef, sha: string, path: string, maxBytes: number): Promise<string | null>;
-  ci(ref: RepoRef, sha: string): Promise<CiStatus>;
+  /**
+   * GitHub Actions on one commit. `ignoreBranches` names the refs whose runs are not this
+   * check's business: the tags of the other capstones in the same repo (see summariseRuns).
+   */
+  ci(ref: RepoRef, sha: string, ignoreBranches?: string[]): Promise<CiStatus>;
   /** The latest run of one named check on a commit. */
   checkRun(ref: RepoRef, sha: string, name: string): Promise<CheckRunStatus>;
 }
@@ -114,11 +118,11 @@ export function githubRepoSource(options: { token?: string; fetchImpl?: FetchLik
       if (bytes.includes(0)) return null;
       return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
     },
-    async ci(ref, sha) {
-      const runs = await json<{ workflow_runs: Array<{ name: string; workflow_id: number; status: string; conclusion: string | null; created_at: string }> }>(
+    async ci(ref, sha, ignoreBranches = []) {
+      const runs = await json<{ workflow_runs: WorkflowRun[] }>(
         `${base(ref)}/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=50`
       );
-      return summariseRuns(runs?.workflow_runs ?? []);
+      return summariseRuns(runs?.workflow_runs ?? [], ignoreBranches);
     },
     async checkRun(ref, sha, name) {
       const result = await json<{ check_runs: Array<{ status: string; conclusion: string | null; started_at: string | null }> }>(
@@ -137,13 +141,32 @@ export function summariseCheckRun(runs: Array<{ status: string; conclusion: stri
   return latest.conclusion === "success" ? { state: "success" } : { state: "failure", conclusion: latest.conclusion ?? "unknown" };
 }
 
-/** The latest run of each workflow decides. Skipped and neutral runs do not fail the build. */
-export function summariseRuns(
-  runs: Array<{ name: string; workflow_id: number; status: string; conclusion: string | null; created_at: string }>
-): CiStatus {
+/** One GitHub Actions run. `head_branch` is the branch that was pushed, or the tag name for a tag push. */
+export type WorkflowRun = {
+  name: string;
+  workflow_id: number;
+  status: string;
+  conclusion: string | null;
+  created_at: string;
+  head_branch?: string | null;
+};
+
+/**
+ * The latest run of each workflow decides. Skipped and neutral runs do not fail the build.
+ *
+ * A course can keep several capstones in one repo, each with its own tag, and one workflow that
+ * runs a different capstone's checks for each tag. Pushing the capstone-2 tag then starts a run on
+ * a commit that capstone 1 is also checked on, and a failure there says nothing about capstone 1.
+ * So the runs started by the refs in `ignoreBranches` are left out. When that would leave nothing
+ * to judge by, every run counts, as it did before.
+ */
+export function summariseRuns(runs: WorkflowRun[], ignoreBranches: string[] = []): CiStatus {
   if (runs.length === 0) return { state: "none" };
-  const latest = new Map<number, (typeof runs)[number]>();
-  for (const run of runs) {
+  const ignored = new Set(ignoreBranches);
+  const own = runs.filter((run) => !(run.head_branch && ignored.has(run.head_branch)));
+  const counted = own.length ? own : runs;
+  const latest = new Map<number, WorkflowRun>();
+  for (const run of counted) {
     const seen = latest.get(run.workflow_id);
     if (!seen || seen.created_at < run.created_at) latest.set(run.workflow_id, run);
   }

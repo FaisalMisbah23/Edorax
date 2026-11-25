@@ -108,6 +108,12 @@ export async function runAutomatedChecks(
     set(repoSpec, "pass", `Found the repo. Checking the latest commit on ${repo.defaultBranch}.`);
   }
 
+  // The repo's tags, read once: the tag checks need them, and so does the CI check of a pack that
+  // has a tag of its own (a check uses about five GitHub API calls, and the limit is 60 an hour).
+  const tagPatterns = specs.flatMap((spec) => (spec.check === "tag" ? [spec.pattern] : []));
+  let tagList: Promise<string[]> | null = null;
+  const repoTags = (ref: RepoRef) => (tagList ??= deps.source.tags(ref));
+
   // 2. Live site, fetched once and shared by every live check.
   const liveSpecs = specs.filter((spec) => spec.check === "live_ok" || spec.check === "live_contains");
   const pages = new Map<string, PublicPage>();
@@ -140,13 +146,15 @@ export async function runAutomatedChecks(
       continue;
     }
     if (spec.check === "ci_green") {
-      const ci = await deps.source.ci(facts.ref, facts.commitSha);
+      // Runs that another capstone's tag started on this commit do not count for this capstone.
+      const others = tagPatterns.length ? (await repoTags(facts.ref)).filter((tag) => tag !== facts!.defaultBranch && !matchesAny(tag, tagPatterns)) : [];
+      const ci = await deps.source.ci(facts.ref, facts.commitSha, others);
       if (ci.state === "success") set(spec, "pass", `GitHub Actions passed on the latest commit (${ci.runs} workflow${ci.runs === 1 ? "" : "s"}).`);
       else if (ci.state === "pending") set(spec, "pending", `GitHub Actions is still running (${ci.running.join(", ")}). Check again when it finishes.`);
       else if (ci.state === "failure") set(spec, "fail", `GitHub Actions failed on the latest commit: ${ci.failed.join(", ")}. Fix the build and tests, push, then check again.`);
       else set(spec, "fail", "No GitHub Actions run was found for the latest commit. Add the CI workflow from the template and push.");
     } else if (spec.check === "tag") {
-      const tags = await deps.source.tags(facts.ref);
+      const tags = await repoTags(facts.ref);
       const found = tagMatches(tags, spec.pattern);
       if (found) set(spec, "pass", `Found the tag ${found}.`);
       else set(spec, "fail", `No tag matches ${spec.pattern}. Create one with git tag and push it with git push --tags.`);

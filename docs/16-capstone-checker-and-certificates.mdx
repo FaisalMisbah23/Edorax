@@ -141,6 +141,17 @@ criteria:
 oralExam: { enabled: false }    # Level 3 hook, see below
 ```
 
+What `ci_green` reads: the GitHub Actions runs on the newest commit of the default branch, and
+the latest run of each workflow decides. One rule on top of that, for a course that keeps several
+capstones in one repo with a tag for each (Level 1 has `capstone-1` to `capstone-4`): when the
+pack has a `tag` check, runs started by a tag that does not match the pack's pattern are left out,
+unless they are the only runs on that commit. So a failed `capstone-2` run does not block the
+check of capstone 1.
+
+A known gap: `ci_green` does not ask for a run on the capstone's own tag. If the newest commit has
+only a branch run, that run decides, even when the course workflow runs the capstone's real checks
+only on the tag.
+
 ```yaml
 # calibration/strong-submission.yaml
 repo: https://github.com/example/site@3f2a9c1   # pinned commit, or
