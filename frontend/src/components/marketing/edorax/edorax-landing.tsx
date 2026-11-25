@@ -87,9 +87,10 @@ export function EdoraxLanding({ dashboardHref = null }: { dashboardHref?: string
         <CatalogSections />
       </Suspense>
       <HomeVisualLabs labCount={labGroups.reduce((sum, group) => sum + group.labs.length, 0)} areas={labGroups.map((group) => group.title)} />
+      {/* Dark and light bands alternate: visual labs (dark), the tabs (white), AI (dark), then light again. */}
+      <HomeFeatureTabs />
       <HomeAi />
       <ExploreFeatures />
-      <HomeFeatureTabs />
       <Certificates />
       <Pricing />
       <Faq />
