@@ -356,6 +356,8 @@ model User {
   creditEntries                 CreditEntry[]
   unlockedCosmetics             UnlockedCosmetic[]
   rewardInventory               RewardInventory[]
+  classesTaught                 TeachingClass[]       @relation("ClassTeacher")
+  classMemberships              TeachingClassMember[]
   instructorWithdrawals         InstructorWithdrawal[]
 }
 
@@ -510,6 +512,7 @@ model Course {
   @@index([mentorId, status])
   leaderboardGroups     LeaderboardGroup[]
   leaderboardPlacements LeaderboardPlacement[]
+  classCourses          TeachingClassCourse[]
 }
 
 /// One learner's rating of a completed course. Editable, never duplicated.
@@ -612,6 +615,7 @@ model Module {
   order    Int
   archivedAt DateTime?
   chapters Chapter[]
+  classDueDates TeachingClassDueDate[]
 
   @@unique([courseId, order])
   @@unique([courseId, contentKey])
@@ -806,6 +810,7 @@ model Organization {
   freeCourseAccesses CourseOrganizationAccess[]
   creditBalance   Int                     @default(0)
   creditTransactions OrganizationCreditTransaction[]
+  classes         TeachingClass[]
 }
 
 /// Platform-admin-controlled allow-list for organizations that receive a paid course at no charge.
@@ -1878,4 +1883,69 @@ model AudiobookTrack {
 
   @@unique([audiobookId, position])
   @@index([audiobookId])
+}
+
+/// A teacher's class: a named group of learners who join with a code and follow
+/// the same courses. Joining a class lets its teacher see the member's progress
+/// in the class's courses, and nothing else about the member.
+model TeachingClass {
+  id             String        @id @default(cuid())
+  name           String
+  /// Short code a learner types or opens as /join/<code>. Rotating it stops new joins on the old one.
+  joinCode       String        @unique
+  teacherId      String
+  teacher        User          @relation("ClassTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  /// Set when the class belongs to an organisation; null for a teacher's own class.
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  archivedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  courses        TeachingClassCourse[]
+  members        TeachingClassMember[]
+  dueDates       TeachingClassDueDate[]
+
+  @@index([teacherId, archivedAt])
+  @@index([organizationId])
+}
+
+/// A course the class follows, in the order the teacher set.
+model TeachingClassCourse {
+  id        String        @id @default(cuid())
+  classId   String
+  class     TeachingClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+
+  @@unique([classId, courseId])
+  @@index([courseId])
+}
+
+/// A learner in a class. Leaving or being removed deletes the row; rotating the join code stops a return.
+model TeachingClassMember {
+  id        String        @id @default(cuid())
+  classId   String
+  class     TeachingClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime      @default(now())
+
+  @@unique([classId, userId])
+  @@index([userId])
+}
+
+/// When a module is due for one class. The module's course must be one of the class's courses.
+model TeachingClassDueDate {
+  id       String        @id @default(cuid())
+  classId  String
+  class    TeachingClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  moduleId String
+  module   Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  dueAt    DateTime
+
+  @@unique([classId, moduleId])
 }
