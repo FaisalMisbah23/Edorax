@@ -10,13 +10,15 @@ import type { ResolvedCertificateSettings } from "../../src/shared/lib/certifica
 import { completeChapter, createCourseFixture, createModuleVersionsFixture } from "../helpers/fixtures.js";
 
 // A module with an alternative version: what the learner reads, how progress counts, the vote
-// they can leave.
+// they can leave, and what an admin sees.
 
 const app = createApp();
 let fx: Awaited<ReturnType<typeof createModuleVersionsFixture>>;
 let plain: Awaited<ReturnType<typeof createCourseFixture>>;
 let outsiderId = "";
 let outsiderToken = "";
+let adminId = "";
+let adminToken = "";
 
 beforeAll(async () => {
   fx = await createModuleVersionsFixture();
@@ -24,13 +26,16 @@ beforeAll(async () => {
   const outsider = await prisma.user.create({ data: { email: `outsider-${fx.tag}@test.local`, name: "Outsider", role: "MENTEE", emailVerified: new Date() } });
   outsiderId = outsider.id;
   outsiderToken = (await createSession(outsider.id)).sessionToken;
+  const admin = await prisma.user.create({ data: { email: `admin-mv-${fx.tag}@test.local`, name: "Admin", role: "ADMIN", emailVerified: new Date() } });
+  adminId = admin.id;
+  adminToken = (await createSession(admin.id)).sessionToken;
 });
 
 afterAll(async () => {
   await fx.cleanup();
   await plain.cleanup();
-  await prisma.session.deleteMany({ where: { userId: { in: [outsiderId] } } });
-  await prisma.user.deleteMany({ where: { id: { in: [outsiderId] } } });
+  await prisma.session.deleteMany({ where: { userId: { in: [outsiderId, adminId] } } });
+  await prisma.user.deleteMany({ where: { id: { in: [outsiderId, adminId] } } });
 });
 
 const learner = () => ({ Authorization: `Bearer ${fx.learnerToken}` });
@@ -181,6 +186,26 @@ describe("module version feedback", () => {
     const long = await request(app).put(feedback()).set(learner()).send({ versionKey: "v2", note: "x".repeat(2001) });
     expect(long.status).toBe(400);
     expect(long.body.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("gives admins totals per version and the notes, and refuses everyone else", async () => {
+    await request(app).put(feedback()).set(learner()).send({ versionKey: "v2", note: "The rewrite was easier." });
+    expect((await request(app).get("/api/v1/admin/module-version-feedback").set(learner())).status).toBe(403);
+    expect((await request(app).get("/api/v1/admin/module-version-feedback")).status).toBe(401);
+
+    const res = await request(app).get("/api/v1/admin/module-version-feedback").set({ Authorization: `Bearer ${adminToken}` });
+    expect(res.status).toBe(200);
+    const totals = res.body.data.totals.filter((row: { courseSlug: string }) => row.courseSlug === fx.course.slug);
+    expect(totals).toEqual([
+      { courseId: fx.course.id, courseSlug: fx.course.slug, courseTitle: fx.course.title, moduleKey: "m2", moduleTitle: "Module 2", versionKey: "default", versionLabel: "Original lessons", votes: 0 },
+      { courseId: fx.course.id, courseSlug: fx.course.slug, courseTitle: fx.course.title, moduleKey: "m2", moduleTitle: "Module 2", versionKey: "v2", versionLabel: "Rewritten: shorter and plainer", votes: 1 },
+    ]);
+    const notes = res.body.data.notes.filter((row: { courseSlug: string }) => row.courseSlug === fx.course.slug);
+    expect(notes).toEqual([expect.objectContaining({
+      courseTitle: fx.course.title, moduleTitle: "Module 2", versionKey: "v2", versionLabel: "Rewritten: shorter and plainer",
+      note: "The rewrite was easier.", learnerName: "Test Learner",
+    })]);
+    expect(Date.parse(notes[0].updatedAt)).not.toBeNaN();
   });
 });
 

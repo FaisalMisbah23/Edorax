@@ -16,6 +16,7 @@ import * as refundPolicySvc from "../services/admin/refund-policy.js";
 import * as appSettingsSvc from "../services/admin/app-settings.js";
 import * as certificateSettingsSvc from "../services/admin/certificate-settings.js";
 import * as appActivity from "../services/activity/reports.js";
+import { loadModuleVersionFeedbackForAdmin } from "../services/admin/module-version-feedback.js";
 import type { AppActivityUsersQuery } from "../validations/activity.js";
 import type {
   AdminProfileBody,
@@ -68,6 +69,11 @@ export async function getOverview(_req: Request, res: Response) {
 export async function getMetrics(req: Request, res: Response) {
   const { range } = req.query as MetricsQuery;
   ok(res, await metrics.loadMetrics(range));
+}
+
+// GET /api/v1/admin/module-version-feedback: which module version learners found better, with their notes
+export async function getModuleVersionFeedback(_req: Request, res: Response) {
+  ok(res, await loadModuleVersionFeedbackForAdmin());
 }
 
 // GET /api/v1/admin/courses
