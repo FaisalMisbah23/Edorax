@@ -21,6 +21,9 @@ export async function read(req: Request, res: Response) {
     "Content-Length": String(image.bytes.byteLength),
     "Cache-Control": purpose !== "content" ? "public, max-age=31536000, immutable" : "private, no-store",
     "X-Content-Type-Options": "nosniff",
+    // Announcement screenshots are shown in emails and in the instructor's sandboxed email preview,
+    // which loads them from an opaque origin. Helmet's same-origin default would block them there.
+    ...(purpose === "announcement" ? { "Cross-Origin-Resource-Policy": "cross-origin" } : {}),
   });
   res.end(Buffer.from(image.bytes));
 }
