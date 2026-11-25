@@ -75,6 +75,9 @@ export async function previewCourseZipUpdate(user: SessionUser, courseId: string
     "Learners who already started stay on their release. New learners receive the new release.",
     "Changed chapters and activities get new progress identities; old submissions and history remain.",
     "Course details, pricing, ownership, and publication status are unchanged.",
+    ...(plan.modules.some(module => module.versions?.length)
+      ? ["A module version in the package replaces that version's lesson list. Unchanged lessons keep their progress; versions the package does not list stay as they are."]
+      : []),
   ];
   await prisma.courseImportPreview.deleteMany({ where: { expiresAt: { lt: new Date() }, appliedAt: null } });
   await prisma.courseImportPreview.deleteMany({ where: { courseId, userId: user.id, appliedAt: null } });
