@@ -412,12 +412,7 @@
   }
 }
 
-/* Two recordings stacked in the tab panel, and the full screen button on the visual labs loop. */
-.stack {
-  display: grid;
-  gap: 20px;
-}
-
+/* The full screen button on the visual labs loop. */
 .stage {
   position: relative;
 }

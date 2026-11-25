@@ -151,8 +151,6 @@ type Feature = {
   window: string;
   file: string;
   label: string;
-  /** A second recording, shown under the first in the same panel. */
-  extra?: { file: string; title: string; label: string };
 };
 
 const FEATURES: Feature[] = [
@@ -188,27 +186,22 @@ const FEATURES: Feature[] = [
     label: "Demo filmed on edorax.com: an AI interview with follow-up questions and written feedback",
   },
   {
-    id: "listen",
-    tab: "Courses you can hear",
-    title: "Read the chapter, or listen to it",
-    line: "Pick what you build, listen to the chapter at any speed, and answer checkpoints that tell you why you were right or wrong.",
+    id: "visual",
+    tab: "Visual labs",
+    title: "Build it, then press Run",
+    line: "Put the parts on a board, link them and press Run. Each design is tested under normal traffic, the peak and each failure, and every check shows what it measured.",
     listTitle: "What you get",
     items: [
-      "Narrated chapters, from 0.75x to 4x",
-      "Small audio files for phones and slow connections",
-      "Checkpoints inside every chapter",
-      "10 USD a course, no subscription",
+      "System design challenges, cloud and DevOps, and networking labs",
+      "Break one part, then run it under load",
+      "Every check shows what it measured and why it failed",
+      "No account needed to try",
     ],
-    cta: { label: "Browse courses", href: "/catalog" },
-    note: "Free courses to start",
-    window: "Course reader",
-    file: "demo-courses",
-    label: "Demo filmed in the Edorax reader: picking a product, listening to a chapter and answering a checkpoint",
-    extra: {
-      file: "demo-visual-labs",
-      title: "Visual lab: design a short-link service",
-      label: "Demo filmed on edorax.com: a visual lab going from 5 of 11 checks passing to 11 of 11",
-    },
+    cta: { label: "Try a visual lab", href: "/labs/visual" },
+    note: "Runs in your browser",
+    window: "Visual lab",
+    file: "demo-visual-labs",
+    label: "Demo filmed on edorax.com: a visual lab going from 5 of 11 checks passing to 11 of 11",
   },
   {
     id: "instructors",
@@ -292,10 +285,7 @@ export function HomeFeatureTabs() {
             </div>
           </div>
           <div className={s.media}>
-            <div className={s.stack}>
-              <ProductWindow title={feature.window} file={feature.file} label={feature.label} />
-              {feature.extra ? <ProductWindow title={feature.extra.title} file={feature.extra.file} label={feature.extra.label} /> : null}
-            </div>
+            <ProductWindow title={feature.window} file={feature.file} label={feature.label} />
           </div>
         </div>
       </div>
