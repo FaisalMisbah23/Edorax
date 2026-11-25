@@ -602,6 +602,8 @@ export type ReviewQueueItem = ReviewContext & {
   /** Which model wrote the draft and what it cost in US dollars, when known. */
   aiDraftModel: string | null;
   aiDraftCostUsd: number | null;
+  /** Why Claude could not draft this answer, when the last try failed. */
+  aiDraftError?: string | null;
   /** False when this answer's course has automatic drafts switched off. Missing from an older API. */
   autoDraft?: boolean;
 };
@@ -704,6 +706,12 @@ export type AiGradingCourseRow = {
   status: CourseStatus;
   /** False when another instructor owns the course; it then follows that owner's default. */
   ownedByYou: boolean;
+  /**
+   * True when the caller's default is the one this course follows: they own it, or they
+   * co-create it and no one ahead of them (the owner, then earlier co-creators) saved a
+   * default. Missing from an older API.
+   */
+  followsYourDefault?: boolean;
   /** The course's own choices; null means it uses the default. */
   own: AiGradingOverrides;
   /** The default this course falls back to. */

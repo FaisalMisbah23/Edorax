@@ -210,6 +210,46 @@ describe("PUT /api/v1/teach/ai-grading", () => {
   });
 });
 
+describe("whose default a co-created course follows", () => {
+  it("follows the co-creator's default while the owner has none, and the owner's once it is set", async () => {
+    await resetAll();
+    // Nobody has a default yet: the co-creator's would be the one the course follows.
+    const before = await request(app).get(URL).set(as(coCreatorToken));
+    expect(row(before.body, fx.course.id)).toMatchObject({ ownedByYou: false, followsYourDefault: true, effective: { instantGrading: false, model: HAIKU } });
+
+    const saved = await request(app).put(URL).set(as(coCreatorToken)).send({ defaults: { instantGrading: true, model: SONNET } });
+    expect(row(saved.body, fx.course.id)).toMatchObject({ followsYourDefault: true, own: { instantGrading: null, model: null }, effective: { instantGrading: true, model: SONNET } });
+    // The owner sees the same effective values and that the default is not theirs.
+    const ownerView = await request(app).get(URL).set(mentor());
+    expect(row(ownerView.body, fx.course.id)).toMatchObject({ ownedByYou: true, followsYourDefault: false, effective: { instantGrading: true, model: SONNET } });
+    // A course the co-creator is not on is untouched.
+    expect(row(ownerView.body, secondCourseId)?.effective).toEqual({ reviewDraft: true, instantGrading: false, model: HAIKU });
+
+    // The owner saves a default: it wins on their course.
+    await request(app).put(URL).set(mentor()).send({ defaults: { instantGrading: false } });
+    const after = await request(app).get(URL).set(as(coCreatorToken));
+    expect(row(after.body, fx.course.id)).toMatchObject({ followsYourDefault: false, effective: { instantGrading: false, model: HAIKU } });
+    // The course's own value still beats every default.
+    await request(app).put(URL).set(as(coCreatorToken)).send({ courses: [{ courseId: fx.course.id, model: SONNET }] });
+    expect(row((await request(app).get(URL).set(mentor())).body, fx.course.id)?.effective.model).toBe(SONNET);
+  });
+
+  it("uses the co-creator who joined first, and never a submission evaluator", async () => {
+    await resetAll();
+    const later = await makeMentor("later-co-creator");
+    await prisma.courseInstructor.create({ data: { courseId: fx.course.id, userId: later.user.id, role: "COURSE_CREATOR" } });
+    const evaluator = await prisma.courseInstructor.findFirstOrThrow({ where: { courseId: fx.course.id, role: "SUBMISSION_EVALUATOR" } });
+    await prisma.aiGradingDefault.create({ data: { userId: evaluator.userId, instantGrading: true, model: SONNET } });
+    expect(row((await request(app).get(URL).set(mentor())).body, fx.course.id)?.effective).toEqual({ reviewDraft: true, instantGrading: false, model: HAIKU });
+
+    await request(app).put(URL).set(as(later.token)).send({ defaults: { model: SONNET } });
+    await request(app).put(URL).set(as(coCreatorToken)).send({ defaults: { model: HAIKU, reviewDraft: false } });
+    const view = await request(app).get(URL).set(as(later.token));
+    expect(row(view.body, fx.course.id)).toMatchObject({ followsYourDefault: false, effective: { reviewDraft: false, model: HAIKU } });
+    await prisma.courseInstructor.deleteMany({ where: { userId: later.user.id } });
+  });
+});
+
 describe("PUT /api/v1/teach/courses/bulk-settings", () => {
   const BULK = "/api/v1/teach/courses/bulk-settings";
   const columns = (id: string) =>

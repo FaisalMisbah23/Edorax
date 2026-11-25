@@ -183,9 +183,10 @@ const ALL_COURSES_BATCH = 4;
  * Every learner across the courses this instructor runs, newest activity first.
  * Reuses the per-course roster so the rows, flags and access rules stay identical.
  */
-export async function loadAllMentees(user: SessionUser, courseId?: string | null): Promise<AllMenteesView> {
+export async function loadAllMentees(user: SessionUser, courseId?: string | null, learnerId?: string | null): Promise<AllMenteesView> {
   const courses = await prisma.course.findMany({
-    where: mentoredCoursesWhere(user),
+    // With a learner filter, only load the courses that learner is enrolled in.
+    where: learnerId ? { AND: [mentoredCoursesWhere(user), { enrollments: { some: { userId: learnerId } } }] } : mentoredCoursesWhere(user),
     orderBy: { title: "asc" },
     select: { id: true, slug: true, title: true },
   });
@@ -199,6 +200,11 @@ export async function loadAllMentees(user: SessionUser, courseId?: string | null
       const course = batch[index]!;
       for (const mentee of view.mentees) mentees.push({ ...mentee, course: { id: course.id, slug: course.slug, title: course.title } });
     });
+  }
+  if (learnerId) {
+    const mine = mentees.filter((mentee) => mentee.userId === learnerId);
+    mentees.length = 0;
+    mentees.push(...mine);
   }
   mentees.sort((a, b) => (b.lastActiveAt ?? "").localeCompare(a.lastActiveAt ?? ""));
 

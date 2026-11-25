@@ -48,7 +48,7 @@ export async function loadBlockState(blockId: string, user: SessionUser | undefi
           id: true,
           archivedAt: true,
           order: true,
-          course: { select: { id: true, familySlug: true, variantFamily: true, pricingType: true, mentorId: true, ...AI_GRADING_COURSE_SELECT } },
+          course: { select: { id: true, familySlug: true, variantFamily: true, pricingType: true, ...AI_GRADING_COURSE_SELECT } },
         },
       },
     },

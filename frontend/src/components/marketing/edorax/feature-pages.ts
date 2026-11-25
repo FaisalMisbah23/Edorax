@@ -26,7 +26,7 @@ export type FeaturePageContent = {
   /** The one main button, and the short reassurance line under it. */
   cta: FeatureLink & { note: string };
   demo: {
-    /** File name in public/video without the extension (needs .mp4 and .webp). Leave out to show a marked placeholder. */
+    /** File name in public/video without the extension (needs .mp4 and .webp). Leave out and the page shows no frame. */
     video?: string;
     /** The address shown in the window frame. */
     address: string;
@@ -236,6 +236,75 @@ export const FEATURE_PAGES: FeaturePageContent[] = [
     closing: {
       title: "Start with one lab.",
       line: "Open a board, break one part and see which checks fail.",
+    },
+  },
+  {
+    slug: "ai-project-check",
+    name: "AI project check",
+    teaser: "Push your project to GitHub and get a checked result with numbered next steps.",
+    seo: {
+      title: "AI project check for your GitHub capstone",
+      description: "Finish a course with a real project: push it to your own GitHub repository and an AI check reads it against the brief, then lists what is left to fix.",
+    },
+    eyebrow: "AI project check",
+    headline: "Push your project.",
+    headlineMark: "Know what is left.",
+    lead: [
+      "A course on Edorax can end in a project you build in your own GitHub repository. Paste the link and the check reads your work against the brief.",
+      "You get a result, the percentage you reached against the pass mark, and numbered steps for what is left. Push a fix and check again.",
+    ],
+    points: [
+      "Automatic checks first: public repository, CI run, required files",
+      "Then an AI review against criteria you can see before you start",
+      "A passed check goes to a mentor, who can confirm it or send it back",
+    ],
+    cta: {
+      label: "Start Level 1 free",
+      href: "/catalog/dw-level-1",
+      note: "A free course with four checked projects. No AI key needed. Up to three checks a day on each project.",
+    },
+    demo: {
+      // No recording yet, so the page shows no frame. Add public/video/feature-project-check.mp4 and .webp, then set video: "feature-project-check".
+      address: "edorax.com/courses/dw-level-1",
+      caption: "Filmed in the real product: a project check on a test repository.",
+      label: "Recording of an AI project check on Edorax: a GitHub repository link is submitted and the report shows the checks, the rubric and what is left",
+    },
+    proof: {},
+    steps: [
+      { title: "Build it in your own repository", body: "The course gives you the brief. The work is yours, in a public repository on your own GitHub account." },
+      { title: "Paste the link and press Check", body: "The check reads the latest commit on your default branch: the files, the tags and the result of your own CI run. It never runs your code." },
+      { title: "Fix what is left and check again", body: "Each thing that is left comes with numbered steps. Push your fix and check again. Every attempt is kept." },
+    ],
+    parts: {
+      title: "What is in it today",
+      items: [
+        { title: "Criteria you can see", body: "The block lists what the check looks for, and marks which criteria are required, before you submit anything." },
+        { title: "Automatic checks", body: "Is the repository public, did the latest CI run pass, are the required files and tags there, and for some projects, does the live site respond." },
+        { title: "A rubric, scored", body: "Each criterion gets a score. The report shows your percentage, the pass mark, what is working well and what would make it better." },
+        { title: "A mentor in the loop", body: "A check that passes goes to your mentor with the evidence behind each score. On any other result you can press Ask my mentor to look." },
+        { title: "A certificate at the end", body: "Finish the course and pass its project checks, and your certificate is issued with a link anyone can verify." },
+        {
+          title: "In four courses",
+          body: "Seven checked projects today, in these courses.",
+          links: [
+            { label: "Level 1: Code Foundations", href: "/catalog/dw-level-1" },
+            { label: "Level 2: Your Portfolio and Outreach Engine", href: "/catalog/site-and-outreach" },
+            { label: "Level 3: Build a Support and Knowledge Agent", href: "/catalog/dw-level-3" },
+            { label: "Terraform in Practice", href: "/catalog/terraform-in-practice" },
+          ],
+        },
+      ],
+    },
+    questions: [
+      ["Do I need my own AI key?", "No. The project check runs on the platform's key. You get up to three checks a day on each project."],
+      ["Does it work with a private repository?", "No. The repository has to be public so the check can read it. It reads the latest commit on the default branch."],
+      ["Does it run my code?", "No. It never clones, builds or runs your code. Test results come from your own GitHub Actions run, which the check reads."],
+      ["How long does a check take?", "The page says about a minute, and it updates by itself when the result is ready. If nothing changed since your last check, you get the same result back."],
+      ["Is the AI result final?", "No. A check that passes goes to your mentor, who can confirm it, change the score or send it back with feedback."],
+    ],
+    closing: {
+      title: "End the course with something you built.",
+      line: "Start the free Level 1 course and send in your first project.",
     },
   },
 ];

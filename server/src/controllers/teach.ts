@@ -199,7 +199,8 @@ export async function removeChapter(req: Request, res: Response) {
 // GET /api/v1/teach/mentees?courseId=
 export async function listAllMentees(req: Request, res: Response) {
   const courseId = typeof req.query.courseId === "string" && req.query.courseId.trim() ? req.query.courseId.trim().slice(0, 64) : null;
-  ok(res, await mentees.loadAllMentees(req.user!, courseId));
+  const learnerId = typeof req.query.learnerId === "string" && req.query.learnerId.trim() ? req.query.learnerId.trim().slice(0, 64) : null;
+  ok(res, await mentees.loadAllMentees(req.user!, courseId, learnerId));
 }
 
 // GET /api/v1/teach/courses/:courseSlug/mentees

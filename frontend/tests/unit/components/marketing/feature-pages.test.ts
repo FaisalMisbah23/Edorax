@@ -32,10 +32,13 @@ describe("feature landing pages", () => {
       // The button sits in the header, the hero and the closing band.
       expect(html.split(`href="${page.cta.href}"`).length - 1).toBeGreaterThanOrEqual(3);
       expect(html).toContain(page.cta.note.replace(/'/g, "&#x27;"));
-      // The frame holds the recording, or a marked placeholder until one is filmed.
-      if (page.demo.video) expect(html).toContain(`poster="/video/${page.demo.video}.webp"`);
-      else expect(html).toContain("has not been filmed yet");
-      expect(html).toMatch(/data-nosnippet=""[^>]*><div[^>]*>.*edorax\.com/s);
+      // The frame holds a real recording; a page without one shows no frame at all.
+      if (page.demo.video) {
+        expect(html).toContain(`poster="/video/${page.demo.video}.webp"`);
+        expect(html).toMatch(/data-nosnippet=""[^>]*><div[^>]*>.*edorax\.com/s);
+      } else {
+        expect(html).not.toContain("<figure");
+      }
       expect(html.match(/<details/g)).toHaveLength(page.questions.length);
     }
   });
@@ -51,12 +54,12 @@ describe("feature landing pages", () => {
     expect(filled).toMatch(/<blockquote[^>]*><p>It saved my weekend\.<\/p>/);
   });
 
-  it("marks the frame as a placeholder when there is no recording yet", () => {
+  it("shows no frame, and no placeholder, when there is no recording yet", () => {
     const page = FEATURE_PAGES[0];
     const html = render({ ...page, demo: { ...page.demo, video: undefined } });
     expect(html).not.toContain("<video");
-    expect(html).toContain("Placeholder");
-    expect(html).toContain("has not been filmed yet");
+    expect(html).not.toContain("<figure");
+    expect(html).not.toMatch(/placeholder/i);
     const filmed = render({ ...page, demo: { ...page.demo, video: "feature-sample" } });
     expect(filmed).toContain('poster="/video/feature-sample.webp"');
     expect(filmed).toContain(page.demo.caption);
