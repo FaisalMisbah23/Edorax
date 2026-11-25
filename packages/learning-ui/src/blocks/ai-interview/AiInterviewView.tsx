@@ -215,10 +215,10 @@ export function AiInterviewView(props: AiInterviewViewProps) {
         <p className="text-sm leading-6">{config.opening}</p>
         <div className="rounded-xl border border-dashed p-4">
           <p className="flex items-center gap-2 text-sm font-medium">
-            <KeyRound className="size-4" aria-hidden /> Add your own OpenRouter key to practise
+            <KeyRound className="size-4" aria-hidden /> Add your own AI key to practise
           </p>
           <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-            This interview uses your key, so you pay OpenRouter directly for a few cents of usage. Free models work too. It takes about a minute to set up.
+            This interview uses your own key from OpenRouter, Google Gemini or Anthropic, so you pay that provider directly for a few cents of usage. Some have free models or a free tier. It takes about a minute to set up.
           </p>
           <a href={AI_SETTINGS_HREF} className={cn(buttonVariants(), "mt-3 h-10 w-full sm:w-auto")}>
             Go to settings

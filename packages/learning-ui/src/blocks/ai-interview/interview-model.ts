@@ -4,7 +4,7 @@ import type { AiInterviewSessionView } from "../../shared/api/ai";
 // Pure helpers behind the interview block, kept apart from React so they can be
 // unit tested without a DOM.
 
-/** Where learners add their OpenRouter key. */
+/** Where learners add their AI provider key (OpenRouter, Google Gemini or Anthropic). */
 export const AI_SETTINGS_HREF = "/settings/profile#ai-interviews";
 
 export type InterviewStage = "unavailable" | "no-key" | "intro" | "chat" | "feedback";

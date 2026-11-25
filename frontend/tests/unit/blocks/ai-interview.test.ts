@@ -120,7 +120,9 @@ describe("interview block", () => {
 
   it("invites the learner to add a key and links to settings when none is saved", () => {
     const html = render({ hasKey: false });
-    expect(html).toContain("Add your own OpenRouter key");
+    expect(html).toContain("Add your own AI key to practise");
+    // The card names every provider the settings page accepts, not only OpenRouter.
+    for (const provider of ["OpenRouter", "Google Gemini", "Anthropic"]) expect(html).toContain(provider);
     expect(html).toContain(`href="${AI_SETTINGS_HREF}"`);
     expect(html).toContain("Go to settings");
     expect(html).not.toContain("Start interview");
