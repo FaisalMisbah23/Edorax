@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
   BarChart3,
+  Bot,
   Headphones,
   BookOpenText,
   ChevronDown,
@@ -202,6 +203,12 @@ export function MentorWorkspaceSidebar({
       href: "/feedback",
       icon: Flag,
       active: pathname.startsWith("/feedback"),
+    },
+    {
+      label: "AI grading",
+      href: "/ai-grading",
+      icon: Bot,
+      active: pathname.startsWith("/ai-grading"),
     },
   ];
 
