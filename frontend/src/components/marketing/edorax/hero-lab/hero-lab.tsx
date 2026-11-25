@@ -113,7 +113,10 @@ export function HeroLab() {
             aria-controls="lab-panel"
             tabIndex={tab === t.id ? 0 : -1}
             className={tab === t.id ? s.tabOn : s.tab}
-            onClick={() => open(t.id)}
+            onClick={(event) => {
+              open(t.id);
+              event.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+            }}
           >
             {solved.has(t.id) ? <span aria-hidden="true" className={s.tick}>{"✓"}</span> : null}
             {t.label}

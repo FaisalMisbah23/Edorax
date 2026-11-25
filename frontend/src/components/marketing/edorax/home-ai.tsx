@@ -226,7 +226,10 @@ export function HomeAi() {
         </div>
         <div className={s.tabs} role="tablist" aria-label="AI features">
           {TABS.map((t) => (
-            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? s.tabOn : s.tab} onClick={() => setTab(t.id)}>
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={tab === t.id ? s.tabOn : s.tab} onClick={(event) => {
+                setTab(t.id);
+                event.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+              }}>
               {t.label}
               <span className={t.tag === "Live" ? s.tagLive : s.tagExample}>{t.tag}</span>
             </button>
