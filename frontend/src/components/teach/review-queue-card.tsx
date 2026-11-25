@@ -136,7 +136,7 @@ export function ReviewQueueCard({ item, ageLabel, autoDraft }: { item: ReviewQue
                 </>
               ) : (
                 <span className="font-normal text-muted-foreground">
-                  {autoDraft && item.blockType === "OPEN_QUESTION" ? "Claude is still drafting this one. Refresh in a minute, or write your own feedback." : "Write your feedback."}
+                  {(item.autoDraft ?? autoDraft) && item.blockType === "OPEN_QUESTION" ? "Claude is still drafting this one. Refresh in a minute, or write your own feedback." : "Write your feedback."}
                 </span>
               )}
             </p>

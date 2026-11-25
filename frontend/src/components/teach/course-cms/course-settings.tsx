@@ -3,9 +3,10 @@
 import type { ChangeEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpenCheck, ImageIcon, Upload, Wallet } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, BookOpenCheck, ImageIcon, Upload, Wallet } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +15,8 @@ import type { CourseSettingsInput, CourseSettingsView } from "@/shared/api/teach
 import { uploadCourseImage } from "@/lib/course-media-upload";
 import { isSafeAssetUrl } from "@/shared/lib/asset-url";
 import { COURSE_CATEGORY_INFO } from "@/lib/course-categories";
+import { aiGradingModelLabel } from "@/shared/lib/ai-grading";
+import { cn } from "@/lib/utils";
 
 type SettingsSection = "details" | "learning" | "pricing";
 
@@ -256,15 +259,44 @@ export function CourseSettings({ course }: { course: CourseSettingsView }) {
             <input type="checkbox" name="sequential" defaultChecked={course.sequential} className="mt-1 size-4 accent-primary" />
             <span><span className="block text-sm font-medium">Require chapters in order</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">Learners finish the previous chapter before opening the next one.</span></span>
           </label>
-          <label className="flex items-start gap-3 rounded-xl border bg-muted/25 p-4">
-            <input type="checkbox" name="autoGradeOpenQuestions" defaultChecked={course.autoGradeOpenQuestions} className="mt-1 size-4 accent-primary" />
-            <span>
-              <span className="block text-sm font-medium">Auto-grade text open questions with AI</span>
-              <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                Short answers are graded instantly with the learner&apos;s OpenRouter key instead of the mentor review queue. Learners must add a key if they have not already. URL and project submissions still go to mentors.
+          {course.aiGrading ? (
+            <div id="ai-grading" className="scroll-mt-24 rounded-xl border bg-muted/25 p-4">
+              {/* The value is set on the AI grading page; the form still sends what applies today. */}
+              <input type="hidden" name="autoGradeOpenQuestions" value={course.autoGradeOpenQuestions ? "on" : ""} />
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">AI grading</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Set for all your courses in one place. This course shows what applies to it today.</p>
+                </div>
+                <Link href="/ai-grading" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
+                  Change AI grading<ArrowRight className="size-4" aria-hidden />
+                </Link>
+              </div>
+              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+                {([
+                  { label: "First-pass review", value: course.aiGrading.effective.reviewDraft ? "On" : "Off", own: course.aiGrading.own.reviewDraft !== null },
+                  { label: "Instant grading of short answers", value: course.aiGrading.effective.instantGrading ? "On" : "Off", own: course.aiGrading.own.instantGrading !== null },
+                  { label: "Grading model", value: aiGradingModelLabel(course.aiGrading.effective.model), own: course.aiGrading.own.model !== null },
+                ]).map((item) => (
+                  <div key={item.label} className="rounded-lg border bg-background px-3 py-2">
+                    <dt className="text-xs text-muted-foreground">{item.label}</dt>
+                    <dd className="mt-0.5 font-semibold">{item.value}</dd>
+                    <dd className={cn("text-xs", item.own ? "font-medium text-primary" : "text-muted-foreground")}>{item.own ? "Set for this course" : "Uses the default"}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ) : (
+            <label className="flex items-start gap-3 rounded-xl border bg-muted/25 p-4">
+              <input type="checkbox" name="autoGradeOpenQuestions" defaultChecked={course.autoGradeOpenQuestions} className="mt-1 size-4 accent-primary" />
+              <span>
+                <span className="block text-sm font-medium">Auto-grade text open questions with AI</span>
+                <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                  Short answers are graded instantly with the learner&apos;s OpenRouter key instead of the mentor review queue. Learners must add a key if they have not already. URL and project submissions still go to mentors.
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+          )}
           {course.hasVariants && (
             <Field label="Course variant" htmlFor="course-variant-assignment" hint="New learners get a variant with the fewest learners and cannot change it. Existing learners keep their choice and progress.">
               <select id="course-variant-assignment" name="variantAssignment" defaultValue={course.variantAssignment} className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30">
