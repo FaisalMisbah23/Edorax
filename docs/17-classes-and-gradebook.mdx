@@ -1,0 +1,96 @@
+---
+title: Classes and the gradebook
+status: classes, join codes, due dates and the gradebook implemented 2026-11-25; organisations that own classes, email invites and per-class AI limits planned
+---
+
+# Classes and the gradebook
+
+**Reads:** [`06-reports.mdx`](06-reports.mdx) (course reports, which the gradebook sits beside),
+[`04-progress-and-gating.mdx`](04-progress-and-gating.mdx) (where marks and progress come from),
+[`organization-api.mdx`](organization-api.mdx) (organisations, which will own classes next).
+
+A class is a teacher's named group of learners who follow the same courses. It lets a teacher run
+a course for their own students on catalog courses they did not write. A course report answers
+"how is everyone in my course doing"; a class answers "how are my students doing".
+
+## Rules
+
+- **Who can teach a class.** Anyone with instructor access (`MENTOR` or `ADMIN`). A class belongs
+  to the teacher who made it. No other teacher can see it, and a wrong id answers 404.
+- **How learners get in.** With a join code, as a link (`/join/<code>`) or typed. Joining is the
+  learner's own act. It is what lets the teacher see that learner's progress in the class's
+  courses, and nothing else about them.
+- **What joining does.** The learner becomes a member and is enrolled in the class's free courses.
+  A paid course is not given away: the learner buys it in the usual way, and the gradebook shows
+  "Not enrolled" until they do.
+- **Leaving and removing.** A learner can leave. A teacher can remove a learner. Neither touches
+  the learner's course enrollment. To stop a removed learner coming back, give the class a new code.
+- **Closing.** An archived class, or one past its end date, takes no new learners.
+
+## Data
+
+| Model | Holds |
+|---|---|
+| `TeachingClass` | Name, join code, teacher, optional start and end, archived flag. `organizationId` is reserved for classes owned by an organisation. |
+| `TeachingClassCourse` | The courses the class follows, in the teacher's order. |
+| `TeachingClassMember` | One row per learner in the class. |
+| `TeachingClassDueDate` | A due date for one module in one class. |
+
+Nothing about marks is stored for a class. The gradebook reads what the reader already records.
+
+## The gradebook
+
+One row per learner. For each course, in order:
+
+| Column | Mark | Progress | Source |
+|---|---|---|---|
+| One per module | Score out of the graded work attempted in the module | Chapters finished out of chapters in the module | `ChapterProgress` |
+| One per project check | Best result of the AI project checker | None | `CapstoneCheck` |
+| Course total | Score out of the graded work attempted in the course | Percent complete | `Enrollment` rollups |
+
+- A learner's modules come from the release and variant they are on, so someone on an older
+  release is marked against the lessons they were given.
+- A cell is **late** when the module has a due date and it is past the date and unfinished, or it
+  was finished after the date.
+- A learner who is not enrolled in a course has no cells for it.
+- The spreadsheet export has a mark column per item, a progress column where that applies, a
+  "late" column for items with a due date, and a count of late items.
+
+## API
+
+Teacher, under `/api/v1/teach/classes` (instructor only):
+
+| Call | Does |
+|---|---|
+| `GET /` | The teacher's classes |
+| `GET /course-options` | Published courses that can go in a class |
+| `POST /` | Create a class |
+| `GET /:classId` | Courses, modules with due dates, roster |
+| `PATCH /:classId` | Rename, change dates or courses, archive or reopen |
+| `POST /:classId/rotate-code` | New join code; the old one stops working |
+| `PUT /:classId/due-dates` | Set or clear module due dates |
+| `DELETE /:classId/members/:userId` | Remove a learner |
+| `GET /:classId/gradebook` | The gradebook |
+| `GET /:classId/gradebook/export` | The gradebook as CSV |
+
+Learner, under `/api/v1/classes`:
+
+| Call | Does |
+|---|---|
+| `GET /join/:code` | Public: what the code leads to |
+| `POST /join/:code` | Join (signed in, email verified) |
+| `GET /` | My classes, where I stand, what is due |
+| `POST /:classId/leave` | Leave a class |
+
+Code: `server/src/services/classes/`, wire types in `server/src/shared/api/classes.ts`, tests in
+`server/tests/api/classes.test.ts`.
+
+## Next
+
+1. **Organisations own classes.** An organisation admin who adds teachers, sees every class in the
+   organisation and pays for seats. `TeachingClass.organizationId` is already there.
+2. **Invite by email or spreadsheet**, so a teacher can paste a list instead of sharing a link.
+3. **Teachers without instructor access.** Today a new teacher asks for instructor access and an
+   admin approves it. A lighter "teacher" sign-up would remove that step.
+4. **Large classes.** The gradebook loads every member's chapter progress in one request. Page it
+   before a class passes a few hundred learners on a long course.
