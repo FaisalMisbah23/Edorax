@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Inbox } from "lucide-react";
 import type { ReviewQueueView } from "@/shared/api/teach";
 import { nowMs } from "@/server/time";
@@ -13,12 +14,15 @@ const AGING_HOURS = 48;
 export default async function ReviewQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ courseId?: string }>;
+  searchParams: Promise<{ courseId?: string; learnerId?: string }>;
 }) {
   await requireTeachSurface();
-  const { courseId: courseFilter } = await searchParams;
-  const query = courseFilter ? `?courseId=${encodeURIComponent(courseFilter)}` : "";
-  const { courses, items, autoDraft, draftCostUsd } = await serverApiFetch<ReviewQueueView>(`/api/v1/teach/review${query}`);
+  const { courseId: courseFilter, learnerId } = await searchParams;
+  const params = new URLSearchParams();
+  if (courseFilter) params.set("courseId", courseFilter);
+  if (learnerId) params.set("learnerId", learnerId);
+  const query = params.size ? `?${params}` : "";
+  const { courses, items, autoDraft, draftCostUsd, learner } = await serverApiFetch<ReviewQueueView>(`/api/v1/teach/review${query}`);
   const now = nowMs();
   const draftedItems = items.filter((item) => item.aiDraft);
   const drafted = draftedItems.length;
@@ -58,6 +62,15 @@ export default async function ReviewQueuePage({
           </form>
         )}
       </div>
+
+      {learner ? (
+        <p className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border bg-card px-4 py-3 text-sm">
+          Showing only {learner.label}.
+          <Link href="/review" className="font-medium text-primary hover:underline">
+            Show everyone
+          </Link>
+        </p>
+      ) : null}
 
       {sendable.length > 0 ? (
         <div className="mt-4 flex flex-col gap-2 rounded-xl border bg-card p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">

@@ -3,6 +3,7 @@ import { prisma } from "../../db/prisma.js";
 import type { SessionUser } from "../../types/auth.js";
 import type { HelpInboxQuery } from "../../validations/teach.js";
 import { mentoredCoursesWhere } from "./access.js";
+import { learnerLabel } from "./reviews.js";
 
 // The mentor's question inbox across every course they teach. Thread detail,
 // replies and resolution reuse the shared /api/v1/help endpoints.
@@ -28,6 +29,7 @@ export async function loadMentorHelpInbox(user: SessionUser, query: HelpInboxQue
             courseId: query.courseId && courseIds.includes(query.courseId) ? query.courseId : { in: courseIds },
             ...(status === "resolved" ? { status: "RESOLVED" } : status === "all" ? {} : { status: "OPEN" }),
             ...(kind === "reports" ? { kind: "LESSON_REPORT" } : kind === "questions" ? { kind: "QUESTION" } : {}),
+            ...(query.learnerId ? { menteeId: query.learnerId } : {}),
           },
           // Open questions oldest first so nobody waits unnoticed; resolved ones newest first.
           orderBy: { updatedAt: status === "resolved" ? "desc" : "asc" },
@@ -35,14 +37,24 @@ export async function loadMentorHelpInbox(user: SessionUser, query: HelpInboxQue
             mentee: { select: { name: true, email: true } },
             course: { select: { title: true } },
             chapter: { select: { title: true } },
-            messages: { orderBy: { createdAt: "desc" }, take: 1, select: { body: true, createdAt: true } },
+            messages: {
+              orderBy: { createdAt: "desc" },
+              take: 4,
+              select: { id: true, body: true, createdAt: true, authorId: true, author: { select: { name: true } } },
+            },
+            _count: { select: { messages: true } },
           },
         });
 
   const now = Date.now();
+  // Threads waiting on the mentor come first, longest wait first; answered ones follow.
+  const waiting = (thread: (typeof threads)[number]) => thread.status === "OPEN" && thread.messages[0]?.authorId === thread.menteeId;
+  threads.sort((a, b) => Number(waiting(b)) - Number(waiting(a)));
   return {
     courses,
+    learner: await learnerLabel(query.learnerId),
     openCount,
+    needsReplyCount: threads.filter(waiting).length,
     threads: threads.map((thread) => {
       const preview = thread.messages[0] ?? null;
       return {
@@ -57,6 +69,15 @@ export async function loadMentorHelpInbox(user: SessionUser, query: HelpInboxQue
         preview: preview ? { body: preview.body, createdAt: preview.createdAt.toISOString() } : null,
         ageHours: preview ? (now - preview.createdAt.getTime()) / (1000 * 60 * 60) : 0,
         feedbackScope: thread.feedbackScope,
+        needsReply: waiting(thread),
+        messages: [...thread.messages].reverse().map((message) => ({
+          id: message.id,
+          body: message.body.slice(0, 4000),
+          fromLearner: message.authorId === thread.menteeId,
+          authorName: message.author.name ?? "Unknown",
+          createdAt: message.createdAt.toISOString(),
+        })),
+        messageCount: thread._count.messages,
       };
     }),
   };

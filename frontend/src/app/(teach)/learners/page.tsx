@@ -1,6 +1,7 @@
 import { Users } from "lucide-react";
 import type { AllMenteesView } from "@/shared/api/teach";
 import { requireTeachSurface } from "@/server/auth/guards";
+import { nowMs } from "@/server/time";
 import { serverApiFetch } from "@/lib/api-server";
 import { AutoSubmitSelect } from "@/components/teach/auto-submit-select";
 import { CohortSummary } from "@/components/teach/mentees/cohort-summary";
@@ -52,7 +53,7 @@ export default async function AllLearnersPage({ searchParams }: { searchParams: 
       {view.mentees.length ? (
         <>
           <MenteesNeedingAttention mentees={view.attentionMentees} />
-          <LearnerDirectory mentees={view.mentees} />
+          <LearnerDirectory mentees={view.mentees} now={nowMs()} />
         </>
       ) : (
         <div className="flex flex-col items-center rounded-2xl border border-dashed bg-card/50 px-6 py-16 text-center">

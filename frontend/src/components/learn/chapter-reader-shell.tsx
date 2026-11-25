@@ -36,7 +36,7 @@ import { CourseRatingPrompt } from "@/components/learn/course-rating-modal";
 import { ReaderRatingButton } from "@/components/learn/course-rating-link";
 import { AskChapterPanel } from "@/components/learn/ask-chapter-panel";
 import { AskChapterProvider } from "@/components/learn/ask-chapter-context";
-import { AskAiFloating, AskAiHeaderButton } from "@/components/learn/ask-ai-floating";
+import { AskAiFloating } from "@/components/learn/ask-ai-floating";
 import type { ChapterNarration } from "@/lib/narration";
 import { PredictRevealProvider } from "@buildment/learning-ui/components/learn/predict-reveal";
 import { ChapterLinkProvider } from "@buildment/learning-ui/components/learn/chapter-link-context";
@@ -372,7 +372,7 @@ export function ChapterReaderShell({
                   collapsed={leftCollapsed}
                   onClick={() => setLeftCollapsed(!leftCollapsed)}
                 />
-                <AskAiHeaderButton />
+                <ReportIssueDialog courseId={courseId} chapterId={chapterId} chapterTitle={chapterTitle} variant="button" />
                 {canRateCourse ? (
                   <ReaderRatingButton courseSlug={courseSlug} courseTitle={courseTitle} rating={myCourseRating} />
                 ) : null}

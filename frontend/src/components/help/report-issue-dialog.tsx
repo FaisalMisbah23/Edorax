@@ -20,10 +20,13 @@ export function ReportIssueDialog({
   courseId,
   chapterId,
   chapterTitle,
+  variant = "icon",
 }: {
   courseId: string;
   chapterId: string;
   chapterTitle: string;
+  /** "button" is the labelled Give feedback button in the lesson top bar; "icon" is the small flag by the title. */
+  variant?: "icon" | "button";
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const pendingQuoteRef = useRef("");
@@ -96,9 +99,14 @@ export function ReportIssueDialog({
         onClick={start}
         title="Report an issue with this lesson"
         aria-label="Report an issue with this lesson"
-        className="inline-flex size-8 items-center justify-center rounded-[8px] text-muted-foreground/70 transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
+        className={
+          variant === "button"
+            ? "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md border-2 border-primary bg-primary/5 px-2.5 text-[15px] font-semibold text-primary transition-colors outline-none hover:bg-primary/10 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow sm:px-4"
+            : "inline-flex size-8 items-center justify-center rounded-[8px] text-muted-foreground/70 transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
+        }
       >
-        <Flag className="size-4 shrink-0" aria-hidden />
+        <Flag className={variant === "button" ? "size-5 shrink-0" : "size-4 shrink-0"} aria-hidden />
+        {variant === "button" ? <span className="hidden sm:inline">Give feedback</span> : null}
       </button>
 
       <dialog

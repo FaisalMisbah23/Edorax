@@ -1,3 +1,4 @@
+import type { NudgeManyResult } from "../../shared/api/teach.js";
 import { renderEmailTemplate } from "../email/render.js";
 import { TEACH_ERROR_CODES } from "../../shared/api/teach.js";
 import { prisma } from "../../db/prisma.js";
@@ -49,4 +50,28 @@ export async function nudgeMentee(user: SessionUser, enrollmentId: string): Prom
 export async function repairProgress(user: SessionUser, enrollmentId: string): Promise<void> {
   const enrollment = await requireEnrollment(user, enrollmentId);
   await prisma.$transaction((tx) => repairEnrollmentProgress(tx, enrollment.id, enrollment.courseId));
+}
+
+const NUDGE_QUIET_MS = 24 * 60 * 60 * 1000;
+
+/** Nudge several learners in one go. Anyone nudged in the last day is skipped, so a second tap cannot spam. */
+export async function nudgeMany(user: SessionUser, enrollmentIds: string[]): Promise<NudgeManyResult> {
+  const ids = [...new Set(enrollmentIds)];
+  const recent = await prisma.enrollment.findMany({
+    where: { id: { in: ids }, lastNudgeSentAt: { gte: new Date(Date.now() - NUDGE_QUIET_MS) } },
+    select: { id: true },
+  });
+  const quiet = new Set(recent.map((row) => row.id));
+  let sent = 0;
+  let failed = 0;
+  for (const id of ids) {
+    if (quiet.has(id)) continue;
+    try {
+      await nudgeMentee(user, id);
+      sent += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { sent, skipped: quiet.size, failed };
 }

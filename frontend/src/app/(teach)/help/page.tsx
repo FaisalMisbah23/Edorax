@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HelpInboxActions } from "@/components/teach/help-inbox-actions";
+import { HelpInboxThreadCard } from "@/components/teach/help-inbox-thread-card";
 import { Inbox } from "lucide-react";
 import type { MentorHelpInboxView } from "@/shared/api/teach";
 import { requireTeachSurface } from "@/server/auth/guards";
@@ -7,21 +7,15 @@ import { serverApiFetch } from "@/lib/api-server";
 import { AutoSubmitSelect } from "@/components/teach/auto-submit-select";
 import { helpUiCopy as copy } from "@/shared/lib/help-ui-copy";
 
-const AGING_HOURS = 48;
 
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
 
 export default async function MentorHelpInboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ courseId?: string; status?: string; kind?: string }>;
+  searchParams: Promise<{ courseId?: string; status?: string; kind?: string; learnerId?: string }>;
 }) {
   await requireTeachSurface();
-  const { courseId: courseFilter, status: rawStatus, kind: rawKind } = await searchParams;
+  const { courseId: courseFilter, status: rawStatus, kind: rawKind, learnerId } = await searchParams;
   const statusFilter =
     rawStatus === "resolved" || rawStatus === "all" ? rawStatus : undefined;
   const kindFilter =
@@ -31,10 +25,13 @@ export default async function MentorHelpInboxPage({
   if (courseFilter) query.set("courseId", courseFilter);
   if (statusFilter) query.set("status", statusFilter);
   if (kindFilter) query.set("kind", kindFilter);
+  if (learnerId) query.set("learnerId", learnerId);
   const suffix = query.size ? `?${query}` : "";
   const {
     courses,
     openCount: openHelpCount,
+    needsReplyCount,
+    learner,
     threads,
   } = await serverApiFetch<MentorHelpInboxView>(
     `/api/v1/teach/help/threads${suffix}`,
@@ -50,11 +47,23 @@ export default async function MentorHelpInboxPage({
           <p className="mt-1 text-sm text-muted-foreground">
             {copy.mentorSubtitle}
           </p>
-          {openHelpCount > 0 && (statusFilter ?? "open") !== "resolved" && (
+          {(statusFilter ?? "open") !== "resolved" && (
             <p className="mt-2 text-sm font-medium text-foreground">
-              {copy.mentorOpenCount(openHelpCount)}
+              {needsReplyCount > 0
+                ? `${needsReplyCount} ${needsReplyCount === 1 ? "needs" : "need"} your reply. ${threads.length - needsReplyCount} waiting on the learner.`
+                : threads.length > 0
+                  ? "Nothing needs your reply. These are waiting on the learner: mark them resolved when you are done."
+                  : ""}
             </p>
           )}
+          {learner ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Showing only {learner.label}.{" "}
+              <Link href="/help" className="font-medium text-primary hover:underline">
+                Show everyone
+              </Link>
+            </p>
+          ) : null}
         </div>
 
         <form
@@ -112,59 +121,10 @@ export default async function MentorHelpInboxPage({
           </p>
         </div>
       ) : (
-        <ul className="mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-          {threads.map((thread) => {
-            const isAging =
-              thread.status === "OPEN" && thread.ageHours >= AGING_HOURS;
-
-            return (
-              <li key={thread.id} className="px-4 py-4 sm:px-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary" aria-hidden>
-                    {initials(thread.menteeLabel)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link href={`/help/${thread.id}`} className="truncate text-[15px] font-semibold text-foreground hover:underline">
-                        {thread.menteeLabel}
-                      </Link>
-                      {thread.kind === "LESSON_REPORT" && (
-                        <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
-                          Report
-                          {thread.category ? ` · ${thread.category.toLowerCase().replace("_", " ")}` : ""}
-                        </span>
-                      )}
-                      {isAging && (
-                        <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-                          {Math.floor(thread.ageHours)}h waiting
-                        </span>
-                      )}
-                      {thread.feedbackScope && (
-                        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                          {thread.feedbackScope === "PLATFORM" ? "Platform feedback" : "Course feedback"}
-                        </span>
-                      )}
-                      {thread.status === "RESOLVED" && (
-                        <span className="rounded-full bg-ok-soft px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ok">
-                          Resolved
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {thread.courseTitle}
-                      {thread.chapterTitle ? ` › ${thread.chapterTitle}` : ""}
-                    </p>
-                    {thread.preview && (
-                      <p className="mt-2 line-clamp-[12] whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
-                        {thread.preview.body}
-                      </p>
-                    )}
-                    <HelpInboxActions threadId={thread.id} open={thread.status === "OPEN"} />
-                  </div>
-                </div>
-              </li>
-            );
-          })}
+        <ul className="mt-6 space-y-3">
+          {threads.map((thread) => (
+            <HelpInboxThreadCard key={thread.id} thread={thread} />
+          ))}
         </ul>
       )}
     </div>

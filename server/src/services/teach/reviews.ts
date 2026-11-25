@@ -27,7 +27,7 @@ import { toMentorView } from "../capstone/service.js";
 // recompute that folds the awarded score into the rollups.
 
 /** Open answers across the caller's courses. Resubmissions jump the queue, then oldest first. */
-export async function loadReviewQueue(user: SessionUser, courseFilter?: string): Promise<ReviewQueueView> {
+export async function loadReviewQueue(user: SessionUser, courseFilter?: string, learnerId?: string): Promise<ReviewQueueView> {
   const courses = await prisma.course.findMany({
     where: mentoredCoursesWhere(user, "SUBMISSION_EVALUATOR"),
     orderBy: { title: "asc" },
@@ -40,7 +40,7 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string):
     courseIds.length === 0
       ? []
       : await prisma.response.findMany({
-          where: { status: "PENDING_REVIEW", block: { chapter: { courseId: scope } } },
+          where: { status: "PENDING_REVIEW", block: { chapter: { courseId: scope } }, ...(learnerId ? { userId: learnerId } : {}) },
           orderBy: { submittedAt: "asc" },
           include: {
             user: { select: { name: true, email: true } },
@@ -82,7 +82,14 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string):
   queueAutoDrafts(items.filter((item) => item.blockType === "OPEN_QUESTION" && !item.aiDraft).map((item) => item.id));
 
   const draftCostUsd = items.reduce((sum, item) => sum + (item.aiDraftCostUsd ?? 0), 0);
-  return { courses, items, autoDraft: aiReviewAutoDraftAvailable, draftCostUsd };
+  return { courses, learner: await learnerLabel(learnerId), items, autoDraft: aiReviewAutoDraftAvailable, draftCostUsd };
+}
+
+/** Name for the "showing one learner" line; null when there is no learner filter. */
+export async function learnerLabel(learnerId?: string): Promise<{ id: string; label: string } | null> {
+  if (!learnerId) return null;
+  const row = await prisma.user.findUnique({ where: { id: learnerId }, select: { id: true, name: true, email: true } });
+  return row ? { id: row.id, label: row.name ?? row.email } : null;
 }
 
 const QUEUE_TEXT_LIMIT = 6000;

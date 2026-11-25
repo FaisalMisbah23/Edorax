@@ -266,6 +266,8 @@ export type MenteeRosterItem = {
   studySeconds: number;
   lastActiveAt: string | null;
   lastActiveLabel: string;
+  /** When the mentor last sent this learner a nudge email for this course. */
+  lastNudgedAt: string | null;
   activityState: "recent" | "inactive" | "never";
   attention: Array<{ kind: MenteeAttentionKind; label: string }>;
   evaluationHref: string;
@@ -583,12 +585,17 @@ export type ReviewQueueItem = ReviewContext & {
 
 export type ReviewQueueView = {
   courses: Array<{ id: string; title: string }>;
+  /** Set when the list is narrowed to one learner. */
+  learner: { id: string; label: string } | null;
   items: ReviewQueueItem[];
   /** True when every open answer gets an automatic AI draft on the platform key. */
   autoDraft: boolean;
   /** Total cost in US dollars of the drafts in this list. */
   draftCostUsd: number;
 };
+
+/** POST /api/v1/teach/enrollments/nudge */
+export type NudgeManyResult = { sent: number; skipped: number; failed: number };
 
 /** POST /api/v1/teach/review/accept-ai-drafts */
 export type AcceptAiDraftsResult = { sent: number; failed: number };
@@ -647,6 +654,11 @@ export type MentorHelpInboxThread = {
   ageHours: number;
   /** Set when a mentor flagged the thread as feedback for the team. */
   feedbackScope: "COURSE" | "PLATFORM" | null;
+  /** True when the learner wrote last, so the thread is waiting on the mentor. */
+  needsReply: boolean;
+  /** The latest messages, oldest first, so the mentor can read and answer from the list. */
+  messages: Array<{ id: string; body: string; fromLearner: boolean; authorName: string; createdAt: string }>;
+  messageCount: number;
 };
 
 /** Claude's suggested reply to a learner question, for the mentor to edit and send. */
@@ -687,7 +699,11 @@ export type FeedbackView = {
 
 export type MentorHelpInboxView = {
   courses: Array<{ id: string; title: string }>;
+  /** Set when the inbox is narrowed to one learner. */
+  learner: { id: string; label: string } | null;
   openCount: number;
+  /** Open threads where the learner wrote last. */
+  needsReplyCount: number;
   threads: MentorHelpInboxThread[];
 };
 
