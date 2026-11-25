@@ -42,6 +42,8 @@ function ProductWindow({ title, file, label }: { title: string; file: string; la
  */
 function LoopWindow({ title, file, poster, label }: { title: string; file: string; poster: string; label: string }) {
   const video = useRef<HTMLVideoElement>(null);
+  // The on-page full screen, used where the browser refuses the native one.
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const el = video.current;
@@ -61,16 +63,35 @@ function LoopWindow({ title, file, poster, label }: { title: string; file: strin
     return () => watcher.disconnect();
   }, []);
 
-  /** Full screen the loop itself. Esc, or the browser's own exit control, returns to the page. */
+  // While the on-page full screen is open: Esc closes it and the page behind does not scroll.
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setExpanded(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const before = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = before;
+    };
+  }, [expanded]);
+
+  /**
+   * Full screen the loop. The browser's own full screen comes first (Esc leaves it). If the
+   * browser refuses, or has none for this element, the window fills the page instead.
+   */
   function openFullScreen() {
     const el = video.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
     if (!el) return;
-    if (el.requestFullscreen) void el.requestFullscreen().catch(() => undefined);
-    else el.webkitEnterFullscreen?.();
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => setExpanded(true));
+    else if (el.webkitEnterFullscreen) el.webkitEnterFullscreen();
+    else setExpanded(true);
   }
 
   return (
-    <div className={s.window}>
+    <div className={expanded ? `${s.window} ${s.expanded}` : s.window} role={expanded ? "dialog" : undefined} aria-modal={expanded ? true : undefined} aria-label={expanded ? title : undefined}>
       <div className={s.windowBar}>
         <span className={s.dots} aria-hidden="true">
           <i />
@@ -78,6 +99,11 @@ function LoopWindow({ title, file, poster, label }: { title: string; file: strin
           <i />
         </span>
         <span className={s.windowTitle}>{title}</span>
+        {expanded ? (
+          <button type="button" className={s.close} onClick={() => setExpanded(false)}>
+            Close
+          </button>
+        ) : null}
       </div>
       <div className={s.stage}>
         <video ref={video} className={s.video} muted loop playsInline preload="none" poster={`/video/${poster}.webp`} width={1280} height={720} aria-label={label}>
