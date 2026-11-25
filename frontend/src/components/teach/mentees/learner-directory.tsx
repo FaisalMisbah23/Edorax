@@ -290,7 +290,9 @@ export function LearnerDirectory({ mentees, now }: { mentees: MenteeRosterItem[]
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate text-sm font-semibold text-foreground">{person.name}</span>
+                      <Link href={`/learners/${encodeURIComponent(person.userId)}`} className="truncate text-sm font-semibold text-foreground hover:underline">
+                        {person.name}
+                      </Link>
                       <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-semibold", state.className)}>{state.label}</span>
                     </div>
                     <p className="truncate text-xs text-muted-foreground">{person.email ?? "No email"}</p>
@@ -330,8 +332,8 @@ export function LearnerDirectory({ mentees, now }: { mentees: MenteeRosterItem[]
                       <Mail className="size-4" aria-hidden /> Email
                     </a>
                   ) : null}
-                  <Link href={person.current.evaluationHref} className="inline-flex h-8 items-center gap-1 rounded-lg border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/50">
-                    Full progress <ArrowRight className="size-3.5" aria-hidden />
+                  <Link href={`/learners/${encodeURIComponent(person.userId)}`} className="inline-flex h-8 items-center gap-1 rounded-lg border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/50">
+                    All their courses <ArrowRight className="size-3.5" aria-hidden />
                   </Link>
                 </div>
               </div>
