@@ -3,6 +3,7 @@ import { CERTIFICATE_TEMPLATE_IDS } from "../shared/lib/certificates.js";
 import { COURSE_CATEGORIES } from "../shared/domain/enums.js";
 import { isSafeAssetUrl } from "../shared/lib/asset-url.js";
 import { VARIANT_ASSIGNMENTS } from "../shared/lib/course-tracks.js";
+import { AI_GRADING_MODELS } from "../shared/lib/ai-grading.js";
 import { id, params } from "./common.js";
 
 export const courseIdParams = params("courseId");
@@ -64,8 +65,11 @@ export const courseSettingsBody = z.object({
   subcategory: z.string().trim().max(80).nullable().optional(),
   tags: z.array(z.string().trim().min(1).max(32)).max(12).optional(),
   sequential: z.boolean(),
-  /** Text open questions grade with the learner's OpenRouter key instead of the mentor queue. */
-  autoGradeOpenQuestions: z.boolean(),
+  /**
+   * Older screens still send this. It only takes effect when it differs from what applies
+   * to the course today; the AI grading page is where it is set now.
+   */
+  autoGradeOpenQuestions: z.boolean().optional(),
   // How learners get a variant in a course family. Optional; omitted leaves it as it is.
   variantAssignment: z.enum(VARIANT_ASSIGNMENTS).optional(),
   pricingType: z.enum(["FREE", "PAID"]),
@@ -125,6 +129,27 @@ export const threadFeedbackBody = z.object({
   scope: z.enum(["COURSE", "PLATFORM"]).nullable(),
   note: z.string().trim().max(600).nullable().optional(),
 });
+
+const aiGradingModel = z.enum(AI_GRADING_MODELS);
+export const aiGradingBody = z
+  .object({
+    defaults: z.object({ reviewDraft: z.boolean(), instantGrading: z.boolean(), model: aiGradingModel }).partial().strict().optional(),
+    courses: z
+      .array(
+        z
+          .object({
+            courseId: id,
+            reviewDraft: z.boolean().nullable().optional(),
+            instantGrading: z.boolean().nullable().optional(),
+            model: aiGradingModel.nullable().optional(),
+          })
+          .strict()
+      )
+      .max(500)
+      .optional(),
+  })
+  .strict();
+export type AiGradingBody = z.infer<typeof aiGradingBody>;
 
 export const helpInboxQuery = z.object({
   courseId: z.string().optional(),

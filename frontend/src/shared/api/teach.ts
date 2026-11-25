@@ -1,5 +1,6 @@
 // GENERATED from server/src/shared — do not edit here. Run `pnpm sync-shared` in server/.
 import type { CertificateTemplateId } from "../lib/certificates";
+import type { AiGradingModel, AiGradingOverrides, AiGradingValues } from "../lib/ai-grading";
 import type { CapstoneMentorView } from "../blocks/capstone-check/report";
 import type {
   ChapterReaderMode,
@@ -150,7 +151,10 @@ export type CourseSettingsView = Pick<CourseBuilderCourse,
   "estimatedHours" | "category" | "subcategory" | "tags" | "sequential" | "coverUrl" | "status" | "pricingType" |
   "priceCents" | "currency"
 > & {
+  /** What applies to this course today (its own value or the owner's default). */
   autoGradeOpenQuestions: boolean;
+  /** AI grading as set on the AI grading page. Missing from an older API. */
+  aiGrading?: { own: AiGradingOverrides; effective: AiGradingValues };
   enrollmentCount: number;
   chapterCount: number;
   integritySnapshots: boolean;
@@ -581,6 +585,8 @@ export type ReviewQueueItem = ReviewContext & {
   /** Which model wrote the draft and what it cost in US dollars, when known. */
   aiDraftModel: string | null;
   aiDraftCostUsd: number | null;
+  /** False when this answer's course has automatic drafts switched off. Missing from an older API. */
+  autoDraft?: boolean;
 };
 
 export type ReviewQueueView = {
@@ -669,6 +675,43 @@ export type HelpReplyDraft = {
   /** Whether the message looks like a course or platform problem worth flagging. */
   feedbackScope: "NONE" | "COURSE" | "PLATFORM";
   feedbackNote: string | null;
+};
+
+// ---------------------------------------------------------------------------
+// AI grading settings (one default per instructor, optional overrides per course)
+
+export type AiGradingCourseRow = {
+  id: string;
+  slug: string;
+  title: string;
+  status: CourseStatus;
+  /** False when another instructor owns the course; it then follows that owner's default. */
+  ownedByYou: boolean;
+  /** The course's own choices; null means it uses the default. */
+  own: AiGradingOverrides;
+  /** The default this course falls back to. */
+  defaults: AiGradingValues;
+  /** What applies today. */
+  effective: AiGradingValues;
+};
+
+export type AiGradingModelInfo = { id: AiGradingModel; label: string; inputUsdPerMillion: number; outputUsdPerMillion: number };
+
+/** GET and PUT /api/v1/teach/ai-grading */
+export type AiGradingView = {
+  /** The caller's default for every course they own. */
+  defaults: AiGradingValues;
+  /** False until the caller saved a default; until then the platform default applies. */
+  defaultsSaved: boolean;
+  platform: { reviewDraftAvailable: boolean; dailyLimit: number; model: string };
+  models: AiGradingModelInfo[];
+  courses: AiGradingCourseRow[];
+};
+
+/** A null course value resets that setting to the default; an omitted one is left alone. */
+export type AiGradingUpdateInput = {
+  defaults?: { reviewDraft?: boolean; instantGrading?: boolean; model?: AiGradingModel };
+  courses?: Array<{ courseId: string; reviewDraft?: boolean | null; instantGrading?: boolean | null; model?: AiGradingModel | null }>;
 };
 
 export type ThreadFeedbackView = { scope: "COURSE" | "PLATFORM" | null; note: string | null };

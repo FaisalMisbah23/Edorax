@@ -164,6 +164,12 @@ const PRICES: Record<string, { input: number; output: number }> = {
   "claude-opus-5-5": { input: 4, output: 20 },
 };
 
+/** List price in US dollars per million tokens, for showing a cost hint next to a model choice. */
+export function modelPriceUsdPerMillion(model: string): { inputUsdPerMillion: number; outputUsdPerMillion: number } {
+  const price = PRICES[model] ?? PRICES["claude-opus-5-5"]!;
+  return { inputUsdPerMillion: price.input, outputUsdPerMillion: price.output };
+}
+
 /** Cost in millionths of a dollar. Unknown models are priced as Opus so caps stay conservative. */
 export function costMicroUsd(model: string, inputTokens: number, outputTokens: number): number {
   const price = PRICES[model] ?? PRICES["claude-opus-5-5"]!;

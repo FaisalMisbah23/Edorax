@@ -35,6 +35,7 @@ import {
   helpInboxQuery,
   nudgeManyBody,
   acceptAiDraftsBody,
+  aiGradingBody,
   threadIdParams,
   threadFeedbackBody,
   inviteParams,
@@ -157,5 +158,7 @@ router.post("/help/threads/:threadId/ai-draft", validateParams(threadIdParams), 
 router.get("/help/threads/:threadId/feedback", validateParams(threadIdParams), teach.getThreadFeedback);
 router.put("/help/threads/:threadId/feedback", validate({ params: threadIdParams, body: threadFeedbackBody }), teach.setThreadFeedback);
 router.get("/feedback", teach.getFeedback);
+router.get("/ai-grading", teach.getAiGrading);
+router.put("/ai-grading", validate({ body: aiGradingBody }), teach.updateAiGrading);
 
 export default router;

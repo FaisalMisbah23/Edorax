@@ -13,6 +13,7 @@ import * as reports from "../services/teach/reports.js";
 import * as reviews from "../services/teach/reviews.js";
 import * as helpInbox from "../services/teach/help-inbox.js";
 import * as feedback from "../services/teach/feedback.js";
+import * as aiGrading from "../services/teach/ai-grading.js";
 import * as helpReplyDraft from "../services/teach/ai/help-reply-draft.js";
 import * as courseTeam from "../services/teach/course-team.js";
 import type {
@@ -21,6 +22,7 @@ import type {
   CreateChapterBody,
   CreateCourseBody,
   HelpInboxQuery,
+  AiGradingBody,
   MoveDirection,
   SubmitReviewBody,
   courseInstructorInviteBody,
@@ -313,6 +315,16 @@ export async function getThreadFeedback(req: Request, res: Response) {
 }
 export async function setThreadFeedback(req: Request, res: Response) {
   ok(res, await feedback.setThreadFeedback(req.user!, param(req, "threadId"), req.body as { scope: "COURSE" | "PLATFORM" | null; note?: string | null }));
+}
+
+// GET /api/v1/teach/ai-grading
+export async function getAiGrading(req: Request, res: Response) {
+  ok(res, await aiGrading.loadAiGrading(req.user!));
+}
+
+// PUT /api/v1/teach/ai-grading
+export async function updateAiGrading(req: Request, res: Response) {
+  ok(res, await aiGrading.updateAiGrading(req.user!, req.body as AiGradingBody));
 }
 
 // GET /api/v1/teach/feedback
