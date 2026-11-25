@@ -203,13 +203,13 @@ function Interview() {
         ))}
       </ul>
       <div className={s.report}>
-        <p className={s.capLabel}>Report after the interview</p>
+        <p className={s.capLabel}>Feedback after the interview</p>
         <ul>
           <li>Explains trade-offs clearly</li>
           <li>Next: talk through what happens under load</li>
         </ul>
       </div>
-      <p className={s.note}>A text interview that asks &quot;why&quot; until the answer is solid, then grades you against a rubric. It runs on your own AI key.</p>
+      <p className={s.note}>A text interview that asks &quot;why&quot; until the answer is solid, then gives you written feedback: what was strong, what to fix and your next three steps. There is no score. It runs on your own AI key.</p>
     </div>
   );
 }
