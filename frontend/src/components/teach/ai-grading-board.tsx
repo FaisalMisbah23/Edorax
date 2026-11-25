@@ -31,11 +31,14 @@ function applyLocally(view: AiGradingView, input: AiGradingUpdateInput): AiGradi
     defaultsSaved: view.defaultsSaved || Boolean(input.defaults),
     courses: view.courses.map((course) => {
       const own = { ...course.own, ...changes.get(course.id) };
-      const rowDefaults = course.ownedByYou ? defaults : course.defaults;
+      const rowDefaults = followsYou(course) ? defaults : course.defaults;
       return { ...course, own, defaults: rowDefaults, effective: resolveAiGrading(own, rowDefaults, rowDefaults) };
     }),
   };
 }
+
+/** An older API sends no followsYourDefault; then only owned courses follow the caller. */
+const followsYou = (course: AiGradingCourseRow) => course.followsYourDefault ?? course.ownedByYou;
 
 const hasOwnValue = (course: AiGradingCourseRow) => course.own.reviewDraft !== null || course.own.instantGrading !== null || course.own.model !== null;
 
@@ -48,7 +51,7 @@ export function AiGradingBoard({ initial }: { initial: AiGradingView }) {
   const haiku = view.models.find((model) => model.id === "claude-haiku-5-5");
   const sonnet = view.models.find((model) => model.id === "claude-sonnet-5-5");
   const ownCount = view.courses.filter(hasOwnValue).length;
-  const mineCount = view.courses.filter((course) => course.ownedByYou).length;
+  const mineCount = view.courses.filter(followsYou).length;
   const allSelected = view.courses.length > 0 && selected.size === view.courses.length;
 
   function save(input: AiGradingUpdateInput, savedText: string) {
@@ -114,7 +117,7 @@ export function AiGradingBoard({ initial }: { initial: AiGradingView }) {
           <p className="mt-0.5 text-sm text-muted-foreground">
             {mineCount === 0
               ? "Applies to every course you own."
-              : `Applies to your ${mineCount} ${mineCount === 1 ? "course" : "courses"}, except where a course has its own setting below.`}
+              : `Applies to ${mineCount} of your ${view.courses.length} ${view.courses.length === 1 ? "course" : "courses"}, the ones you own or co-create, except where a course has its own setting below.${mineCount < view.courses.length ? " A course whose owner set a default follows the owner's." : ""}`}
           </p>
         </div>
         <div className="divide-y">
@@ -348,7 +351,7 @@ function CourseRow({
             {course.title}
           </Link>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {own ? <span className="font-semibold text-primary">Own setting</span> : course.ownedByYou ? "Uses the default" : "Uses the owner's default"}
+            {own ? <span className="font-semibold text-primary">Own setting</span> : followsYou(course) ? "Uses the default" : "Uses another instructor's default"}
             {course.status !== "PUBLISHED" ? ` · ${course.status === "ARCHIVED" ? "Archived" : "Draft"}` : ""}
             {!course.ownedByYou && own ? " · owned by another instructor" : ""}
           </p>

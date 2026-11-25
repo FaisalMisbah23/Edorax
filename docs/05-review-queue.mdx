@@ -54,7 +54,8 @@ for the review drafts (Haiku or Sonnet only, see `shared/lib/ai-grading.ts`).
 
 Each setting resolves in this order: the course's own value (`Course.aiReviewDraft`,
 `aiInstantGrading`, `aiGradingModel`; null means "use the default"), then the course owner's default
-(`AiGradingDefault`), then the platform default (drafts on, instant grading off, `AI_REVIEW_MODEL`).
+(`AiGradingDefault`) when the owner saved one, otherwise the default of the
+co-creator who joined the course first and has saved one, then the platform default (drafts on, instant grading off, `AI_REVIEW_MODEL`).
 The platform switch `AI_REVIEW_AUTO_DRAFT` and the daily cap `AI_REVIEW_DAILY_LIMIT` still apply on
 top. `PUT` changes the caller's default and any number of courses in one transaction; one course the
 caller does not own or co-create refuses the whole request. Capstone checks keep `CAPSTONE_MODEL`.
