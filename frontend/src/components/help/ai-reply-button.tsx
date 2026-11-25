@@ -11,8 +11,8 @@ export function aiNoteFor(draft: HelpReplyDraft): string {
   const flag =
     draft.feedbackScope === "NONE"
       ? ""
-      : ` This looks like a ${draft.feedbackScope === "PLATFORM" ? "platform" : "course"} problem${draft.feedbackNote ? `: ${draft.feedbackNote}` : "."} You can flag it above.`;
-  return `Drafted by ${draft.model}${cost}. Check it, edit it, then send.${flag}`;
+      : ` Looks like a ${draft.feedbackScope === "PLATFORM" ? "platform" : "course"} problem: flag it above.`;
+  return `Drafted by ${draft.model}${cost}. Edit it, then send.${flag}`;
 }
 
 /**

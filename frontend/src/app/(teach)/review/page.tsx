@@ -62,9 +62,9 @@ export default async function ReviewQueuePage({
       </div>
 
       {sendable.length > 0 ? (
-        <div className="mt-4 flex flex-col gap-2 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4 flex flex-col gap-2 rounded-xl border bg-card p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
-            {sendable.length} drafted reviews are ready to send.
+            {sendable.length} drafted {sendable.length === 1 ? "review is" : "reviews are"} ready to send.
             {unsure > 0 ? ` ${unsure} more are low confidence and stay for you to read.` : ""}
             {draftCostUsd > 0 ? ` Drafts on this page cost ${formatUsd(draftCostUsd)} in total.` : ""}
           </p>
@@ -144,9 +144,23 @@ export default async function ReviewQueuePage({
                       </Link>
                     </div>
                   </div>
-                ) : autoDraft && response.blockType === "OPEN_QUESTION" ? (
-                  <p className="mt-3 text-xs text-muted-foreground">Claude is drafting a review. Refresh in a minute.</p>
-                ) : null}
+                ) : (
+                  <div className="mt-3 flex flex-col gap-2 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      {response.blockType === "CAPSTONE_CHECK"
+                        ? "Capstone project. The AI check already graded it: open it to read the report, then approve or send it back."
+                        : autoDraft && response.blockType === "OPEN_QUESTION"
+                          ? "Claude is still drafting this one. Refresh in a minute, or open it to review by hand."
+                          : "No AI draft for this kind of answer. Open it to review by hand."}
+                    </p>
+                    <Link
+                      href={`/review/${response.id}`}
+                      className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                    >
+                      {response.blockType === "CAPSTONE_CHECK" ? "Open the capstone report" : "Open and review"}
+                    </Link>
+                  </div>
+                )}
               </li>
             );
           })}
