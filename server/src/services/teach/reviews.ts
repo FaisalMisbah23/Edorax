@@ -15,6 +15,7 @@ import type { SubmitReviewBody } from "../../validations/teach.js";
 import { mentoredCoursesWhere, requireCourseById } from "./access.js";
 import { generateReviewDraft } from "./ai/review-draft.js";
 import { ensureAutoDraft, queueAutoDrafts, readStoredDraft } from "./ai/auto-draft.js";
+import { AI_GRADING_COURSE_SELECT, aiGradingForResponse, effectiveAiGrading } from "./ai-grading.js";
 import { aiReviewAutoDraftAvailable } from "../../config/env.js";
 import { loadAiKeyForUse } from "../ai/credentials.js";
 import { AiError, type AiProviderName } from "../ai/openrouter.js";
@@ -31,9 +32,11 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string, 
   const courses = await prisma.course.findMany({
     where: mentoredCoursesWhere(user, "SUBMISSION_EVALUATOR"),
     orderBy: { title: "asc" },
-    select: { id: true, title: true },
+    select: { id: true, title: true, ...AI_GRADING_COURSE_SELECT },
   });
   const courseIds = courses.map((course) => course.id);
+  // Automatic drafts per course: the platform switch and key, then the AI grading settings.
+  const draftsOn = new Map(courses.map((course) => [course.id, aiReviewAutoDraftAvailable && effectiveAiGrading(course).reviewDraft]));
   const scope = courseFilter && courseIds.includes(courseFilter) ? courseFilter : { in: courseIds };
 
   const pending =
@@ -49,7 +52,7 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string, 
                 type: true,
                 points: true,
                 config: true,
-                chapter: { select: { id: true, title: true, module: { select: { title: true } }, course: { select: { slug: true, title: true } } } },
+                chapter: { select: { id: true, title: true, module: { select: { title: true } }, course: { select: { id: true, slug: true, title: true } } } },
               },
             },
           },
@@ -76,13 +79,20 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string, 
     aiDraft: readStoredDraft(response.aiDraft, response.aiDraftModel)?.draft ?? null,
     aiDraftModel: response.aiDraft ? response.aiDraftModel : null,
     aiDraftCostUsd: response.aiDraft && response.aiDraftCostMicroUsd != null ? response.aiDraftCostMicroUsd / 1_000_000 : null,
+    autoDraft: draftsOn.get(response.block.chapter.course.id) ?? false,
     ...reviewContext(response.block.chapter, response.enrollmentId, progress),
   }));
   // Open answers without a draft yet get one in the background, oldest first.
-  queueAutoDrafts(items.filter((item) => item.blockType === "OPEN_QUESTION" && !item.aiDraft).map((item) => item.id));
+  queueAutoDrafts(items.filter((item) => item.blockType === "OPEN_QUESTION" && !item.aiDraft && item.autoDraft).map((item) => item.id));
 
   const draftCostUsd = items.reduce((sum, item) => sum + (item.aiDraftCostUsd ?? 0), 0);
-  return { courses, learner: await learnerLabel(learnerId), items, autoDraft: aiReviewAutoDraftAvailable, draftCostUsd };
+  return {
+    courses: courses.map(({ id, title }) => ({ id, title })),
+    learner: await learnerLabel(learnerId),
+    items,
+    autoDraft: aiReviewAutoDraftAvailable && [...draftsOn.values()].some(Boolean),
+    draftCostUsd,
+  };
 }
 
 /** Name for the "showing one learner" line; null when there is no learner filter. */
@@ -209,7 +219,7 @@ export async function loadReviewDetail(user: SessionUser, responseId: string): P
     integrity,
     capstone,
     aiDraft,
-    platformDraft: aiReviewAutoDraftAvailable,
+    platformDraft: aiReviewAutoDraftAvailable && ((await aiGradingForResponse(response.id))?.reviewDraft ?? false),
     ...reviewContext(response.block.chapter, response.enrollmentId, progress),
   };
 }
@@ -281,8 +291,9 @@ export async function generateAiReviewDraft(user: SessionUser, responseId: strin
     throw new UnprocessableError("This submission could not be prepared for AI review.", TEACH_ERROR_CODES.AI_DRAFT_UNSUPPORTED);
   }
 
-  // With automatic drafts on, "Draft again" runs on the platform key: the mentor needs no key.
-  if (aiReviewAutoDraftAvailable) {
+  // With automatic drafts on for this course, "Draft again" runs on the platform key: the
+  // mentor needs no key. With them off, the mentor's own key pays, as it did before.
+  if (aiReviewAutoDraftAvailable && (await aiGradingForResponse(response.id))?.reviewDraft) {
     const fresh = await ensureAutoDraft(response.id, { force: true });
     if (fresh) return fresh;
     throw new UnprocessableError("AI drafting is temporarily unavailable. Try again in a moment.", TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);

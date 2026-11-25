@@ -19,6 +19,7 @@ import type { SessionUser } from "../../types/auth.js";
 import { applyTokens, contentTokenValues } from "../../shared/lib/content-tokens.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
 import { loadBlockForSubmission } from "./access.js";
+import { effectiveAiGrading } from "../teach/ai-grading.js";
 import { adjustEnrollmentPendingReviews, lockEnrollmentVariant, recomputeChapterProgress, recordBlockStats } from "../progress/compute.js";
 import { notifyMentorPendingReview } from "../notifications/events.js";
 import { dispatchNotification } from "../notifications/service.js";
@@ -155,7 +156,7 @@ export async function submitBlockResponse(input: {
   let graded: Graded;
   let storedPayload: object = payload;
 
-  if (block.type === "OPEN_QUESTION" && shouldLlmGradeOpenQuestion(block.config, block.chapter.course.autoGradeOpenQuestions)) {
+  if (block.type === "OPEN_QUESTION" && shouldLlmGradeOpenQuestion(block.config, effectiveAiGrading(block.chapter.course).instantGrading)) {
     const config = OpenQuestionConfigSchema.parse(block.config);
     const latest = await prisma.response.findFirst({
       where: { blockId, userId: learner.id, status: { not: "DRAFT" } },
