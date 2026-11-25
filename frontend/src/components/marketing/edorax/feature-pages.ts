@@ -5,7 +5,9 @@
 // Rules for the copy: every claim is something the product does today; no invented numbers,
 // logos or quotes (leave `proof` empty until real ones exist); no trainer names.
 
-export type FeatureLink = { label: string; href: string };
+import { LAB_SLUGS } from "@/shared/lab/slugs";
+
+export type FeatureLink ={ label: string; href: string };
 
 export type FeaturePageContent = {
   slug: string;
@@ -174,6 +176,66 @@ export const FEATURE_PAGES: FeaturePageContent[] = [
     closing: {
       title: "Take one practice interview today.",
       line: "Pick a course, add your key and answer the first question.",
+    },
+  },
+  {
+    slug: "hands-on-labs",
+    name: "Hands-on labs",
+    teaser: "Build a system on a board, break it and watch every check pass or fail.",
+    seo: {
+      title: "Hands-on labs: visual, guided and shell",
+      description: "Learn by doing on Edorax: visual system design labs in your browser, guided projects checked step by step, and 46 shell labs on real Linux machines.",
+    },
+    eyebrow: "Hands-on labs",
+    headline: "Build it, break it,",
+    headlineMark: "see what happens.",
+    lead: [
+      "Reading tells you how a system should behave. A lab lets you find out: put the parts on a board, pick what fails, and press Run.",
+      "Every test case passes or fails in front of you, with the number it measured and the reason. Fix one thing and run again.",
+    ],
+    points: [
+      `${LAB_SLUGS.length} visual labs that run in your browser, with no code and no account to try`,
+      "Guided labs: a real project in small steps, with tests on every step",
+      "46 shell labs on real Linux machines, in the free desktop app",
+    ],
+    cta: {
+      label: "Open the labs",
+      href: "/labs",
+      note: "Visual labs open in your browser with no account. Make one when you want to keep your progress.",
+    },
+    demo: {
+      video: "demo-visual-labs",
+      address: "edorax.com/labs/visual/hld-visual-url-shortener",
+      caption: "Filmed on edorax.com: a visual lab going from 5 of 11 checks passing to 11 of 11.",
+      label: "Recording of a visual system design lab on Edorax: parts are added to a board, the tests run, and the checks go from 5 of 11 passing to 11 of 11",
+    },
+    proof: {},
+    steps: [
+      { title: "Build", body: "Add parts from the list, link them and set their size. Switch between plain names and real AWS names at any time." },
+      { title: "Break", body: "Open a part and press Break it. That only arms the failure. Nothing changes until you run." },
+      { title: "Run", body: "The design plays through every scenario: normal traffic, the peak, and each failure. Each test case shows what it measured and why." },
+    ],
+    parts: {
+      title: "Three kinds of lab",
+      items: [
+        { title: "Visual labs", body: "Design a system on a board and run it. System design, cloud and DevOps, and networking labs are open today.", links: [{ label: "See the visual labs", href: "/labs" }] },
+        { title: "Guided labs", body: "One real project, split into small labs. You write the code on your own computer or in a GitHub Codespace, tests check each lab, and a quiz follows it.", links: [{ label: "See the guided labs", href: "/labs/guided" }] },
+        { title: "Shell labs", body: "A fresh Linux machine in Docker on your own computer. You type real commands, and the Check button looks at the machine itself.", links: [{ label: "See the shell labs", href: "/labs/shell" }] },
+        { title: "Checks that explain", body: "A failed check says what it measured and what is still missing, so you know what to change before you run again." },
+        { title: "Help when you are stuck", body: "Shell labs have hints and the visual labs can show a solution. You choose how much help you take." },
+        { title: "Labs inside the courses", body: "Chapters embed the same labs next to the lesson that explains them, so you read, then try it." },
+      ],
+    },
+    questions: [
+      ["Do I need to install anything?", "Not for the visual labs: they run in your browser. Shell labs use the free Edorax desktop app, because they need a real Linux machine, and the app uses Docker to make one."],
+      ["Do I need an account?", "You can open and run a visual lab without one. Sign in to keep your progress, and to use the shell labs in the desktop app."],
+      ["What do the labs cost?", "The visual labs on the labs page and the shell labs are free. The guided labs are part of courses you enroll in."],
+      ["Can I break things?", "Yes, that is the point. A visual lab resets when you want, and every shell lab starts from a clean machine."],
+      ["Which computers does the desktop app run on?", "Windows, macOS on Apple silicon, and Linux. It is an early release."],
+    ],
+    closing: {
+      title: "Start with one lab.",
+      line: "Open a board, break one part and see which checks fail.",
     },
   },
 ];
