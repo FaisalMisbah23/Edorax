@@ -5,7 +5,7 @@ import request from "supertest";
 // The automatic drafts need the platform key; give the suite a fake one. No call leaves
 // the process: every draft below goes through an injected generator.
 vi.mock("../../src/config/env.js", async (importOriginal) => {
-  const actual = await importOriginal<EnvModule>();
+  const actual = await importOriginal<typeof EnvModule>();
   return { ...actual, env: { ...actual.env, ANTHROPIC_API_KEY: "test-key", AI_REVIEW_MODEL: "claude-haiku-5-5" }, aiReviewAutoDraftAvailable: true };
 });
 
@@ -213,7 +213,7 @@ describe("PUT /api/v1/teach/ai-grading", () => {
 describe("automatic review drafts follow the settings", () => {
   const draft = { summary: "Fine.", strengths: ["Clear."], improvements: ["Compare."], feedback: "Compare one alternative.", suggestedVerdict: "NEEDS_REVISION" as const, suggestedScore: 3, confidence: "MEDIUM" as const };
   const generator = () =>
-    vi.fn<typeof generateReviewDraft>(async (_context, options) => ({ draft, model: options.model ?? "none", usage: { inputTokens: 1000, outputTokens: 200 } }) as Awaited<ReturnType<typeof generateReviewDraft>>);
+    vi.fn<typeof generateReviewDraft>(async (_context, options) => ({ draft, model: options?.model ?? "none", usage: { inputTokens: 1000, outputTokens: 200 } }) as Awaited<ReturnType<typeof generateReviewDraft>>);
 
   it("uses the platform model, then the owner's default, then the course's own model", async () => {
     await resetAll();
@@ -226,7 +226,7 @@ describe("automatic review drafts follow the settings", () => {
     await request(app).put(URL).set(mentor()).send({ courses: [{ courseId: fx.course.id, model: HAIKU }] });
     expect((await ensureAutoDraft(responseId, { generate, force: true }))?.model).toBe(HAIKU);
     expect(generate).toHaveBeenCalledTimes(3);
-    expect(generate.mock.calls.map(([, options]) => options.model)).toEqual([HAIKU, SONNET, HAIKU]);
+    expect(generate.mock.calls.map(([, options]) => options?.model)).toEqual([HAIKU, SONNET, HAIKU]);
     // Sonnet is priced from the same table as the capstone checks: 1000 in, 200 out.
     expect((await prisma.response.findUniqueOrThrow({ where: { id: responseId } })).aiDraftCostMicroUsd).toBe(200);
   });
