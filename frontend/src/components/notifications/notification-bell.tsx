@@ -12,6 +12,7 @@ import {
   Check,
   GraduationCap,
   Inbox,
+  Megaphone,
   MessageSquareText,
   Settings,
   ShieldCheck,
@@ -53,6 +54,11 @@ const CATEGORY_ICON: Record<NotificationCategory, LucideIcon> = {
   admin: Inbox,
 };
 
+/** A few types get their own icon instead of their category's. */
+const TYPE_ICON: Partial<Record<NotificationType, LucideIcon>> = {
+  "course.announcement": Megaphone,
+};
+
 /** Label for the link under each notification (where clicking it goes). */
 const ACTION_LABEL: Partial<Record<NotificationType, string>> = {
   "help.question": "View question",
@@ -67,6 +73,7 @@ const ACTION_LABEL: Partial<Record<NotificationType, string>> = {
   "course.learner_completed": "View learners",
   "study.reminder": "Continue learning",
   "course.suggestion": "View course",
+  "course.announcement": "Open",
   "instructor.request": "Review request",
   "organization.course_request": "Review request",
 };
@@ -242,7 +249,7 @@ export function NotificationBell({
 }
 
 function NotificationCard({ item, onSelect }: { item: NotificationItem; onSelect: () => void }) {
-  const Icon = CATEGORY_ICON[item.category] ?? Bell;
+  const Icon = TYPE_ICON[item.type] ?? CATEGORY_ICON[item.category] ?? Bell;
   const unread = !item.readAt;
   const action = item.url ? (ACTION_LABEL[item.type] ?? "Open") : null;
 

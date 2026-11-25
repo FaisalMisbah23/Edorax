@@ -10,6 +10,8 @@ import { requireVerified } from "../../middlewares/require-verified.js";
 import { requireZipImport } from "../../middlewares/require-zip-import.js";
 import { validate, validateBody, validateParams } from "../../middlewares/validate.js";
 import {
+  announcementDraftBody,
+  announcementSendBody,
   assignByEmailsBody,
   courseCertificateTemplateBody,
   approveCourseZipUpdateBody,
@@ -104,6 +106,10 @@ router.post("/courses/:courseId/coupons", validate({ params: courseIdParams, bod
 router.patch("/courses/:courseId/coupons/:couponId", validate({ params: courseCouponParams, body: instructorCouponActiveBody }), teach.setCourseCouponActive);
 router.get("/courses/:courseSlug/preview", validateParams(courseSlugParams), teach.getCourseDraftPreview);
 router.get("/courses/:courseSlug/team", validateParams(courseSlugParams), teach.getCourseTeam);
+router.get("/courses/:courseId/announcements", validateParams(courseIdParams), teach.listAnnouncements);
+router.post("/courses/:courseId/announcements/preview", validate({ params: courseIdParams, body: announcementDraftBody }), teach.previewAnnouncement);
+router.post("/courses/:courseId/announcements/test", validate({ params: courseIdParams, body: announcementDraftBody }), teach.sendTestAnnouncement);
+router.post("/courses/:courseId/announcements", validate({ params: courseIdParams, body: announcementSendBody }), teach.sendAnnouncement);
 router.post("/courses/:courseId/media/:purpose", raw({ type: "image/*", limit: "8mb" }), media.upload);
 router.post("/courses/:courseId/instructor-invites", validate({ params: courseIdParams, body: courseInstructorInviteBody }), teach.inviteCourseInstructor);
 router.post("/instructor-invites/:token/accept", validateParams(courseInstructorInviteParams), teach.acceptCourseInstructorInvite);

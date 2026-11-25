@@ -4,9 +4,22 @@ import { COURSE_CATEGORIES } from "../shared/domain/enums.js";
 import { isSafeAssetUrl } from "../shared/lib/asset-url.js";
 import { VARIANT_ASSIGNMENTS } from "../shared/lib/course-tracks.js";
 import { AI_GRADING_MODELS } from "../shared/lib/ai-grading.js";
+import { ANNOUNCEMENT_LIMITS } from "../shared/api/course-announcements.js";
 import { id, params } from "./common.js";
 
 export const courseIdParams = params("courseId");
+
+// Course announcements: a message from an instructor to everyone enrolled in a course.
+const announcementFields = {
+  title: z.string().trim().min(1, "Add a title.").max(ANNOUNCEMENT_LIMITS.title),
+  message: z.string().trim().min(1, "Write the message.").max(ANNOUNCEMENT_LIMITS.message),
+  steps: z.array(z.string().trim().min(1).max(ANNOUNCEMENT_LIMITS.step)).max(ANNOUNCEMENT_LIMITS.steps).default([]),
+  images: z.array(z.string().trim().max(500).refine(isSafeAssetUrl, "Use an uploaded screenshot.")).max(ANNOUNCEMENT_LIMITS.images).default([]),
+  ctaLabel: z.string().trim().min(1, "Name the button.").max(ANNOUNCEMENT_LIMITS.ctaLabel),
+  ctaPath: z.string().trim().max(300).refine((value) => value.startsWith("/") && isSafeAssetUrl(value), "Use a path inside the app, such as /courses/your-course."),
+};
+export const announcementDraftBody = z.object(announcementFields);
+export const announcementSendBody = z.object({ ...announcementFields, expectedRecipientCount: z.number().int().min(0) });
 export const approveCourseZipUpdateBody = z.object({ previewId: id, confirm: z.literal(true) });
 export const courseSlugParams = params("courseSlug");
 export const courseCouponParams = z.object({ courseId: id, couponId: id });

@@ -16,6 +16,7 @@ import * as feedback from "../services/teach/feedback.js";
 import * as aiGrading from "../services/teach/ai-grading.js";
 import * as helpReplyDraft from "../services/teach/ai/help-reply-draft.js";
 import * as courseTeam from "../services/teach/course-team.js";
+import * as announcements from "../services/teach/announcements.js";
 import type {
   ChapterSettingsBody,
   CourseCertificateTemplateBody, CourseSettingsBody,
@@ -81,6 +82,22 @@ export async function getCourseDraftPreview(req: Request, res: Response) {
 
 export async function getCourseTeam(req: Request, res: Response) {
   ok(res, await courseTeam.loadCourseTeam(req.user!, param(req, "courseSlug")));
+}
+
+export async function previewAnnouncement(req: Request, res: Response) {
+  ok(res, await announcements.previewAnnouncement(req.user!, param(req, "courseId"), req.body));
+}
+
+export async function sendTestAnnouncement(req: Request, res: Response) {
+  ok(res, await announcements.sendTestAnnouncement(req.user!, param(req, "courseId"), req.body));
+}
+
+export async function sendAnnouncement(req: Request, res: Response) {
+  created(res, await announcements.sendAnnouncement(req.user!, param(req, "courseId"), req.body));
+}
+
+export async function listAnnouncements(req: Request, res: Response) {
+  ok(res, await announcements.listAnnouncements(req.user!, param(req, "courseId")));
 }
 
 export async function inviteCourseInstructor(req: Request, res: Response) {

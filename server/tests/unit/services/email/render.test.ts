@@ -45,6 +45,7 @@ describe("EJS emails", () => {
       verdict: "approved your answer", applicant: "Alex", email: "alex@example.com", organizationName: "School",
       organizationSlug: "school", role: "Course creator", expiryDays: 14,
       progress: 1, target: 3, unit: "sessions", remaining: 2, note: null,
+      paragraphs: ["We wrote the module again."], steps: ["Open the module."], images: [], ctaLabel: "Open the course",
     };
     for (const file of files.filter((file) => file !== "layout.ejs")) {
       const html = await renderEmailTemplate(file.replace(/\.ejs$/, ""), data);

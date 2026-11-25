@@ -7,7 +7,7 @@ import { AppError, BadRequestError, ForbiddenError, NotFoundError, UnauthorizedE
 import { isMissingObjectError, r2Storage } from "../storage/r2.js";
 import { requireCourseById } from "./access.js";
 
-export type CourseMediaPurpose = "cover" | "content";
+export type CourseMediaPurpose = "cover" | "content" | "announcement";
 export const MAX_COURSE_IMAGE_BYTES = 8 * 1024 * 1024;
 
 function storage(): { client: S3Client; bucket: string } {

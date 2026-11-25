@@ -1,0 +1,15 @@
+<%- include('dot', { mood: 'cheer' }) %>
+<p>Hi <%= name %>,</p>
+<% paragraphs.forEach((paragraph) => { %><p style="margin:0 0 12px;"><%- paragraph %></p>
+<% }) %>
+<% if (steps.length > 0) { %>
+<p style="margin:16px 0 6px;"><strong>How to try it</strong></p>
+<ol style="margin:0 0 12px;padding-left:22px;">
+<% steps.forEach((step) => { %>  <li style="margin:0 0 6px;"><%= step %></li>
+<% }) %></ol>
+<% } %>
+<% images.forEach((src, index) => { %>
+<img src="<%= src %>" alt="Screenshot <%= index + 1 %> of <%= images.length %>" width="520" style="display:block;border:1px solid #d9dcea;max-width:100%;height:auto;margin:12px 0;">
+<% }) %>
+<%- include('button', { url: url, label: ctaLabel }) %>
+<p>Tried it? Tell us what you think. In the course, use the Give feedback button, or write back to your instructor with what worked and what did not. It takes a minute and it shapes the next version.</p>

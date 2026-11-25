@@ -331,6 +331,7 @@ model User {
   headingNotes          HeadingNote[]
   highlights            ChapterHighlight[]
   moduleVersionFeedback ModuleVersionFeedback[]
+  courseAnnouncements   CourseAnnouncement[]
   organizationCourseRequestsReviewed OrganizationCourseRequest[] @relation("OrgCourseRequestReviewer")
   instructorAccessRequest       InstructorAccessRequest?
   instructorAccessReviews       InstructorAccessRequest[] @relation("InstructorAccessReviewer")
@@ -518,6 +519,7 @@ model Course {
   chapterDrafts  CourseChapterDraft[]
   enrollments    Enrollment[]
   moduleVersionFeedback ModuleVersionFeedback[]
+  announcements         CourseAnnouncement[]
   organizationCourses OrganizationCourse[]
   organizationFreeAccesses CourseOrganizationAccess[]
   organizationCourseRequests OrganizationCourseRequest[]
@@ -2048,4 +2050,30 @@ model OrganizationInvite {
   createdAt      DateTime         @default(now())
 
   @@index([organizationId])
+}
+
+/// A message an instructor sent to everyone enrolled in a course (for example "a new version of
+/// module 2 is ready"). The row is the record of what was sent and to how many people; the bell
+/// notices and emails themselves live in Notification and EmailOutbox.
+model CourseAnnouncement {
+  id             String   @id @default(cuid())
+  courseId       String
+  course         Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title          String
+  message        String   @db.Text
+  /// Short how-to steps, in order. Empty when the message needs none.
+  steps          String[] @default([])
+  /// Public screenshot URLs (uploaded through the course image upload).
+  images         String[] @default([])
+  ctaLabel       String
+  /// App-relative link the button opens, e.g. /courses/dw-level-1.
+  ctaPath        String
+  /// How many learners the announcement went to.
+  recipientCount Int
+  createdAt      DateTime @default(now())
+
+  @@index([courseId, createdAt])
+  @@index([authorId])
 }

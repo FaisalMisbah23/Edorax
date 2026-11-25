@@ -15,6 +15,7 @@ import {
   CircleHelp,
   LayoutDashboard,
   LibraryBig,
+  Megaphone,
   Menu,
   MessageSquareText,
   Settings2,
@@ -159,6 +160,13 @@ export function MentorWorkspaceSidebar({
       href: courseBase ? `${courseBase}/settings` : "/courses",
       icon: Settings2,
       active: Boolean(routeCourseSlug) && pathname.endsWith("/settings"),
+      disabled: !selectedCourse,
+    },
+    {
+      label: "Announce",
+      href: courseBase ? `${courseBase}/announce` : "/courses",
+      icon: Megaphone,
+      active: Boolean(routeCourseSlug) && pathname.endsWith("/announce"),
       disabled: !selectedCourse,
     },
   ];
