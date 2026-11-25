@@ -21,5 +21,6 @@
   "domain/enums.ts",
   "lib/course-tracks.ts",
   "html-preview/spec.ts",
+  "runnable-js/spec.ts",
   "api/module-versions.ts"
 ]

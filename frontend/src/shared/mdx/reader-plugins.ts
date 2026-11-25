@@ -11,5 +11,6 @@ import { remarkLearningLog } from "./remark-learning-log";
 import { remarkDiagram } from "./remark-diagram";
 import { remarkMermaid } from "./remark-mermaid";
 import { remarkHtmlPreview } from "./remark-html-preview";
+import { remarkRunnableJs } from "./remark-runnable-js";
 
-export const readerRemarkPlugins = [remarkChecklist, remarkLearningLog, remarkHtmlPreview, remarkDiagram, remarkMermaid];
+export const readerRemarkPlugins = [remarkChecklist, remarkLearningLog, remarkHtmlPreview, remarkRunnableJs, remarkDiagram, remarkMermaid];
