@@ -16,7 +16,9 @@ import { modelPriceUsdPerMillion } from "../capstone/grade.js";
 import { mentoredCoursesWhere } from "./access.js";
 
 // AI grading settings for an instructor's courses, set in one place instead of one
-// course at a time. Each course follows its owner's default unless it has its own value.
+// course at a time. Each course follows a default unless it has its own value. The default
+// is the course owner's when the owner saved one; otherwise it is the default of the
+// co-creator who joined the course first and has saved one.
 
 const ownerDefaultSelect = { reviewDraft: true, instantGrading: true, model: true } as const;
 
@@ -25,15 +27,32 @@ export const AI_GRADING_COURSE_SELECT = {
   aiReviewDraft: true,
   aiInstantGrading: true,
   aiGradingModel: true,
+  mentorId: true,
   mentor: { select: { aiGradingDefault: { select: ownerDefaultSelect } } },
+  // The first co-creator with a saved default; used only when the owner has none.
+  instructors: {
+    where: { role: "COURSE_CREATOR", user: { aiGradingDefault: { isNot: null } } },
+    orderBy: { createdAt: "asc" },
+    take: 1,
+    select: { userId: true, user: { select: { aiGradingDefault: { select: ownerDefaultSelect } } } },
+  },
 } as const;
 
 export type AiGradingCourseFields = {
   aiReviewDraft: boolean | null;
   aiInstantGrading: boolean | null;
   aiGradingModel: string | null;
+  mentorId: string;
   mentor: { aiGradingDefault: AiGradingValues | null };
+  instructors: Array<{ userId: string; user: { aiGradingDefault: AiGradingValues | null } }>;
 };
+
+/** The default a course follows and whose it is; null when nobody on the course saved one. */
+export function courseAiGradingDefault(course: Pick<AiGradingCourseFields, "mentorId" | "mentor" | "instructors">): { userId: string; values: AiGradingValues } | null {
+  if (course.mentor.aiGradingDefault) return { userId: course.mentorId, values: course.mentor.aiGradingDefault };
+  const coCreator = course.instructors.find((member) => member.user.aiGradingDefault);
+  return coCreator?.user.aiGradingDefault ? { userId: coCreator.userId, values: coCreator.user.aiGradingDefault } : null;
+}
 
 function platformDefaults(): AiGradingValues {
   return platformAiGradingDefaults(env.AI_REVIEW_MODEL);
@@ -43,9 +62,9 @@ export function courseAiGradingOverrides(course: Pick<AiGradingCourseFields, "ai
   return { reviewDraft: course.aiReviewDraft, instantGrading: course.aiInstantGrading, model: course.aiGradingModel };
 }
 
-/** What applies to this course: its own value, else its owner's default, else the platform default. */
+/** What applies to this course: its own value, else the default it follows, else the platform default. */
 export function effectiveAiGrading(course: AiGradingCourseFields): AiGradingValues {
-  return resolveAiGrading(courseAiGradingOverrides(course), course.mentor.aiGradingDefault, platformDefaults());
+  return resolveAiGrading(courseAiGradingOverrides(course), courseAiGradingDefault(course)?.values, platformDefaults());
 }
 
 /** The settings for the course an answer belongs to; null when the answer is gone. */
@@ -63,7 +82,7 @@ export async function loadAiGrading(user: SessionUser): Promise<AiGradingView> {
     prisma.course.findMany({
       where: mentoredCoursesWhere(user),
       orderBy: { title: "asc" },
-      select: { id: true, slug: true, title: true, status: true, mentorId: true, ...AI_GRADING_COURSE_SELECT },
+      select: { id: true, slug: true, title: true, status: true, ...AI_GRADING_COURSE_SELECT },
     }),
   ]);
   const platform = platformDefaults();
@@ -74,8 +93,10 @@ export async function loadAiGrading(user: SessionUser): Promise<AiGradingView> {
     title: course.title,
     status: course.status,
     ownedByYou: course.mentorId === user.id,
+    // With no default saved on the course yet, the caller's would be the one it follows.
+    followsYourDefault: (courseAiGradingDefault(course)?.userId ?? user.id) === user.id,
     own: courseAiGradingOverrides(course),
-    defaults: resolveAiGradingDefaults(course.mentor.aiGradingDefault, platform),
+    defaults: resolveAiGradingDefaults(courseAiGradingDefault(course)?.values, platform),
     effective: effectiveAiGrading(course),
   }));
 

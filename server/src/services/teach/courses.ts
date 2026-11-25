@@ -159,8 +159,8 @@ export async function loadCourseSettings(user: SessionUser, courseSlug: string):
     },
   });
   const account = await prisma.user.findUnique({ where: { id: user.id }, select: { zipImportEnabled: true } });
-  const { variantFamily, certificate, certificateTemplate, aiReviewDraft, aiInstantGrading, aiGradingModel, mentor, ...settings } = course;
-  const aiFields = { aiReviewDraft, aiInstantGrading, aiGradingModel, mentor };
+  const { variantFamily, certificate, certificateTemplate, aiReviewDraft, aiInstantGrading, aiGradingModel, mentorId, mentor, instructors, ...settings } = course;
+  const aiFields = { aiReviewDraft, aiInstantGrading, aiGradingModel, mentorId, mentor, instructors };
   const aiGrading = { own: courseAiGradingOverrides(aiFields), effective: effectiveAiGrading(aiFields) };
   const yamlTemplate = certificate && typeof certificate === "object" && !Array.isArray(certificate) ? (certificate as { template?: unknown }).template : undefined;
   return { ...settings, autoGradeOpenQuestions: aiGrading.effective.instantGrading, aiGrading, certificateTemplate: certificateTemplateId(certificateTemplate ?? yamlTemplate), hasVariants: Boolean(resolveCourseFamily(course.familySlug, variantFamily)), enrollmentCount: _count.enrollments, chapterCount: _count.chapters, zipImportEnabled: account?.zipImportEnabled ?? false };

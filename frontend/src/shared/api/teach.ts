@@ -705,6 +705,12 @@ export type AiGradingCourseRow = {
   status: CourseStatus;
   /** False when another instructor owns the course; it then follows that owner's default. */
   ownedByYou: boolean;
+  /**
+   * True when the caller's default is the one this course follows: they own it, or they
+   * co-create it and no one ahead of them (the owner, then earlier co-creators) saved a
+   * default. Missing from an older API.
+   */
+  followsYourDefault?: boolean;
   /** The course's own choices; null means it uses the default. */
   own: AiGradingOverrides;
   /** The default this course falls back to. */
