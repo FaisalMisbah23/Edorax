@@ -25,6 +25,8 @@ export type ClassSummary = {
   archived: boolean;
   memberCount: number;
   courses: Array<{ id: string; slug: string; title: string }>;
+  /** The organisation that runs the class, or null for a teacher's own class. */
+  organization: { id: string; name: string } | null;
   createdAt: string;
 };
 
