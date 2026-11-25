@@ -256,7 +256,10 @@ export function HomeFeatureTabs() {
               aria-controls={`${uid}-panel`}
               tabIndex={index === active ? 0 : -1}
               className={index === active ? s.tabOn : s.tab}
-              onClick={() => setActive(index)}
+              onClick={(event) => {
+                setActive(index);
+                event.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+              }}
             >
               {item.tab}
             </button>

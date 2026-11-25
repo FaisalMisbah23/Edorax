@@ -409,16 +409,27 @@
     font-size: 27px;
   }
 
-  /* The three tabs wrap, so Mock interview is not hidden off the edge. */
+  /* The three tabs are a slider: swipe sideways, snap to each tab, fade at the edge. */
   .tabs {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    margin-right: -16px;
+    padding-right: 36px;
+    mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .tab,
   .tabOn {
-    flex: 1 1 auto;
-    justify-content: center;
+    flex: none;
     font-size: 15px;
+    scroll-snap-align: start;
   }
 
   .lesson,

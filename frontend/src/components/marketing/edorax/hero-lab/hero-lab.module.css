@@ -737,18 +737,16 @@
 }
 
 @media (max-width: 640px) {
-  /* The five tabs wrap onto two rows, so none of them is hidden off the edge. */
+  /* The five tabs are a slider: swipe sideways, snap to each tab, fade at the edge. */
   .tabs {
-    flex-wrap: wrap;
-    overflow-x: visible;
+    scroll-snap-type: x proximity;
+    mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
   }
 
   .tab,
   .tabOn {
-    flex: 1 1 auto;
-    justify-content: center;
-    min-height: 48px;
-    padding: 0 12px;
+    scroll-snap-align: start;
   }
 
   .dotPerch {
