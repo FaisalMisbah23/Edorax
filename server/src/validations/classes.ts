@@ -16,7 +16,7 @@ export const classMemberParams = z.object({ classId: id, userId: id });
 export const classCodeParams = z.object({ code: z.string().trim().min(4).max(16).transform((value) => value.toUpperCase()) });
 
 export const createClassBody = z
-  .object({ name, courseIds, startsAt: when.optional(), endsAt: when.optional() })
+  .object({ name, courseIds, startsAt: when.optional(), endsAt: when.optional(), organizationId: id.nullable().optional() })
   .refine(datesInOrder, datesMessage);
 
 export const updateClassBody = z

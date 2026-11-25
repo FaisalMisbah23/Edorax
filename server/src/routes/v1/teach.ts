@@ -1,7 +1,6 @@
 import { requireInstructorWithdrawals } from "../../middlewares/instructor-withdrawals.js";
 import { raw, Router } from "express";
 import * as teach from "../../controllers/teach.js";
-import * as classes from "../../controllers/classes.js";
 import * as audiobooks from "../../controllers/audiobooks.js";
 import * as media from "../../controllers/course-media.js";
 import * as integrity from "../../controllers/integrity.js";
@@ -10,7 +9,6 @@ import { requireInstructor } from "../../middlewares/require-instructor.js";
 import { requireVerified } from "../../middlewares/require-verified.js";
 import { requireZipImport } from "../../middlewares/require-zip-import.js";
 import { validate, validateBody, validateParams } from "../../middlewares/validate.js";
-import { classDueDatesBody, classIdParams, classMemberParams, createClassBody, updateClassBody } from "../../validations/classes.js";
 import {
   assignByEmailsBody,
   courseCertificateTemplateBody,
@@ -164,17 +162,5 @@ router.put("/help/threads/:threadId/feedback", validate({ params: threadIdParams
 router.get("/feedback", teach.getFeedback);
 router.get("/ai-grading", teach.getAiGrading);
 router.put("/ai-grading", validate({ body: aiGradingBody }), teach.updateAiGrading);
-
-// Classes: a teacher's own groups of learners, their due dates and gradebook.
-router.get("/classes", classes.listTeacherClasses);
-router.get("/classes/course-options", classes.listCourseOptions);
-router.post("/classes", validateBody(createClassBody), classes.createClass);
-router.get("/classes/:classId", validateParams(classIdParams), classes.getTeacherClass);
-router.patch("/classes/:classId", validate({ params: classIdParams, body: updateClassBody }), classes.updateClass);
-router.post("/classes/:classId/rotate-code", validateParams(classIdParams), classes.rotateCode);
-router.put("/classes/:classId/due-dates", validate({ params: classIdParams, body: classDueDatesBody }), classes.setDueDates);
-router.delete("/classes/:classId/members/:userId", validateParams(classMemberParams), classes.removeMember);
-router.get("/classes/:classId/gradebook", validateParams(classIdParams), classes.getGradebook);
-router.get("/classes/:classId/gradebook/export", validateParams(classIdParams), classes.exportGradebook);
 
 export default router;

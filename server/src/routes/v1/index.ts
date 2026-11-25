@@ -24,6 +24,8 @@ import certificateRoutes from "./certificates.js";
 import shellLabRoutes from "./shell-labs.js";
 import desktopRoutes from "./desktop.js";
 import classRoutes from "./classes.js";
+import teachClassRoutes from "./teach-classes.js";
+import organizationRoutes from "./organizations.js";
 import { enforceDesktopMinVersion } from "../../middlewares/desktop-version.js";
 
 // First-party API, versioned. JSON routes use the { success, data } envelope;
@@ -44,6 +46,8 @@ router.use("/catalog", catalogRoutes);
 router.use("/enrollments", enrollmentRoutes);
 router.use("/help", helpRoutes);
 router.use("/invites", inviteRoutes);
+// Class tools are open to organisation teachers too, so they sit before the instructor-only /teach routes.
+router.use("/teach/classes", teachClassRoutes);
 router.use("/teach", teachRoutes);
 router.use("/media", mediaRoutes);
 router.use("/audiobooks", audiobookRoutes);
@@ -58,5 +62,6 @@ router.use("/certificates", certificateRoutes);
 router.use("/shell-labs", shellLabRoutes);
 router.use("/desktop", desktopRoutes);
 router.use("/classes", classRoutes);
+router.use("/organizations", organizationRoutes);
 
 export default router;
