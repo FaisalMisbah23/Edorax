@@ -31,6 +31,7 @@ import {
   type AnnouncementTestResult,
 } from "@/shared/api/course-announcements";
 import { cn } from "@/lib/utils";
+import { isSafeAssetUrl } from "@/shared/lib/asset-url";
 
 type Course = { id: string; slug: string; title: string; status: string };
 type Upload = { id: number; name: string; progress: number; error: string | null };
@@ -54,6 +55,7 @@ export function AnnouncementComposer({ course }: { course: Course }) {
   const [form, dispatch] = useReducer(announcementReducer, course.slug, blankAnnouncement);
   const [problems, setProblems] = useState<string[]>([]);
   const [uploads, setUploads] = useState<Upload[]>([]);
+  const [imageAddress, setImageAddress] = useState("");
   // `key` is the draft the preview was made from; `version` reloads the frame on every refresh.
   const [preview, setPreview] = useState<(AnnouncementPreview & { key: string; version: number }) | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
@@ -315,6 +317,30 @@ export function AnnouncementComposer({ course }: { course: Course }) {
             }}
           />
           <Button type="button" variant="outline" size="sm" disabled={freeImageSlots <= 0} onClick={() => fileInput.current?.click()}><ImagePlus aria-hidden />Add screenshots</Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              aria-label="Image address"
+              value={imageAddress}
+              spellCheck={false}
+              placeholder="Or paste an image address, such as /announcements/your-image.jpg"
+              onChange={(event) => setImageAddress(event.target.value)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={freeImageSlots <= 0 || imageAddress.trim() === ""}
+              onClick={() => {
+                const address = imageAddress.trim();
+                if (!isSafeAssetUrl(address)) {
+                  toast("Use a path inside the app that starts with a slash, or an https address.", "error", { title: "That address will not work" });
+                  return;
+                }
+                dispatch({ type: "addImage", url: address });
+                setImageAddress("");
+              }}
+            >Add image</Button>
+          </div>
         </fieldset>
 
         <div className="grid gap-6 sm:grid-cols-2">
