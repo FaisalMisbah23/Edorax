@@ -275,99 +275,6 @@
   background: #0a0f2c;
 }
 
-/* The result card that overlaps the corner of the visual lab window. */
-.resultCard {
-  position: absolute;
-  left: -28px;
-  bottom: -36px;
-  width: 250px;
-  padding: 16px 18px;
-  background: #ffffff;
-  color: #0a0f2c;
-  border: 1px solid #dce0f2;
-  border-radius: 12px;
-  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.6);
-  font-size: 14px;
-  animation: float 7s ease-in-out infinite alternate;
-}
-
-.resultCard p {
-  margin: 0;
-}
-
-.resultLabel {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #6b7399;
-}
-
-.resultTitle {
-  margin-top: 4px !important;
-  font-weight: 700;
-  font-size: 17px;
-}
-
-.resultBar {
-  height: 5px;
-  margin: 10px 0 !important;
-  border-radius: 3px;
-  background: #dce0f2;
-  overflow: hidden;
-}
-
-.resultBar span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: #12805c;
-}
-
-.resultCard ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.resultCard li {
-  position: relative;
-  padding-left: 22px;
-}
-
-.resultCard li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 3px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #12805c
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.3 7 10.6l4.5-5' stroke='%23fff' stroke-width='1.8' fill='none'/%3E%3C/svg%3E")
-    center / contain no-repeat;
-}
-
-.resultScore {
-  margin-top: 12px !important;
-  padding-top: 10px;
-  border-top: 1px solid #dce0f2;
-  font-weight: 700;
-  color: #12805c;
-}
-
-@keyframes float {
-  from {
-    transform: translateY(0);
-  }
-
-  to {
-    transform: translateY(-8px);
-  }
-}
-
 /* Tabs */
 .tabs {
   margin-top: 40px;
@@ -440,24 +347,9 @@
   color: #6b7399;
 }
 
-@media (max-width: 900px) {
-  .resultCard {
-    left: 12px;
-    bottom: -44px;
-  }
-
-  .dark .wrap {
-    padding-bottom: 112px;
-  }
-}
-
 @media (max-width: 640px) {
   .wrap {
     padding: 56px 24px;
-  }
-
-  .dark .wrap {
-    padding-bottom: 96px;
   }
 
   .h2,
@@ -508,12 +400,6 @@
     font-size: 22px;
   }
 
-  .resultCard {
-    width: 210px;
-    padding: 12px 14px;
-    font-size: 13px;
-  }
-
   .btnYellow,
   .btnOutline {
     width: 100%;
@@ -521,7 +407,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .resultCard,
   .enter {
     animation: none;
   }

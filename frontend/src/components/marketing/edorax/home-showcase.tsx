@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import s from "./home-showcase.module.css";
 
 // Two showcase sections for the home page. Every recording is filmed from the real product
@@ -29,6 +29,49 @@ function ProductWindow({ title, file, label }: { title: string; file: string; la
         <span className={s.windowTitle}>{title}</span>
       </div>
       <video key={file} className={s.video} controls playsInline preload="none" poster={`/video/${file}.webp`} width={1920} height={1080} aria-label={label}>
+        <source src={`/video/${file}.mp4`} type="video/mp4" />
+      </video>
+    </div>
+  );
+}
+
+/**
+ * A product window that plays a short silent loop by itself, like a GIF, while it is on screen.
+ * The file loads only when the window first comes into view, and it pauses when scrolled away.
+ * People who ask for less motion get the still poster with normal controls instead.
+ */
+function LoopWindow({ title, file, poster, label }: { title: string; file: string; poster: string; label: string }) {
+  const video = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const el = video.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      el.controls = true;
+      return;
+    }
+    const watcher = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) void el.play().catch(() => undefined);
+        else el.pause();
+      },
+      { threshold: 0.35 },
+    );
+    watcher.observe(el);
+    return () => watcher.disconnect();
+  }, []);
+
+  return (
+    <div className={s.window}>
+      <div className={s.windowBar}>
+        <span className={s.dots} aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+        <span className={s.windowTitle}>{title}</span>
+      </div>
+      <video ref={video} className={s.video} muted loop playsInline preload="none" poster={`/video/${poster}.webp`} width={1280} height={720} aria-label={label}>
         <source src={`/video/${file}.mp4`} type="video/mp4" />
       </video>
     </div>
@@ -68,25 +111,12 @@ export function HomeVisualLabs({ labCount, areas }: { labCount: number; areas: s
           </div>
         </div>
         <div className={s.media}>
-          <ProductWindow
+          <LoopWindow
             title="Visual lab: design a short-link service"
-            file="demo-visual-labs"
-            label="Demo filmed on edorax.com: a visual lab going from 5 of 11 checks passing to 11 of 11"
+            file="demo-visual-labs-loop"
+            poster="demo-visual-labs"
+            label="A short silent loop filmed on edorax.com: a visual lab going from 5 of 11 checks passing to 11 of 11"
           />
-          {/* The end of the recording, as a card: the same result the lab shows when every check passes. */}
-          <div className={s.resultCard} aria-hidden="true">
-            <p className={s.resultLabel}>Test results</p>
-            <p className={s.resultTitle}>Your design passes</p>
-            <p className={s.resultBar}>
-              <span />
-            </p>
-            <ul>
-              <li>Shortening works</li>
-              <li>Clicks are counted</li>
-              <li>Serves the whole peak</li>
-            </ul>
-            <p className={s.resultScore}>11 of 11 checks pass</p>
-          </div>
         </div>
       </div>
     </section>
