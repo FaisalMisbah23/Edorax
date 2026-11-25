@@ -30,12 +30,12 @@ export default async function AllLearnersPage({ searchParams }: { searchParams: 
           </p>
         </div>
         {view.courses.length > 1 ? (
-          <form className="flex items-center gap-2" action="/learners" method="GET">
+          <form className="w-full min-w-0 sm:w-auto" action="/learners" method="GET">
             <AutoSubmitSelect
               name="courseId"
               defaultValue={view.courseId ?? ""}
               aria-label="Filter by course"
-              className="h-9 max-w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-ring"
+              className="h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-ring sm:h-10 sm:w-72"
             >
               <option value="">All courses</option>
               {view.courses.map((course) => (
