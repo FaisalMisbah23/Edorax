@@ -191,12 +191,6 @@ export function FeaturePage({ page }: { page: FeaturePageContent }) {
                 </li>
               ))}
               <li>
-                <Link href="/labs" className={s.moreCard}>
-                  <strong>Hands-on labs</strong>
-                  <span>Visual system design labs in your browser, and shell labs on real Linux machines.</span>
-                </Link>
-              </li>
-              <li>
                 <Link href="/catalog" className={s.moreCard}>
                   <strong>All courses</strong>
                   <span>Courses you read, hear and prove, one course at a time.</span>
