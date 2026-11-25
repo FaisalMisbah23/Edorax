@@ -1,9 +1,14 @@
 "use client";
 
-// The lab's right-hand test rail: brief, scenarios, live numbers and verification
-// checks. On smaller boards it drops below the canvas, but keeps the same readable
-// single-column hierarchy. Every check shows its target before a run and its
-// measurement plus an actionable explanation afterwards.
+// The lab's right-hand test panel: brief, scenarios, live numbers and verification
+// checks. It is never below the canvas, so nobody scrolls to find the tests.
+// - Wide board (72rem and up): a column beside the canvas, always there.
+// - Medium board (56rem to 72rem): closed to a tab on the right edge; it opens as a
+//   column when a run starts, taking the room of the components list.
+// - Narrow board: a drawer that slides in over the canvas from the right.
+// - Full screen: a card that floats over the work area.
+// Every check shows its target before a run and its measurement plus an actionable
+// explanation afterwards.
 
 import type { ChallengeReport, CheckResult } from "./challenge";
 import type { HldLabSpec } from "./types";
@@ -241,8 +246,29 @@ export function ResultsDialog({
   );
 }
 
+/**
+ * How the panel sits on the board.
+ * - "dock": part of the board. A drawer over the canvas while the board is narrower than
+ *   `columnFrom`, a column of the board's grid from there up.
+ * - "float": a card over the work area (full screen).
+ */
+export type RunPanelPlacement = "dock" | "float";
+/** The container width from which a docked panel is a grid column: 72rem, or 56rem when the components list is folded away. */
+export type RunPanelColumnFrom = "4xl" | "6xl";
+
+const PANEL_BASE = "custom-scrollbar min-h-0 overflow-y-auto";
+const PANEL_DRAWER = `${PANEL_BASE} absolute inset-y-0 right-0 z-30 w-[min(370px,calc(100%-40px))] border-l-[1.5px] border-border bg-[color:var(--lab-module)] shadow-[-14px_0_32px_-14px_rgba(15,23,42,0.45)]`;
+// As a column the panel must not set the height of the row (its content is long), so it is
+// sized by the canvas beside it (contain: size) and scrolls inside.
+const PANEL_DOCK: Record<RunPanelColumnFrom, string> = {
+  "6xl": `${PANEL_DRAWER} lab-drawer-from-6xl @6xl:static @6xl:z-auto @6xl:h-full @6xl:w-auto @6xl:bg-[color:var(--lab-recessed)]/45 @6xl:shadow-none`,
+  "4xl": `${PANEL_DRAWER} lab-drawer-from-4xl @4xl:static @4xl:z-auto @4xl:w-auto @4xl:[contain:size] @4xl:bg-[color:var(--lab-recessed)]/45 @4xl:shadow-none @6xl:h-full`,
+};
+const PANEL_FLOAT = `${PANEL_BASE} absolute right-3 top-3 z-40 max-h-[calc(100%-24px)] w-[min(390px,calc(100%-24px))] rounded-[12px] border border-slate-600 bg-[color:var(--lab-module)] shadow-2xl`;
+const TAB_DOCK = "absolute right-0 top-1/2 z-20 -translate-y-1/2 @6xl:static @6xl:h-full @6xl:translate-y-0 @6xl:border-l-[1.5px] @6xl:border-border @6xl:bg-[color:var(--lab-recessed)]/55";
+
 export function RunPanel({
-  spec, result, report, state, running, ran, load, previewId, collapsed, onLoad, onShow, onBack, onToggle, onOpenResults,
+  spec, result, report, state, running, ran, load, previewId, open, placement = "dock", columnFrom = "6xl", onLoad, onShow, onBack, onToggle, onOpenResults,
 }: {
   spec: HldLabSpec;
   /** The design as it stands, at the offered load. */
@@ -255,7 +281,10 @@ export function RunPanel({
   load: number;
   /** A completed scenario currently projected onto the board. */
   previewId: string | null;
-  collapsed: boolean;
+  /** true: shown. false: closed to a tab on the edge. null: not chosen yet, so a wide board shows it and a narrower one shows the tab. */
+  open: boolean | null;
+  placement?: RunPanelPlacement;
+  columnFrom?: RunPanelColumnFrom;
   onLoad: (n: number) => void;
   onShow: (scenario: string) => void;
   onBack: () => void;
@@ -290,21 +319,27 @@ export function RunPanel({
           ? "Running the design through every scenario..."
           : `${report.total} checks will run${functional.length > 0 ? `: ${functional.length} on what it does (functional) and ${nonFunctional.length} on how well it does it (non-functional)` : ""}. Press Run.`;
 
-  if (collapsed) {
-    return (
-      <aside className="flex min-h-[52px] items-center justify-center border-t-[1.5px] border-border bg-[color:var(--lab-recessed)]/55 @2xl:col-span-2 @6xl:col-span-1 @6xl:h-full @6xl:min-h-0 @6xl:border-l-[1.5px] @6xl:border-t-0" aria-label="Collapsed test suite">
-        <button type="button" onClick={onToggle} className="flex h-full w-full items-center justify-center gap-2 px-2 py-2 text-muted-foreground hover:bg-muted hover:text-foreground @6xl:flex-col" title="Expand test suite" aria-label="Expand test suite">
-          <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m15 18-6-6 6-6" /></svg>
-          <span className="lab-mono text-[9px] font-bold uppercase tracking-[0.16em] @6xl:[writing-mode:vertical-rl]">Tests</span>
-          <span className={`lab-mono rounded-full px-1.5 py-0.5 text-[9px] font-bold ${ran ? (report.allPass ? "bg-[color:var(--lab-ok)]/15 text-[color:var(--lab-ok-ink)]" : "bg-[color:var(--lab-down-fill)] text-[color:var(--lab-down-ink)]") : "bg-muted text-muted-foreground"}`}>{ran ? `${report.passed}/${report.total}` : report.total}</span>
-        </button>
-      </aside>
-    );
-  }
+  // Closed: a tab on the right edge of the board. It carries the score, so a learner sees it without opening anything.
+  const tab = (extra: string) => (
+    <aside className={`${TAB_DOCK} ${extra}`} aria-label="Collapsed test suite" data-testid="run-panel-tab">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex flex-col items-center gap-2 rounded-l-[8px] border-[1.5px] border-r-0 border-border bg-[color:var(--lab-module)] px-1.5 py-3 text-muted-foreground shadow-[-4px_3px_12px_-4px_rgba(15,23,42,0.35)] hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--lab-accent)] @6xl:h-full @6xl:w-full @6xl:justify-center @6xl:rounded-none @6xl:border-0 @6xl:bg-transparent @6xl:px-2 @6xl:shadow-none"
+        title="Open the tests"
+        aria-label="Open the tests"
+        aria-expanded={false}
+      >
+        <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m15 18-6-6 6-6" /></svg>
+        <span className="lab-mono text-[9px] font-bold uppercase tracking-[0.16em] [writing-mode:vertical-rl]">Tests</span>
+        <span className={`lab-mono rounded-full px-1.5 py-0.5 text-[9px] font-bold ${ran ? (report.allPass ? "bg-[color:var(--lab-ok)]/15 text-[color:var(--lab-ok-ink)]" : "bg-[color:var(--lab-down-fill)] text-[color:var(--lab-down-ink)]") : "bg-muted text-muted-foreground"}`}>{ran ? `${report.passed}/${report.total}` : report.total}</span>
+      </button>
+    </aside>
+  );
 
-  return (
+  const panel = (extra: string) => (
     <aside
-      className="custom-scrollbar min-h-0 overflow-y-auto border-t-[1.5px] border-border bg-[color:var(--lab-recessed)]/45 @2xl:col-span-2 @6xl:col-span-1 @6xl:h-full @6xl:border-l-[1.5px] @6xl:border-t-0"
+      className={`${placement === "float" ? PANEL_FLOAT : PANEL_DOCK[columnFrom]} ${extra}`}
       data-testid="run-panel"
       aria-label="Test suite"
     >
@@ -320,7 +355,7 @@ export function RunPanel({
             <button type="button" onClick={onOpenResults} disabled={!ran} className={`lab-mono rounded-full border px-2.5 py-1 text-[11px] font-bold tabular-nums disabled:cursor-default ${state === "done" ? (report.allPass ? "border-[color:var(--lab-ok)]/60 bg-[color:var(--lab-ok)]/10 text-[color:var(--lab-ok-ink)]" : "border-[color:var(--lab-down)]/60 bg-[color:var(--lab-down-fill)]/50 text-[color:var(--lab-down-ink)]") : "border-border bg-muted text-muted-foreground"}`} title={ran ? "Open detailed results" : undefined}>
               {state === "done" ? `${report.passed}/${report.total} passed` : `${report.total} checks`}
             </button>
-            <button type="button" onClick={onToggle} className="flex size-7 items-center justify-center rounded-[5px] border border-border text-muted-foreground hover:bg-muted hover:text-foreground" title="Collapse test suite" aria-label="Collapse test suite">
+            <button type="button" onClick={onToggle} className="flex size-7 items-center justify-center rounded-[5px] border border-border text-muted-foreground hover:bg-muted hover:text-foreground" title="Close the tests" aria-label="Close the tests">
               <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="m9 18 6-6-6-6" /></svg>
             </button>
           </div>
@@ -436,4 +471,9 @@ export function RunPanel({
         </div>
     </aside>
   );
+
+  if (placement === "float") return open ? panel("lab-drawer-in") : null;
+  // Not chosen yet: the width of the board decides, in CSS, so nothing jumps after the first paint.
+  if (open === null) return <>{tab("@6xl:hidden")}{panel("hidden @6xl:block")}</>;
+  return open ? panel("lab-drawer-in") : tab("");
 }

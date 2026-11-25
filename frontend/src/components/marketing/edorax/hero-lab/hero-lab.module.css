@@ -559,15 +559,12 @@
   display: none;
 }
 
-/* The board is long (canvas, tests, notes), so it scrolls inside the window. Its own
-   Full screen button gives the whole screen. */
+/* The board is shown whole: its tests open as a drawer over the canvas, so there is no
+   second scroll area inside the window. Its own Full screen button gives the whole screen. */
 .board {
   flex: none;
   background: #EEF0FA;
-  padding: 12px;
-  height: 640px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  padding: 0 12px;
 }
 
 /* Listen */
@@ -590,9 +587,37 @@
   justify-content: center;
 }
 
+/* Shown in the play button from the press until sound is really playing. */
+.spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid rgba(246, 247, 251, 0.35);
+  border-top-color: #F6F7FB;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .playerTrack {
   flex: 1;
   min-width: 0;
+}
+
+.playerNote,
+.playerError {
+  flex: 1;
+  padding: 0 8px;
+  text-align: center;
+  font-variant-numeric: normal;
+}
+
+.playerError {
+  color: #B42318;
 }
 
 .range {
@@ -747,5 +772,10 @@
   .enter,
   .dotBob {
     animation: none;
+  }
+
+  /* Still turning, just slowly: a frozen ring would not read as loading. */
+  .spinner {
+    animation-duration: 2.4s;
   }
 }
