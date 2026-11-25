@@ -411,3 +411,42 @@
     animation: none;
   }
 }
+
+/* Two recordings stacked in the tab panel, and the full screen button on the visual labs loop. */
+.stack {
+  display: grid;
+  gap: 20px;
+}
+
+.stage {
+  position: relative;
+}
+
+.fullscreen {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  background: rgba(10, 15, 44, 0.9);
+  border: 1px solid #46507a;
+  border-radius: 6px;
+  color: #f6f7fb;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.fullscreen:hover {
+  background: #1c29b8;
+  border-color: #1c29b8;
+}
+
+.fullscreen:focus-visible {
+  outline: 3px solid #ffc933;
+  outline-offset: 2px;
+}

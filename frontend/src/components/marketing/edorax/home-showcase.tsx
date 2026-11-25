@@ -61,6 +61,14 @@ function LoopWindow({ title, file, poster, label }: { title: string; file: strin
     return () => watcher.disconnect();
   }, []);
 
+  /** Full screen the loop itself. Esc, or the browser's own exit control, returns to the page. */
+  function openFullScreen() {
+    const el = video.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    if (!el) return;
+    if (el.requestFullscreen) void el.requestFullscreen().catch(() => undefined);
+    else el.webkitEnterFullscreen?.();
+  }
+
   return (
     <div className={s.window}>
       <div className={s.windowBar}>
@@ -71,9 +79,17 @@ function LoopWindow({ title, file, poster, label }: { title: string; file: strin
         </span>
         <span className={s.windowTitle}>{title}</span>
       </div>
-      <video ref={video} className={s.video} muted loop playsInline preload="none" poster={`/video/${poster}.webp`} width={1280} height={720} aria-label={label}>
-        <source src={`/video/${file}.mp4`} type="video/mp4" />
-      </video>
+      <div className={s.stage}>
+        <video ref={video} className={s.video} muted loop playsInline preload="none" poster={`/video/${poster}.webp`} width={1280} height={720} aria-label={label}>
+          <source src={`/video/${file}.mp4`} type="video/mp4" />
+        </video>
+        <button type="button" className={s.fullscreen} onClick={openFullScreen}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" />
+          </svg>
+          Full screen
+        </button>
+      </div>
     </div>
   );
 }
@@ -135,6 +151,8 @@ type Feature = {
   window: string;
   file: string;
   label: string;
+  /** A second recording, shown under the first in the same panel. */
+  extra?: { file: string; title: string; label: string };
 };
 
 const FEATURES: Feature[] = [
@@ -186,6 +204,11 @@ const FEATURES: Feature[] = [
     window: "Course reader",
     file: "demo-courses",
     label: "Demo filmed in the Edorax reader: picking a product, listening to a chapter and answering a checkpoint",
+    extra: {
+      file: "demo-visual-labs",
+      title: "Visual lab: design a short-link service",
+      label: "Demo filmed on edorax.com: a visual lab going from 5 of 11 checks passing to 11 of 11",
+    },
   },
   {
     id: "instructors",
@@ -226,7 +249,7 @@ export function HomeFeatureTabs() {
     <section id="labs" className={s.light}>
       <div className={s.wrap}>
         <p className={s.eyebrow}>More than reading</p>
-        <h2 className={s.h2}>Four ways to practise for real.</h2>
+        <h2 className={s.h2}>Learn it your way.</h2>
         <p className={s.lead}>Each one is filmed in the real product. Pick one to see it.</p>
 
         <div role="tablist" aria-label="Features" className={s.tabs} onKeyDown={onKeyDown}>
@@ -269,7 +292,10 @@ export function HomeFeatureTabs() {
             </div>
           </div>
           <div className={s.media}>
-            <ProductWindow title={feature.window} file={feature.file} label={feature.label} />
+            <div className={s.stack}>
+              <ProductWindow title={feature.window} file={feature.file} label={feature.label} />
+              {feature.extra ? <ProductWindow title={feature.extra.title} file={feature.extra.file} label={feature.extra.label} /> : null}
+            </div>
           </div>
         </div>
       </div>

@@ -39,8 +39,8 @@ type Answer = { answer: string; live: boolean };
 
 const TABS = [
   { id: "tutor", label: "Ask about the chapter", tag: "Live" },
-  { id: "capstone", label: "AI capstone check", tag: "Example" },
-  { id: "interview", label: "Mock interview", tag: "Example" },
+  { id: "capstone", label: "AI capstone check", tag: "Live" },
+  { id: "interview", label: "Mock interview", tag: "Live" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
