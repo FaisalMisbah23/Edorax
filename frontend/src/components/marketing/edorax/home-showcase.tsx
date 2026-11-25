@@ -66,7 +66,7 @@ function LoopWindow({ title, file, poster, label }: { title: string; file: strin
   // While the on-page full screen is open: Esc closes it and the page behind does not scroll.
   useEffect(() => {
     if (!expanded) return;
-    const onKey = (event: KeyboardEvent) => {
+    const onKey = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") setExpanded(false);
     };
     document.addEventListener("keydown", onKey);
