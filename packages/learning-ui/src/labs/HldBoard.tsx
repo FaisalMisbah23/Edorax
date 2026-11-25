@@ -608,8 +608,10 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
   const boardWidth = () => rootRef.current?.clientWidth ?? 0;
   const MEDIUM = 896;
   const WIDE = 1152;
-  /** True when the tests are a column beside the canvas, not a drawer over it. */
-  const testsAreColumn = () => !isFullscreen && (boardWidth() >= WIDE || (boardWidth() >= MEDIUM && paletteCollapsed));
+  /** True when the open tests are a column beside the canvas, not a drawer or sheet over it. */
+  const testsAreColumn = () => boardWidth() >= WIDE || (boardWidth() >= MEDIUM && (isFullscreen || paletteCollapsed));
+  /** What the learner sees now. Until they choose, a wide inline board shows the tests and every other board shows the tab. */
+  const testsShown = () => testsOpen ?? (!isFullscreen && boardWidth() >= WIDE);
 
   /**
    * Open or close the tests. On a medium board there is no room for the components list,
@@ -635,8 +637,7 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
   useEffect(() => {
     if (previousSidePanels.current === sidePanels) return;
     previousSidePanels.current = sidePanels;
-    if (isFullscreen) return;
-    const t = setTimeout(() => fitView({ padding: 0.12, maxZoom: 1, minZoom: boardWidth() < 520 ? 0.55 : 0.35 }), 80);
+    const t = setTimeout(() => fitView({ padding: isFullscreen ? 0.16 : 0.12, maxZoom: 1, minZoom: boardWidth() < 520 ? 0.55 : 0.35 }), 80);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sidePanels, isFullscreen, fitView]);
@@ -656,7 +657,7 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
         e.stopPropagation();
         setChallengeOpen(false);
       } else if (testsOpen && !testsAreColumn()) {
-        // The tests are a drawer over the canvas here, so Esc closes them first.
+        // The tests are a drawer or sheet over the canvas here, so Esc closes them first.
         e.stopPropagation();
         showTests(false);
       } else if (isFullscreen && onToggleFullscreen) {
@@ -727,18 +728,6 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
                   Challenge
                 </button>
               </>
-            ) : null}
-            {isFullscreen ? (
-              <button
-                type="button"
-                onClick={() => { setTestsOpen((open) => !open); setChallengeOpen(false); }}
-                aria-expanded={testsOpen === true}
-                data-testid="tests-button"
-                className={`lab-mono flex items-center gap-2 rounded-[6px] border px-3 py-2 text-[10.5px] font-bold uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 ${testsOpen ? "border-sky-300 bg-sky-300 text-slate-950" : "border-slate-600 text-slate-100 hover:border-slate-400 hover:bg-white/10"}`}
-              >
-                <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 11l3 3 8-8" /><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>
-                Tests
-              </button>
             ) : null}
             <NamesToggle />
             {ran ? (
@@ -835,7 +824,7 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
         ) : null}
 
         <div
-          className={`relative grid grid-cols-1 overflow-hidden ${isFullscreen ? "" : gridColumns} ${
+          className={`relative grid grid-cols-1 overflow-hidden ${isFullscreen ? (testsOpen === true ? "@4xl:grid-cols-[minmax(0,1fr)_370px]" : "") : gridColumns} ${
             isFullscreen ? "h-[calc(100dvh-164px)] min-h-[420px]" : "@6xl:h-[680px]"
           }`}
         >
@@ -1116,12 +1105,12 @@ function Editor({ spec, onReset, solutionMode = false, onRun, onRunDone, onSnaps
             load={load}
             previewId={previewId}
             open={testsOpen}
-            placement={isFullscreen ? "float" : "dock"}
-            columnFrom={testsColumnFrom}
+            fullscreen={isFullscreen}
+            columnFrom={isFullscreen ? "4xl" : testsColumnFrom}
             onLoad={(n) => setControls((c) => ({ ...c, load: n }))}
             onShow={setPreviewId}
             onBack={() => setPreviewId(null)}
-            onToggle={() => showTests(testsOpen === null ? !testsAreColumn() : !testsOpen)}
+            onToggle={() => showTests(!testsShown())}
             onOpenResults={() => setResultsOpen(true)}
           />
         </div>
