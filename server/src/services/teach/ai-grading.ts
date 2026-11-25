@@ -62,7 +62,7 @@ export async function loadAiGrading(user: SessionUser): Promise<AiGradingView> {
     prisma.aiGradingDefault.findUnique({ where: { userId: user.id }, select: ownerDefaultSelect }),
     prisma.course.findMany({
       where: mentoredCoursesWhere(user),
-      orderBy: [{ status: "asc" }, { title: "asc" }],
+      orderBy: { title: "asc" },
       select: { id: true, slug: true, title: true, status: true, mentorId: true, ...AI_GRADING_COURSE_SELECT },
     }),
   ]);
