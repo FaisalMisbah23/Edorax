@@ -37,6 +37,8 @@ export default async function MentorHelpInboxPage({
     `/api/v1/teach/help/threads${suffix}`,
   );
 
+  const openThreads = threads.filter((thread) => thread.status === "OPEN").length;
+
   return (
     <div className="mx-auto max-w-6xl">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -50,10 +52,12 @@ export default async function MentorHelpInboxPage({
           {(statusFilter ?? "open") !== "resolved" && (
             <p className="mt-2 text-sm font-medium text-foreground">
               {needsReplyCount > 0
-                ? `${needsReplyCount} ${needsReplyCount === 1 ? "needs" : "need"} your reply. ${Math.max(0, threads.length - needsReplyCount)} waiting on the learner.`
-                : threads.length > 0
-                  ? "Nothing needs your reply. These are waiting on the learner: mark them resolved when you are done."
-                  : ""}
+                ? `${needsReplyCount} ${needsReplyCount === 1 ? "needs" : "need"} your reply. ${Math.max(0, openThreads - needsReplyCount)} waiting on the learner.`
+                : openThreads > 0
+                  ? `Nothing needs your reply. ${openThreads} waiting on the learner: mark ${openThreads === 1 ? "it" : "them"} resolved when you are done.`
+                  : threads.length > 0
+                    ? "Nothing is open. Everything here is resolved."
+                    : ""}
             </p>
           )}
           {learner ? (
