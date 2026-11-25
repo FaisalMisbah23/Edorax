@@ -16,11 +16,11 @@ const VisualLab = dynamic(() => import("./visual-lab").then((m) => m.VisualLab),
 
 // Dot sits on the window and says one short thing about each tab.
 const TABS = [
-  { id: "shell", label: "Shell labs", mood: "think", line: "Type a command. I check it as you go." },
-  { id: "visual", label: "Visual labs", mood: "wave", line: "Drag a server in, then press Run tests." },
-  { id: "lesson", label: "Lesson + quiz", mood: "happy", line: "Read a little, then prove it." },
-  { id: "blocks", label: "Drag blocks", mood: "wink", line: "Drag them into order." },
-  { id: "listen", label: "Listen", mood: "cheer", line: "Too tired to read? Press play." },
+  { id: "shell", label: "Shell labs", mood: "think" },
+  { id: "visual", label: "Visual labs", mood: "wave" },
+  { id: "lesson", label: "Lesson + quiz", mood: "happy" },
+  { id: "blocks", label: "Drag blocks", mood: "wink" },
+  { id: "listen", label: "Listen", mood: "cheer" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
@@ -94,7 +94,6 @@ export function HeroLab() {
   return (
     <div className={s.frame} data-nosnippet="">
     <div className={s.dotPerch} aria-hidden="true">
-      <span className={s.bubble}>{solved.has(tab) ? "Nice. Try the next one." : current.line}</span>
       <span className={s.dotBob}>
         <Dot mood={solved.has(tab) ? "cheer" : current.mood} size={104} />
       </span>
