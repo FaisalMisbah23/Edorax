@@ -275,6 +275,12 @@ export async function submitReview(req: Request, res: Response) {
 }
 
 // POST /api/v1/teach/review/:responseId/ai-draft
+// POST /api/v1/teach/review/:responseId/archive
+export async function archiveResponse(req: Request, res: Response) {
+  await reviews.archiveResponse(req.user!, param(req, "responseId"));
+  noContent(res);
+}
+
 // POST /api/v1/teach/review/:responseId/accept-ai-draft
 export async function acceptAiDraft(req: Request, res: Response) {
   await reviews.acceptAiDraft(req.user!, param(req, "responseId"));
