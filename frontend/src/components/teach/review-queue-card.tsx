@@ -28,7 +28,7 @@ function Clamped({ text }: { text: string }) {
     <>
       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">{long && !open ? `${text.slice(0, CLAMP_CHARS)}…` : text}</p>
       {long ? (
-        <button type="button" onClick={() => setOpen((value) => !value)} className="mt-1 text-xs font-medium text-primary hover:underline">
+        <button type="button" onClick={() => setOpen((value) => !value)} className="mt-1 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline sm:min-h-0 sm:text-xs">
           {open ? "Show less" : "Show all"}
         </button>
       ) : null}
@@ -190,10 +190,10 @@ export function ReviewQueueCard({ item, ageLabel, autoDraft }: { item: ReviewQue
           </>
         ) : (
           <>
-            <button type="button" onClick={() => setConfirmArchive(true)} className="inline-flex items-center gap-1 font-medium text-muted-foreground hover:text-foreground">
+            <button type="button" onClick={() => setConfirmArchive(true)} className="inline-flex min-h-11 items-center gap-1 pr-2 font-medium text-muted-foreground hover:text-foreground sm:min-h-0">
               <Archive className="size-3.5" aria-hidden /> Archive
             </button>
-            <Link href={`/review/${item.id}`} className="font-medium text-muted-foreground hover:text-foreground">
+            <Link href={`/review/${item.id}`} className="inline-flex min-h-11 items-center font-medium text-muted-foreground hover:text-foreground sm:min-h-0">
               Open full page
             </Link>
           </>
