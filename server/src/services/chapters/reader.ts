@@ -5,7 +5,7 @@ import { learningLogToAnswers, learningLogToChecklist, parseLearningLog } from "
 import { prisma } from "../../db/prisma.js";
 import { NotFoundError } from "../../utils/errors.js";
 import type { SessionUser } from "../../types/auth.js";
-import { shouldBypassProgressGating } from "../auth/seed-access.js";
+import { shouldBypassProgressGatingForCourse } from "../auth/seed-access.js";
 import { requireBlockSubmissionAccess } from "../enrollment/api-learn-access.js";
 import { loadChapterThread } from "../help/threads.js";
 import { serializeHelpThread } from "../help/serialize.js";
@@ -46,6 +46,7 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
       projectGoal: true,
       sequential: true,
       familySlug: true,
+      mentorId: true,
       variantFamily: true,
       activeReleaseId: true,
       modules: {
@@ -90,7 +91,7 @@ export async function loadChapterReader(courseSlug: string, chapterSlug: string,
     }
   }
 
-  const bypassLocking = shouldBypassProgressGating(user);
+  const bypassLocking = shouldBypassProgressGatingForCourse(user, course);
   let selectedRelease = await releaseForEnrollment(course.id, enrollment, course.familySlug);
   let courseModules = selectedRelease ? await releaseModulesWithBlocks(selectedRelease.modules) : course.modules;
 
