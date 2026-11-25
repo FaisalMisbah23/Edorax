@@ -79,6 +79,7 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string, 
     aiDraft: readStoredDraft(response.aiDraft, response.aiDraftModel)?.draft ?? null,
     aiDraftModel: response.aiDraft ? response.aiDraftModel : null,
     aiDraftCostUsd: response.aiDraft && response.aiDraftCostMicroUsd != null ? response.aiDraftCostMicroUsd / 1_000_000 : null,
+    aiDraftError: response.aiDraft ? null : response.aiDraftError,
     autoDraft: draftsOn.get(response.block.chapter.course.id) ?? false,
     ...reviewContext(response.block.chapter, response.enrollmentId, progress),
   }));

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Archive, CheckCircle2, ExternalLink, RotateCcw, Sparkles } from "lucide-react";
 import type { ReviewQueueItem } from "@/shared/api/teach";
 import { submitReview } from "@/server/actions/reviews";
-import { archiveReviewResponse } from "@/server/actions/ai-review";
+import { archiveReviewResponse, generateAiReviewDraft } from "@/server/actions/ai-review";
 import { Button } from "@/components/ui/button";
 import { ReviewContextLinks } from "@/components/teach/review-context-links";
 import { formatUsd } from "@/components/teach/format-usd";
@@ -58,6 +58,19 @@ export function ReviewQueueCard({ item, ageLabel, autoDraft }: { item: ReviewQue
       if (!result.ok && !alreadyHandled(result.errors.join(" "))) setError(result.errors.join(" "));
       else {
         setGone(true);
+        router.refresh();
+      }
+    });
+  }
+
+  function retryDraft() {
+    startTransition(async () => {
+      setError(null);
+      const result = await generateAiReviewDraft({ responseId: item.id });
+      if (!result.ok) setError(result.error);
+      else {
+        setFeedback(result.draft.feedback);
+        setScore(String(result.draft.suggestedScore));
         router.refresh();
       }
     });
@@ -135,8 +148,17 @@ export function ReviewQueueCard({ item, ageLabel, autoDraft }: { item: ReviewQue
                   </span>
                 </>
               ) : (
-                <span className="font-normal text-muted-foreground">
-                  {(item.autoDraft ?? autoDraft) && item.blockType === "OPEN_QUESTION" ? "Claude is still drafting this one. Refresh in a minute, or write your own feedback." : "Write your feedback."}
+                <span className="flex flex-wrap items-center gap-2 font-normal text-muted-foreground">
+                  {item.aiDraftError
+                    ? `Claude could not draft this: ${item.aiDraftError}`
+                    : (item.autoDraft ?? autoDraft) && item.blockType === "OPEN_QUESTION"
+                      ? "Claude is still drafting this one. Refresh in a minute, or write your own feedback."
+                      : "Write your feedback."}
+                  {(item.autoDraft ?? autoDraft) && item.blockType === "OPEN_QUESTION" ? (
+                    <button type="button" onClick={retryDraft} disabled={pending} className="font-medium text-primary hover:underline disabled:opacity-60">
+                      {pending ? "Drafting..." : "Try again"}
+                    </button>
+                  ) : null}
                 </span>
               )}
             </p>

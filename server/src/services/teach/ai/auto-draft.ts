@@ -77,6 +77,23 @@ async function underDailyCap(now = new Date()): Promise<boolean> {
 
 type Deps = { generate?: typeof generateReviewDraft; force?: boolean };
 
+/** After a failure, wait this long before the queue tries the same answer again on its own. */
+const RETRY_AFTER_MS = 30 * 60 * 1000;
+
+async function markFailed(responseId: string, reason: string) {
+  await prisma.response
+    .update({ where: { id: responseId }, data: { aiDraftError: reason.slice(0, 300), aiDraftFailedAt: new Date() } })
+    .catch(() => undefined);
+}
+
+/** A short reason for the mentor. Provider errors are already written for people; anything else stays generic. */
+function failureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  if (message.startsWith("Claude could not generate a draft: ")) return message.slice("Claude could not generate a draft: ".length);
+  if (message.startsWith("Claude returned an unreadable")) return "Claude returned a draft we could not read.";
+  return "Claude could not draft this one.";
+}
+
 /**
  * Make and save the platform draft for one pending open answer. Returns the saved draft,
  * or null when drafting is off (for the platform or for this course), capped, not an
@@ -92,12 +109,15 @@ export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Prom
       aiDraft: true,
       aiDraftModel: true,
       aiDraftCostMicroUsd: true,
+      aiDraftFailedAt: true,
       block: { select: { chapter: { select: { course: { select: AI_GRADING_COURSE_SELECT } } } } },
     },
   });
   if (!row || row.status !== "PENDING_REVIEW") return null;
   const existing = readStoredDraft(row.aiDraft, row.aiDraftModel, row.aiDraftCostMicroUsd);
   if (existing && !deps.force) return existing;
+  // A recent failure is not retried on every page load; "Try again" (force) always runs.
+  if (!deps.force && row.aiDraftFailedAt && Date.now() - row.aiDraftFailedAt.getTime() < RETRY_AFTER_MS) return null;
   const settings = effectiveAiGrading(row.block.chapter.course);
   if (!settings.reviewDraft) return null;
   if (!(await underDailyCap())) return null;
@@ -105,7 +125,10 @@ export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Prom
   inFlight.add(responseId);
   try {
     const context = await loadReviewDraftContext(responseId);
-    if (!context) return null;
+    if (!context) {
+      await markFailed(responseId, "This answer has no readable text to draft from. Review it by hand.");
+      return null;
+    }
     const result = await (deps.generate ?? generateReviewDraft)(context, {
       provider: "ANTHROPIC",
       apiKey: env.ANTHROPIC_API_KEY,
@@ -115,11 +138,19 @@ export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Prom
     const costMicro = result.usage ? costMicroUsd(result.model, result.usage.inputTokens, result.usage.outputTokens) : null;
     await prisma.response.update({
       where: { id: responseId },
-      data: { aiDraft: draft as Prisma.InputJsonValue, aiDraftModel: result.model, aiDraftAt: new Date(), aiDraftCostMicroUsd: costMicro },
+      data: {
+        aiDraft: draft as Prisma.InputJsonValue,
+        aiDraftModel: result.model,
+        aiDraftAt: new Date(),
+        aiDraftCostMicroUsd: costMicro,
+        aiDraftError: null,
+        aiDraftFailedAt: null,
+      },
     });
     return { draft, model: result.model, costUsd: costMicro == null ? null : costMicro / 1_000_000 };
   } catch (error) {
     logger.warn({ err: error instanceof Error ? error.message : "unknown", responseId }, "automatic review draft failed");
+    await markFailed(responseId, failureReason(error));
     return null;
   } finally {
     inFlight.delete(responseId);
