@@ -68,8 +68,10 @@ describe("/api/v1/teach/review", () => {
       question: { prompt: "Explain the trade-off you made.", rubric: "Names a concrete trade-off.", sampleAnswer: "Compares two options." },
       answerUrl: null,
       review: null,
-      history: [],
     });
+    expect(res.body.data.history).toEqual([
+      expect.objectContaining({ id: responseId, attempt: 1, current: true, review: null, answerText: expect.stringMatching(/^I chose Postgres/) }),
+    ]);
     expect(res.body.data.answerText).toMatch(/^I chose Postgres/);
 
     expect((await request(app).get(`/api/v1/teach/review/${responseId}`).set("Authorization", `Bearer ${fx.learnerToken}`)).status).toBe(403);
@@ -101,7 +103,15 @@ describe("/api/v1/teach/review", () => {
 
     const detail = await request(app).get(`/api/v1/teach/review/${responseId}`).set(mentor());
     expect(detail.body.data.review).toEqual({ score: 5, verdict: "APPROVED" });
-    expect(detail.body.data.history).toEqual([{ id: responseId, attempt: 1, verdict: "APPROVED", feedback: "Clear reasoning.", reviewerName: "Test Mentor" }]);
+    expect(detail.body.data.history).toEqual([
+      expect.objectContaining({
+        id: responseId,
+        attempt: 1,
+        current: true,
+        submittedAt: expect.any(String),
+        review: { verdict: "APPROVED", feedback: "Clear reasoning.", reviewerName: "Test Mentor", reviewedAt: expect.any(String) },
+      }),
+    ]);
     expect((await request(app).get("/api/v1/teach/review").set(mentor())).body.data.items.map((i: { id: string }) => i.id)).not.toContain(responseId);
   });
 });

@@ -9,6 +9,8 @@ import { QuizIntegrity } from "@/components/teach/evaluation/quiz-integrity";
 import { CapstoneReport, capstoneDraftFeedback } from "@/components/teach/evaluation/capstone-report";
 import { ReviewContextLinks } from "@/components/teach/review-context-links";
 import { formatUsd } from "@/components/teach/format-usd";
+import { AttemptTimeline } from "@/components/teach/evaluation/attempt-timeline";
+import { LocalDate } from "@/components/classes/local-date";
 
 export default async function ReviewDetailPage({
   params,
@@ -61,7 +63,7 @@ export default async function ReviewDetailPage({
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {response.learner.name ?? response.learner.email} · attempt {response.attempt} ·{" "}
-            submitted {new Date(response.submittedAt).toLocaleString()}
+            answered on <LocalDate iso={response.submittedAt} withTime />
           </p>
           <ReviewContextLinks item={response} className="mt-3" />
         </div>
@@ -71,6 +73,8 @@ export default async function ReviewDetailPage({
           </span>
         )}
       </div>
+
+      {capstone ? null : <AttemptTimeline attempts={history} />}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {capstone ? <CapstoneReport capstone={capstone} /> : null}
@@ -104,21 +108,6 @@ export default async function ReviewDetailPage({
             </div>
           )}
 
-          {history.length > 0 && (
-            <div className="mt-4 space-y-3">
-              <h3 className="text-sm font-semibold">Previous exchange</h3>
-              {history.map((item) => (
-                <div key={item.id} className="rounded-lg border p-3">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Attempt {item.attempt} ·{" "}
-                    {item.verdict === "APPROVED" ? "approved" : "sent back for revision"} by{" "}
-                    {item.reviewerName ?? "mentor"}
-                  </p>
-                  <p className="mt-1.5 whitespace-pre-wrap text-sm">{item.feedback}</p>
-                </div>
-              ))}
-            </div>
-          )}
         </section>}
 
         {/* Right: the mentee's answer + review form */}
@@ -140,7 +129,7 @@ export default async function ReviewDetailPage({
 
           {alreadyReviewed ? (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-700 dark:text-emerald-300">
-              Already reviewed —{" "}
+              Already reviewed:{" "}
               {response.status === "REVIEWED" ? "approved" : "sent back for revision"}
               {response.review?.score !== null && response.review?.score !== undefined
                 ? ` with score ${response.review.score}/${response.block.points}`
