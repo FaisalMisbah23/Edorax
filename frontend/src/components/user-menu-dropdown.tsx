@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { LayoutDashboard, Loader2, LogOut, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Loader2, LogOut, Moon, Sun, TrendingUp } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useHydrated } from "@/lib/use-browser-storage";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +34,9 @@ export function UserMenuDropdown({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const displayName = user.name ?? user.email ?? "Account";
+  // The top bar hides its dark mode button on narrow screens, so the menu carries it too.
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const isDark = useHydrated() && (resolvedTheme ?? theme) === "dark";
 
   return (
     <DropdownMenu>
@@ -73,6 +78,10 @@ export function UserMenuDropdown({
             My progress
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem closeOnClick={false} onClick={() => setTheme(isDark ? "light" : "dark")}>
+          {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          {isDark ? "Light mode" : "Dark mode"}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
