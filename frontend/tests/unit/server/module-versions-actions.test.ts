@@ -23,12 +23,12 @@ beforeEach(() => {
 });
 
 describe("module version server actions", () => {
-  it("chooses a version with a PUT and refreshes the course pages", async () => {
+  it("chooses a version with a PUT and does not re-render the old chapter", async () => {
     serverApiFetch.mockResolvedValue(chosen);
     const result = await chooseModuleVersionAction({ courseSlug: "test-course", moduleKey: "m2", versionKey: "v2" });
     expect(result).toEqual({ ok: true, data: chosen });
     expect(serverApiFetch).toHaveBeenCalledWith("/api/v1/courses/test-course/modules/m2/version", { method: "PUT", json: { versionKey: "v2" } });
-    expect(revalidatePath).toHaveBeenCalledWith("/courses/test-course", "layout");
+    expect(revalidatePath).not.toHaveBeenCalled();
   });
 
   it("returns the API message instead of throwing, and refreshes nothing", async () => {

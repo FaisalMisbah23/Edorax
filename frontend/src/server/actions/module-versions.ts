@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import type {
   ChooseModuleVersionResult,
   ModuleVersionFeedbackResult,
@@ -37,8 +36,9 @@ export async function chooseModuleVersionAction(raw: {
       json: { versionKey: raw.versionKey },
     })
   );
-  // The module list, next and previous, and the percentage all change with the version.
-  if (result.ok) revalidatePath(`/courses/${result.data.courseSlug}`, "layout");
+  // No revalidatePath here: it re-renders the page the learner is on, a chapter of the old
+  // version, and opening that chapter switches the module straight back to the old version.
+  // The caller opens the new version's first chapter with a full page load instead.
   return result;
 }
 
