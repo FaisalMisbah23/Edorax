@@ -61,6 +61,7 @@ export type MentorSidebarCourse = {
   learnerCount: number;
   pendingReviews: number;
   openHelpRequests: number;
+  openFeedback?: number;
 };
 
 type NavItem = {
