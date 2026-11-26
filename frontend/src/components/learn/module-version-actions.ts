@@ -23,7 +23,7 @@ const serverCalls: Calls = {
  */
 export function moduleVersionActionsFor(
   courseSlug: string,
-  router: { push: (href: string) => void; refresh: () => void },
+  router: { push: (href: string) => void; refresh: () => void; assign?: (href: string) => void },
   calls: Calls = serverCalls
 ): ModuleVersionActions {
   return {
@@ -31,8 +31,17 @@ export function moduleVersionActionsFor(
       const result = await calls.choose({ courseSlug, moduleKey, versionKey });
       if (!result.ok) throw new Error(result.error);
       const first = result.data.firstChapterSlug;
-      if (first) router.push(`/courses/${encodeURIComponent(result.data.courseSlug)}/${encodeURIComponent(first)}`);
-      else router.refresh();
+      if (!first) {
+        router.refresh();
+        return;
+      }
+      const href = `/courses/${encodeURIComponent(result.data.courseSlug)}/${encodeURIComponent(first)}`;
+      // A full page load, not router.push: the client may hold a copy of this chapter rendered
+      // before the switch (a prefetch made while the old version was chosen), and showing it
+      // makes the switch look like it did nothing until the learner reloads.
+      if (router.assign) router.assign(href);
+      else if (typeof window !== "undefined") window.location.assign(href);
+      else router.push(href);
     },
     async saveFeedback(moduleKey, versionKey, note) {
       const result = await calls.save({ courseSlug, moduleKey, versionKey, note });

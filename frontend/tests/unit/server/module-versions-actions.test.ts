@@ -75,15 +75,17 @@ describe("loadModuleVersions", () => {
 });
 
 describe("moduleVersionActionsFor", () => {
-  const router = () => ({ push: vi.fn(), refresh: vi.fn() });
+  const router = () => ({ push: vi.fn(), refresh: vi.fn(), assign: vi.fn() });
 
-  it("opens the first chapter of the chosen version", async () => {
+  it("opens the first chapter of the chosen version with a full page load", async () => {
     const nav = router();
     const choose = vi.fn().mockResolvedValue({ ok: true, data: chosen });
     const actions = moduleVersionActionsFor("test-course", nav, { choose, save: vi.fn(), remove: vi.fn() });
     await actions.choose("m2", "v2");
     expect(choose).toHaveBeenCalledWith({ courseSlug: "test-course", moduleKey: "m2", versionKey: "v2" });
-    expect(nav.push).toHaveBeenCalledWith("/courses/test-course/basics-v2-one");
+    // Not a client push: a copy prefetched before the switch would show the old version.
+    expect(nav.assign).toHaveBeenCalledWith("/courses/test-course/basics-v2-one");
+    expect(nav.push).not.toHaveBeenCalled();
   });
 
   it("refreshes when the version has no chapters, and throws the message on failure", async () => {
