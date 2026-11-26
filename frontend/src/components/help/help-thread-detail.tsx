@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import {
   askMentorFromChapter,
   replyToHelpThread,
+  reopenHelpThread,
   resolveHelpThread,
 } from "@/server/actions/help";
 import { HelpNoteTimeline } from "./help-note-timeline";
@@ -184,6 +185,20 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
     void deliver(pending);
   }
 
+  function reopenThread() {
+    if (props.variant !== "mentor") return;
+    setError(null);
+    startResolving(async () => {
+      const result = await reopenHelpThread({ threadId: props.threadId });
+      if (!result.ok) {
+        setError(result.error);
+        toast(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   function markResolved() {
     if (props.variant !== "mentor") return;
     setError(null);
@@ -351,9 +366,17 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
               }
             />
           ) : (
-            <p className="mx-auto w-fit max-w-full rounded-2xl bg-muted px-4 py-2 text-center text-sm text-muted-foreground">
-              {copy.resolvedMentorSide}
-            </p>
+            <div className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-3 rounded-2xl bg-muted px-4 py-2 text-center text-sm text-muted-foreground">
+              <span>{copy.resolvedMentorSide}</span>
+              <button
+                type="button"
+                onClick={reopenThread}
+                disabled={resolving}
+                className="font-medium text-primary hover:underline disabled:opacity-60"
+              >
+                {resolving ? "Reopening..." : "Reopen"}
+              </button>
+            </div>
           )}
         </ChatFooter>
       </section>

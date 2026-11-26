@@ -446,6 +446,24 @@ export async function resolve(user: SessionUser, threadId: string) {
   return { threadId: thread.id, alreadyResolved: false };
 }
 
+/** Undo a resolve: the thread goes back to open so the mentor can keep replying. */
+export async function reopen(user: SessionUser, threadId: string) {
+  const thread = await loadAccessibleThread(threadId, user);
+  if (!canResolveHelpThread(user, thread.course)) {
+    throw new ForbiddenError("Only the course mentor can reopen this thread.");
+  }
+  if (thread.status === "OPEN") return { threadId: thread.id, alreadyOpen: true };
+
+  await prisma.helpThread.update({
+    where: { id: thread.id },
+    data: { status: "OPEN", resolvedAt: null },
+  });
+  for (const participantId of participantIds(thread)) {
+    publish(participantId, "help-thread", { threadId: thread.id, status: "OPEN" });
+  }
+  return { threadId: thread.id, alreadyOpen: false };
+}
+
 async function appendMessage(
   threadId: string,
   authorId: string,
