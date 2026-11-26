@@ -66,6 +66,13 @@ export async function replyToHelpThread(input: {
   );
 }
 
+export async function reopenHelpThread(input: { threadId: string }) {
+  return helpCall(
+    `/api/v1/help/threads/${encodeURIComponent(input.threadId)}/reopen`,
+    {},
+  );
+}
+
 export async function resolveHelpThread(input: { threadId: string }) {
   return helpCall(
     `/api/v1/help/threads/${encodeURIComponent(input.threadId)}/resolve`,

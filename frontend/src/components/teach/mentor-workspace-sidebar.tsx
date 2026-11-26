@@ -61,6 +61,7 @@ export type MentorSidebarCourse = {
   learnerCount: number;
   pendingReviews: number;
   openHelpRequests: number;
+  openFeedback?: number;
 };
 
 type NavItem = {
@@ -230,6 +231,7 @@ export function MentorWorkspaceSidebar({
       href: "/feedback",
       icon: Flag,
       active: pathname.startsWith("/feedback"),
+      count: total((course) => course.openFeedback ?? 0),
     },
     {
       label: "AI grading",

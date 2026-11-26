@@ -39,5 +39,10 @@ router.post(
   validateParams(threadParams),
   help.resolve,
 );
+router.post(
+  "/threads/:threadId/reopen",
+  validateParams(threadParams),
+  help.reopen,
+);
 
 export default router;

@@ -59,6 +59,8 @@ export type MentorSidebarCourse = {
   learnerCount: number;
   pendingReviews: number;
   openHelpRequests: number;
+  /** Open learner questions flagged as feedback, plus open lesson reports. */
+  openFeedback?: number;
 };
 
 export type TeachWorkspace = {

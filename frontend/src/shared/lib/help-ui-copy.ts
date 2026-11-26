@@ -37,7 +37,7 @@ export const helpUiCopy = {
   resolvedStartNew: "start a new question",
   resolvedFollowUpBelow: "Send a new question below if you're stuck again.",
   resolvedMentorSide:
-    "Resolved—the learner can ask a new question from the lesson if they need more help.",
+    "Resolved. The learner can ask a new question from the lesson if they need more help.",
 
   dashboardTitleUnread: "Mentor replied",
   dashboardTitleOpen: "Question open",

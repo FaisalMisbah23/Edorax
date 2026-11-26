@@ -50,6 +50,11 @@ export async function markSeen(req: Request, res: Response) {
   );
 }
 
+// POST /api/v1/help/threads/:threadId/reopen: course mentor only, undoes a resolve
+export async function reopen(req: Request, res: Response) {
+  ok(res, await threads.reopen(req.user!, req.params.threadId as string));
+}
+
 // POST /api/v1/help/threads/:threadId/resolve — course mentor only
 export async function resolve(req: Request, res: Response) {
   ok(res, await threads.resolve(req.user!, req.params.threadId as string));
