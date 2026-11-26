@@ -25,7 +25,7 @@ export async function loadTeachWorkspace(user: SessionUser): Promise<TeachWorksp
           },
         },
         enrollments: { where: CONFIRMED_ENROLLMENT_WHERE, select: { pendingReviews: true } },
-        helpThreads: { where: { status: "OPEN" }, select: { id: true } },
+        helpThreads: { where: { status: "OPEN" }, select: { id: true, kind: true, feedbackScope: true } },
       },
     }),
     loadInstructorAccessState(user),
@@ -42,6 +42,8 @@ export async function loadTeachWorkspace(user: SessionUser): Promise<TeachWorksp
       learnerCount: course._count.enrollments,
       pendingReviews: course.enrollments.reduce((sum, item) => sum + item.pendingReviews, 0),
       openHelpRequests: course.helpThreads.length,
+      // Same rule as the Feedback page (flagged threads and lesson reports), open ones only.
+      openFeedback: course.helpThreads.filter((thread) => thread.feedbackScope !== null || thread.kind === "LESSON_REPORT").length,
     })),
   };
 }
