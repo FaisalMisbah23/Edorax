@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { type ComponentProps, useEffect, useMemo, useState } from "react";
 import {
   ChapterSidebar as SharedChapterSidebar,
   type ChapterSidebarProps,
@@ -9,6 +9,15 @@ import {
 import { CourseNavigationProvider } from "@buildment/learning-ui/components/learn/course-navigation";
 import { moduleVersionActionsFor } from "@/components/learn/module-version-actions";
 export { SidebarToggle } from "@buildment/learning-ui/components/learn/chapter-sidebar";
+
+/**
+ * Sidebar lesson links do not prefetch. A long course shows dozens of lessons, and prefetching
+ * each one renders a whole chapter on the server: on System Design that kept the API busy for
+ * 20 seconds after every page load, so a click like a version switch waited behind it.
+ */
+function SidebarLink(props: ComponentProps<typeof Link>) {
+  return <Link prefetch={false} {...props} />;
+}
 export function ChapterSidebar(props: ChapterSidebarProps) {
   const [width, setWidth] = useState(288);
   useEffect(() => {
@@ -34,7 +43,7 @@ export function ChapterSidebar(props: ChapterSidebarProps) {
   const rest = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
   const active = rest && !rest.includes("/") ? decodeURIComponent(rest) : props.currentChapterSlug;
   return (
-    <CourseNavigationProvider Link={Link}>
+    <CourseNavigationProvider Link={SidebarLink}>
       <SharedChapterSidebar
         {...props}
         currentChapterSlug={active}
