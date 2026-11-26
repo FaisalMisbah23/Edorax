@@ -1,18 +1,42 @@
 import type { ModuleVersionActions } from "@buildment/learning-ui/components/learn/module-versions";
+import type { ChooseModuleVersionResult } from "@/shared/api/module-versions";
+import { ApiError, apiFetch } from "@/lib/api-client";
 import {
-  chooseModuleVersionAction,
+  type ModuleVersionActionResult,
   removeModuleVersionFeedbackAction,
   saveModuleVersionFeedbackAction,
 } from "@/server/actions/module-versions";
 
+/**
+ * Save the choice with a direct call to the API, not a server action. Next runs server actions
+ * one at a time behind the page's pending requests, and the sidebar preloads many lesson links,
+ * so a server action here waited 20 seconds or more on a long course before it even started.
+ */
+async function chooseModuleVersionDirect(raw: {
+  courseSlug: string;
+  moduleKey: string;
+  versionKey: string;
+}): Promise<ModuleVersionActionResult<ChooseModuleVersionResult>> {
+  try {
+    const data = await apiFetch<ChooseModuleVersionResult>(
+      `/api/v1/courses/${encodeURIComponent(raw.courseSlug)}/modules/${encodeURIComponent(raw.moduleKey)}/version`,
+      { method: "PUT", json: { versionKey: raw.versionKey } }
+    );
+    return { ok: true, data };
+  } catch (error) {
+    if (error instanceof ApiError) return { ok: false, error: error.message };
+    return { ok: false, error: "That version could not be opened. Please try again." };
+  }
+}
+
 type Calls = {
-  choose: typeof chooseModuleVersionAction;
+  choose: typeof chooseModuleVersionDirect;
   save: typeof saveModuleVersionFeedbackAction;
   remove: typeof removeModuleVersionFeedbackAction;
 };
 
 const serverCalls: Calls = {
-  choose: chooseModuleVersionAction,
+  choose: chooseModuleVersionDirect,
   save: saveModuleVersionFeedbackAction,
   remove: removeModuleVersionFeedbackAction,
 };
