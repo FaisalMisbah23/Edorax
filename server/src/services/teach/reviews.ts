@@ -161,15 +161,29 @@ async function requireReviewableResponse(user: SessionUser, responseId: string) 
   return response;
 }
 
+/** The answer as the mentor reads it: the text, or the submitted link, or the raw payload. */
+function readAnswerText(raw: unknown): string {
+  const payload = raw as { text?: string; url?: string } | null;
+  if (typeof payload?.text === "string" && payload.text.trim()) return payload.text;
+  if (typeof payload?.url === "string") return `(Link submission)\n${payload.url}`;
+  return JSON.stringify(raw, null, 2);
+}
+
 /** One submission with the mentor-only question config and the learner's previous exchanges. */
 export async function loadReviewDetail(user: SessionUser, responseId: string): Promise<ReviewDetailView> {
   const response = await requireReviewableResponse(user, responseId);
 
   const [history, integrity, progress] = await Promise.all([
     prisma.response.findMany({
-      where: { blockId: response.blockId, userId: response.userId, review: { isNot: null } },
-      orderBy: { attempt: "asc" },
-      select: { id: true, attempt: true, review: { select: { verdict: true, feedback: true, reviewer: { select: { name: true } } } } },
+      where: { blockId: response.blockId, userId: response.userId, status: { not: "DRAFT" } },
+      orderBy: [{ attempt: "asc" }, { submittedAt: "asc" }],
+      select: {
+        id: true,
+        attempt: true,
+        submittedAt: true,
+        payload: true,
+        review: { select: { verdict: true, feedback: true, createdAt: true, reviewer: { select: { name: true } } } },
+      },
     }),
     loadIntegritySummaries(response.enrollmentId, response.block.chapter.id),
     loadLearnerProgress([response.enrollmentId]),
@@ -184,12 +198,7 @@ export async function loadReviewDetail(user: SessionUser, responseId: string): P
   const capstone = response.block.type === "CAPSTONE_CHECK" ? await loadCapstoneReview(response.blockId, response.userId, response.id, response.block.config) : null;
   const payload = response.payload as { text?: string; url?: string } | null;
   const rawUrl = typeof payload?.url === "string" ? payload.url : null;
-  const answerText =
-    typeof payload?.text === "string" && payload.text.trim()
-      ? payload.text
-      : rawUrl
-        ? `(Link submission)\n${rawUrl}`
-        : JSON.stringify(response.payload, null, 2);
+  const answerText = readAnswerText(response.payload);
 
   return {
     id: response.id,
@@ -212,11 +221,22 @@ export async function loadReviewDetail(user: SessionUser, responseId: string): P
     answerText,
     answerUrl: rawUrl ? (parseSafeSubmissionUrl(rawUrl)?.toString() ?? null) : null,
     review: response.review,
-    history: history.flatMap((item) =>
-      item.review
-        ? [{ id: item.id, attempt: item.attempt, verdict: item.review.verdict, feedback: item.review.feedback, reviewerName: item.review.reviewer.name }]
-        : []
-    ),
+    // Every attempt in order, so the mentor sees when each answer came in and what was said back.
+    history: history.map((item) => ({
+      id: item.id,
+      attempt: item.attempt,
+      submittedAt: item.submittedAt.toISOString(),
+      answerText: readAnswerText(item.payload),
+      current: item.id === response.id,
+      review: item.review
+        ? {
+            verdict: item.review.verdict,
+            feedback: item.review.feedback,
+            reviewerName: item.review.reviewer.name,
+            reviewedAt: item.review.createdAt.toISOString(),
+          }
+        : null,
+    })),
     integrity,
     capstone,
     aiDraft,

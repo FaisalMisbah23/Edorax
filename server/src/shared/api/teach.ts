@@ -641,7 +641,16 @@ export type ReviewDetailView = ReviewContext & {
   answerText: string;
   answerUrl: string | null;
   review: { score: number | null; verdict: ReviewVerdict } | null;
-  history: Array<{ id: string; attempt: number; verdict: ReviewVerdict; feedback: string; reviewerName: string | null }>;
+  /** Every submitted attempt on this question by this learner, oldest first, with the review each got. */
+  history: Array<{
+    id: string;
+    attempt: number;
+    submittedAt: string;
+    answerText: string;
+    /** True for the attempt this page is about. */
+    current: boolean;
+    review: { verdict: ReviewVerdict; feedback: string; reviewerName: string | null; reviewedAt: string } | null;
+  }>;
   /** Quiz integrity attempts on this chapter by this learner, newest first. */
   integrity: IntegrityAttemptSummary[];
   /** Capstone checks: the check under review and the learner's other checks on this block, newest first. */
