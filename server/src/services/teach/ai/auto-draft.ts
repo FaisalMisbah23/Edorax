@@ -101,7 +101,21 @@ function failureReason(error: unknown): string {
  * `force` replaces an existing draft (the mentor's "Draft again").
  */
 export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Promise<StoredAiDraft | null> {
-  if (!aiReviewAutoDraftAvailable || inFlight.has(responseId)) return null;
+  const outcome = await draftWithReason(responseId, deps);
+  return "draft" in outcome ? outcome.draft : null;
+}
+
+/**
+ * Same as ensureAutoDraft, but says why there is no draft, so "Try again" can tell the
+ * mentor the real reason instead of a generic "temporarily unavailable".
+ */
+export async function draftWithReason(responseId: string, deps: Deps = {}): Promise<{ draft: StoredAiDraft } | { reason: string }> {
+  if (!aiReviewAutoDraftAvailable) return { reason: "Automatic drafting is switched off on the platform." };
+  // A background draft for this answer is already running: wait for it instead of failing.
+  for (let waited = 0; inFlight.has(responseId) && waited < 45_000; waited += 1_000) {
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+  }
+  if (inFlight.has(responseId)) return { reason: "Claude is still working on this one. Try again in a minute." };
   const row = await prisma.response.findUnique({
     where: { id: responseId },
     select: {
@@ -113,21 +127,27 @@ export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Prom
       block: { select: { chapter: { select: { course: { select: AI_GRADING_COURSE_SELECT } } } } },
     },
   });
-  if (!row || row.status !== "PENDING_REVIEW") return null;
+  if (!row) return { reason: "This answer no longer exists." };
+  if (row.status !== "PENDING_REVIEW") return { reason: "This answer is already reviewed." };
   const existing = readStoredDraft(row.aiDraft, row.aiDraftModel, row.aiDraftCostMicroUsd);
-  if (existing && !deps.force) return existing;
+  if (existing && !deps.force) return { draft: existing };
   // A recent failure is not retried on every page load; "Try again" (force) always runs.
-  if (!deps.force && row.aiDraftFailedAt && Date.now() - row.aiDraftFailedAt.getTime() < RETRY_AFTER_MS) return null;
+  if (!deps.force && row.aiDraftFailedAt && Date.now() - row.aiDraftFailedAt.getTime() < RETRY_AFTER_MS) {
+    return { reason: "The last try failed. Press Try again." };
+  }
   const settings = effectiveAiGrading(row.block.chapter.course);
-  if (!settings.reviewDraft) return null;
-  if (!(await underDailyCap())) return null;
+  if (!settings.reviewDraft) return { reason: "AI drafts are off for this course. Turn them on in the course's AI grading settings." };
+  if (!(await underDailyCap())) {
+    return { reason: `Today's limit of ${env.AI_REVIEW_DAILY_LIMIT} AI drafts is used up. It resets at midnight UTC.` };
+  }
 
   inFlight.add(responseId);
   try {
     const context = await loadReviewDraftContext(responseId);
     if (!context) {
-      await markFailed(responseId, "This answer has no readable text to draft from. Review it by hand.");
-      return null;
+      const reason = "This answer has no readable text to draft from. Review it by hand.";
+      await markFailed(responseId, reason);
+      return { reason };
     }
     const result = await (deps.generate ?? generateReviewDraft)(context, {
       provider: "ANTHROPIC",
@@ -147,11 +167,12 @@ export async function ensureAutoDraft(responseId: string, deps: Deps = {}): Prom
         aiDraftFailedAt: null,
       },
     });
-    return { draft, model: result.model, costUsd: costMicro == null ? null : costMicro / 1_000_000 };
+    return { draft: { draft, model: result.model, costUsd: costMicro == null ? null : costMicro / 1_000_000 } };
   } catch (error) {
     logger.warn({ err: error instanceof Error ? error.message : "unknown", responseId }, "automatic review draft failed");
-    await markFailed(responseId, failureReason(error));
-    return null;
+    const reason = failureReason(error);
+    await markFailed(responseId, reason);
+    return { reason };
   } finally {
     inFlight.delete(responseId);
   }

@@ -14,7 +14,7 @@ import { xpKeys } from "../../shared/gamification/xp.js";
 import type { SubmitReviewBody } from "../../validations/teach.js";
 import { mentoredCoursesWhere, requireCourseById } from "./access.js";
 import { generateReviewDraft } from "./ai/review-draft.js";
-import { ensureAutoDraft, queueAutoDrafts, readStoredDraft } from "./ai/auto-draft.js";
+import { draftWithReason, ensureAutoDraft, queueAutoDrafts, readStoredDraft } from "./ai/auto-draft.js";
 import { AI_GRADING_COURSE_SELECT, aiGradingForResponse, effectiveAiGrading } from "./ai-grading.js";
 import { aiReviewAutoDraftAvailable } from "../../config/env.js";
 import { loadAiKeyForUse } from "../ai/credentials.js";
@@ -295,9 +295,9 @@ export async function generateAiReviewDraft(user: SessionUser, responseId: strin
   // With automatic drafts on for this course, "Draft again" runs on the platform key: the
   // mentor needs no key. With them off, the mentor's own key pays, as it did before.
   if (aiReviewAutoDraftAvailable && (await aiGradingForResponse(response.id))?.reviewDraft) {
-    const fresh = await ensureAutoDraft(response.id, { force: true });
-    if (fresh) return fresh;
-    throw new UnprocessableError("AI drafting is temporarily unavailable. Try again in a moment.", TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);
+    const outcome = await draftWithReason(response.id, { force: true });
+    if ("draft" in outcome) return outcome.draft;
+    throw new UnprocessableError(`Claude could not draft this: ${outcome.reason}`, TEACH_ERROR_CODES.AI_DRAFT_UNAVAILABLE);
   }
 
   // The reviewing instructor's own OpenRouter or Anthropic key pays for the draft.
