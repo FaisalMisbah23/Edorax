@@ -6,6 +6,7 @@ import { ArrowUp, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markChapterComplete } from "@/server/actions/progress";
 import { acknowledgeStreakMilestone } from "@/server/actions/weekly-goal";
+import { StreakMilestoneCelebration } from "@/components/learn/streak-milestone-celebration";
 import type { StreakMilestone } from "@/shared/lib/streak";
 import { cn } from "@/lib/utils";
 import { fireMiniConfetti } from "@buildment/learning-ui/components/learn/mini-confetti";
@@ -36,7 +37,8 @@ export function ChapterCompletionStrip(props: {
   return <ChapterCompletionMoment key={props.chapterId} {...props} />;
 }
 
-type CelebrationPhase = "idle" | "burst" | "modal";
+// "milestone" is the full-screen streak celebration. It shows first, then the chapter modal opens after it closes.
+type CelebrationPhase = "idle" | "burst" | "milestone" | "modal";
 
 function ChapterCompletionMoment({
   chapterId,
@@ -108,7 +110,7 @@ function ChapterCompletionMoment({
     const reduced = prefersReducedMotion();
     if (reduced) {
       playFeedback("completion");
-      const timer = window.setTimeout(() => setCelebrationPhase("modal"), 0);
+      const timer = window.setTimeout(() => setCelebrationPhase(streakMilestone ? "milestone" : "modal"), 0);
       if (streakMilestone) void acknowledgeStreakMilestone(streakMilestone);
       return () => window.clearTimeout(timer);
     }
@@ -120,7 +122,7 @@ function ChapterCompletionMoment({
     if (streakMilestone) void acknowledgeStreakMilestone(streakMilestone);
 
     modalTimerRef.current = window.setTimeout(() => {
-      setCelebrationPhase("modal");
+      setCelebrationPhase(streakMilestone ? "milestone" : "modal");
     }, MODAL_OPEN_DELAY_MS);
 
     return () => {
@@ -130,6 +132,10 @@ function ChapterCompletionMoment({
       }
     };
   }, [celebrationPhase, streakMilestone]);
+
+  function closeMilestone() {
+    setCelebrationPhase("modal");
+  }
 
   function closeCelebration() {
     if (modalTimerRef.current != null) {
@@ -243,12 +249,14 @@ function ChapterCompletionMoment({
         </div>
       </div>
 
+      {streakMilestone ? (
+        <StreakMilestoneCelebration days={streakMilestone} open={celebrationPhase === "milestone"} onClose={closeMilestone} />
+      ) : null}
       <ChapterCompleteCelebrationModal
         open={celebrationPhase === "modal"}
         courseSlug={courseSlug}
         onClose={closeCelebration}
         recap={recap}
-        streakMilestone={streakMilestone}
         courseCompleted={courseCompleted + (!chapterComplete && completionSaved ? 1 : 0)}
         courseTotal={courseTotal}
         nextHref={nextLocked && !isComplete ? undefined : nextHref}

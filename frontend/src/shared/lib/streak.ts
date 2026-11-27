@@ -1,5 +1,5 @@
 // GENERATED from server/src/shared — do not edit here. Run `pnpm sync-shared` in server/.
-export const STREAK_MILESTONES = [3, 7, 14] as const;
+export const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 365] as const;
 export type StreakMilestone = (typeof STREAK_MILESTONES)[number];
 
 export type StudyGoalKind = "SESSIONS" | "CHAPTERS" | "MINUTES";
