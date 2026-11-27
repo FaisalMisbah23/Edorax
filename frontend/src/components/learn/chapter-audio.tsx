@@ -30,16 +30,46 @@ function writeSaved(key: string, seconds: number) {
 export function ChapterAudio({ src, minutes, bytes, title, className }: { src: string; minutes: number; bytes: number; title: string; className?: string }) {
   const audio = useRef<HTMLAudioElement>(null);
   const lastSaved = useRef(0);
-  const [status, setStatus] = useState<Status>("idle");
+  const retried = useRef(false);
+  const statusRef = useRef<Status>("idle");
+  const [status, setStatusState] = useState<Status>("idle");
   const [speed, setSpeed] = useState(1);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const storageKey = `buildment:narration:${src}`;
 
+  // The ref lets the media event handlers see the current status without waiting for a re-render.
+  function setStatus(next: Status) {
+    statusRef.current = next;
+    setStatusState(next);
+  }
+
   useEffect(() => {
     const element = audio.current;
     if (element) element.playbackRate = speed;
   }, [speed]);
+
+  /**
+   * A browser does not ask for a file again after it failed (a 401, a reset connection, a dropped network):
+   * play() on that element does nothing until load() is called. So a retry always calls load() first.
+   */
+  function startPlaying(element: HTMLAudioElement) {
+    if (element.error) element.load();
+    setStatus("loading");
+    element.playbackRate = speed;
+    void element.play().catch(() => setStatus("error"));
+  }
+
+  function handleError(element: HTMLAudioElement) {
+    // One quiet automatic retry covers a request that failed once and would work a moment later.
+    if (!retried.current && (statusRef.current === "loading" || statusRef.current === "playing")) {
+      retried.current = true;
+      setStatus("loading");
+      window.setTimeout(() => startPlaying(element), 800);
+      return;
+    }
+    setStatus("error");
+  }
 
   function toggle() {
     const element = audio.current;
@@ -48,9 +78,8 @@ export function ChapterAudio({ src, minutes, bytes, title, className }: { src: s
       element.pause();
       return;
     }
-    setStatus("loading");
-    element.playbackRate = speed;
-    void element.play().catch(() => setStatus("error"));
+    retried.current = false;
+    startPlaying(element);
   }
 
   /** Sets the speed the browser actually accepts, so the drop-down never shows a speed that is not playing. */
@@ -97,10 +126,16 @@ export function ChapterAudio({ src, minutes, bytes, title, className }: { src: s
             setTime(start);
           }
         }}
-        onPlaying={() => setStatus("playing")}
-        onPause={() => setStatus("paused")}
+        onPlaying={() => {
+          retried.current = false;
+          setStatus("playing");
+        }}
+        // A failed file also fires "pause"; keep showing the error instead of hiding it.
+        onPause={() => {
+          if (statusRef.current !== "error") setStatus("paused");
+        }}
         onWaiting={() => setStatus("loading")}
-        onError={() => setStatus("error")}
+        onError={(event) => handleError(event.currentTarget)}
         onEnded={() => {
           setStatus("paused");
           writeSaved(storageKey, 0);
