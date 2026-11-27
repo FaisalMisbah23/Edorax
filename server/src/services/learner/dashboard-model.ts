@@ -158,6 +158,8 @@ export function buildMenteeDashboardViewModel(args: {
   responses: DashboardResponseInput[];
   helpThreads: DashboardHelpInput[];
   sessions: DashboardSessionInput[];
+  /** Slug of the chapter each enrollment was last studied in; the Continue button resumes there. */
+  lastChapterByEnrollment?: ReadonlyMap<string, string>;
   week: DashboardDay[];
   todayKey: string;
   openHelpCount?: number;
@@ -193,7 +195,7 @@ export function buildMenteeDashboardViewModel(args: {
       })),
     });
     const flat = modules.flatMap((module) => module.chapters);
-    const target = pickContinueTarget(flat);
+    const target = pickContinueTarget(flat, args.lastChapterByEnrollment?.get(enrollment.id));
     const targetModule = target ? modules.find((module) => module.chapters.some((chapter) => chapter.id === target.id)) : null;
     const enrollmentResponses = latestByEnrollment.get(enrollment.id) ?? [];
     const revision = enrollmentResponses.find((response) => response.status === "NEEDS_REVISION");

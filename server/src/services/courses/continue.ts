@@ -3,7 +3,7 @@ import { NotFoundError } from "../../utils/errors.js";
 import type { SessionUser } from "../../types/auth.js";
 import { requireBlockSubmissionAccess } from "../enrollment/api-learn-access.js";
 import { shouldBypassProgressGatingForCourse } from "../auth/seed-access.js";
-import { resolveContinueChapterPath, syllabusForEnrollment } from "../progress/enrollment-syllabus.js";
+import { lastStudiedChapterSlug, resolveContinueChapterPath, syllabusForEnrollment } from "../progress/enrollment-syllabus.js";
 import { releaseForEnrollment, releaseModulesWithBlocks } from "./releases.js";
 
 /** Path of the chapter the learner should open next in this course (`null` when done). */
@@ -52,5 +52,5 @@ export async function continueChapterPath(input: {
   const selected = await releaseForEnrollment(course.id, enrollment, course.familySlug);
   const modules = selected ? await releaseModulesWithBlocks(selected.modules) : course.modules;
   const { flatChapters } = await syllabusForEnrollment({ ...course, modules }, enrollment.id, bypassLocking);
-  return { href: resolveContinueChapterPath(course.slug, flatChapters) };
+  return { href: resolveContinueChapterPath(course.slug, flatChapters, await lastStudiedChapterSlug(enrollment.id)) };
 }

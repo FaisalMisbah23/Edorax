@@ -23,6 +23,7 @@ import { LeagueGoalCard } from "@/components/learn/dashboard/league-goal-card";
 import { CourseStageLine, LearningMomentum } from "@/components/learn/dashboard/gamification";
 import { showsGameElements } from "@/lib/gamification";
 import { MascotStill } from "@/components/mascot/mascot-tip";
+import { CourseCover } from "@/components/learn/course-cover";
 import type {
   DashboardAction,
   DashboardCourse,
@@ -388,6 +389,8 @@ function CourseCard({ course, featured }: { course: DashboardCourse; featured: b
   return (
     <article className={cn("overflow-hidden rounded-2xl border bg-card transition-shadow duration-200  focus-within:ring-2 focus-within:ring-ring motion-reduce:transition-none", featured && "border-primary/40")}>
       {featured ? <p className="border-b border-border bg-muted px-4 py-3 text-sm font-medium">{course.state === "IN_PROGRESS" ? "Continue where you left off" : "Your next step"}</p> : null}
+      {/* The course picture, or a flat Edorax cover when the course has none, as in the catalog. */}
+      <CourseCover coverUrl={course.coverUrl} title={course.title} aspect="banner" className="rounded-none" />
       <div className="flex min-h-24 items-stretch border-b bg-muted/30">
         <div className="min-w-0 flex-1 p-4">
           <div className="flex flex-wrap items-center gap-2">
