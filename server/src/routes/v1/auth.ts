@@ -55,6 +55,10 @@ router.post("/resend-verification", optionalAuth, userRateLimit({ scope: "resend
 router.post("/magic-link", userRateLimit({ scope: "magic-link", max: 5 }), validateBody(magicLinkBody), auth.requestMagicLink);
 router.get("/magic-link/verify", validateQuery(magicLinkVerifyQuery), auth.verifyMagicLink);
 
+router.get("/providers", auth.providers);
+router.get("/google", userRateLimit({ scope: "google", max: 20 }), auth.startGoogle);
+router.get("/google/callback", userRateLimit({ scope: "google-callback", max: 20 }), auth.finishGoogle);
+
 router.get("/confirm-email", validateQuery(confirmEmailQuery), auth.confirmEmail);
 router.get("/dev-login", validateQuery(devLoginQuery), auth.devLogin);
 

@@ -20,6 +20,20 @@ export function loginErrorMessage(code: string | undefined): string | null {
       return "That sign-in link is invalid or was already used.";
     case "magic-expired":
       return "That sign-in link has expired. Request a new one.";
+    case "google-denied":
+      return "Google sign-in was cancelled. You can try again or use your email.";
+    case "google-unverified":
+      return "Google has not verified that email address, so we cannot use it. Use another Google account or sign in with your email.";
+    case "google-disposable":
+      return "Please use a non-disposable email address.";
+    case "google-mfa":
+      return "This account uses an authenticator code. Sign in with your password and the code.";
+    case "google-unavailable":
+      return "Sign in with Google is not available right now. Use your email instead.";
+    case "google-invalid":
+    case "google-failed":
+      return "Google sign-in did not finish. Try again.";
+    case "google-suspended":
     case "ACCOUNT_SUSPENDED":
     case "magic-suspended":
     case "suspended":

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { NOINDEX } from "@/lib/seo";
 import Link from "next/link";
 import { AuthCard, AuthPageShell } from "@/components/auth/auth-page-shell";
+import { GoogleSignIn } from "@/components/auth/google-sign-in";
+import { loadAuthProviders } from "@/lib/auth-providers-server";
 import { SignupForm } from "@/components/auth/signup-form";
 import { safeRedirectTo } from "@/shared/lib/safe-redirect";
 import { getSessionUser } from "@/server/auth/guards";
@@ -18,6 +20,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
     if (user.role !== "ADMIN" && !user.emailVerified) redirect("/verify-email");
     redirect(redirectTo ?? homeRouteForRole(user.role));
   }
+  const providers = await loadAuthProviders();
   return (
     <AuthPageShell>
       <AuthCard
@@ -26,6 +29,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         mood="happy"
         line="Glad you are here."
       >
+        {providers.google ? <GoogleSignIn redirectTo={redirectTo} /> : null}
         <SignupForm redirectTo={redirectTo} />
         <p className="mt-6 text-center text-base text-muted-foreground">
           Already have an account?{" "}
