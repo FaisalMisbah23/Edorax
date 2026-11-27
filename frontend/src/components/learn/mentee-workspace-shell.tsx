@@ -82,7 +82,7 @@ export function MenteeWorkspaceShell({
   stats,
 }: {
   children: ReactNode;
-  user: { name?: string | null; email?: string | null; role?: string };
+  user: { name?: string | null; email?: string | null; image?: string | null; role?: string };
   instructorAccess: InstructorAccessView;
   assignedCourses: number;
   openHelpRequests: number;
