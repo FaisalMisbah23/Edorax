@@ -7,7 +7,7 @@ import { shouldBypassProgressGatingForCourse } from "../auth/seed-access.js";
 import { enrollmentGrantsContentAccess } from "../enrollment/lifecycle.js";
 import { ensureOwnCourseEnrollment, isCourseInstructor } from "../enrollment/own-course.js";
 import { redeemCouponOnCourseOpen } from "../coupons/redeem.js";
-import { pickDefaultOpenModule, resolveContinueChapterPath, syllabusForEnrollment } from "../progress/enrollment-syllabus.js";
+import { lastStudiedChapterSlug, pickDefaultOpenModule, resolveContinueChapterPath, syllabusForEnrollment } from "../progress/enrollment-syllabus.js";
 import { releaseForEnrollment, releaseModulesWithBlocks, upgradeEnrollmentToRelease } from "./releases.js";
 import { resolveCourseFamily } from "../../shared/lib/course-tracks.js";
 
@@ -135,7 +135,7 @@ export async function getCourseOverview(courseSlug: string, user: SessionUser): 
     syllabus: {
       modules,
       chapterCount: flatChapters.length,
-      continueHref: resolveContinueChapterPath(course.slug, flatChapters),
+      continueHref: resolveContinueChapterPath(course.slug, flatChapters, await lastStudiedChapterSlug(enrollment.id)),
       defaultOpenModuleId: pickDefaultOpenModule(modules),
     },
   };

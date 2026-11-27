@@ -205,6 +205,18 @@ export async function loadMenteeDashboard(args: {
     return { day, seconds: byDay.get(day) ?? 0 };
   });
 
+  // Where each course's Continue button resumes: the chapter of the most recent study session.
+  const lastSessions =
+    enrollmentIds.length === 0
+      ? []
+      : await prisma.studySession.findMany({
+          where: { enrollmentId: { in: enrollmentIds } },
+          orderBy: { updatedAt: "desc" },
+          distinct: ["enrollmentId"],
+          select: { enrollmentId: true, chapter: { select: { slug: true } } },
+        });
+  const lastChapterByEnrollment = new Map(lastSessions.map((session) => [session.enrollmentId, session.chapter.slug]));
+
   return buildMenteeDashboardViewModel({
     learnerId: args.learnerId,
     learnerName: args.learnerName,
@@ -212,6 +224,7 @@ export async function loadMenteeDashboard(args: {
     responses,
     helpThreads,
     sessions,
+    lastChapterByEnrollment,
     week,
     todayKey,
     openHelpCount,

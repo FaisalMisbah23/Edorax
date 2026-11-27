@@ -1,7 +1,7 @@
 import type { LearnerProgressCourse, LearnerProgressView } from "../../shared/api/learner.js";
 import { prisma } from "../../db/prisma.js";
 import { closedWrongCheckpoints } from "../progress/attention.js";
-import { loadEnrollmentSyllabus, resolveContinueChapterPath } from "../progress/enrollment-syllabus.js";
+import { lastStudiedChapterSlug, loadEnrollmentSyllabus, resolveContinueChapterPath } from "../progress/enrollment-syllabus.js";
 
 /** Completion, scored accuracy and study consistency per course for the "My progress" page. */
 export async function loadLearnerProgress(input: { userId: string; bypassLocking: boolean; year?: number }): Promise<LearnerProgressView> {
@@ -145,7 +145,7 @@ export async function loadLearnerProgress(input: { userId: string; bypassLocking
           return { day, seconds: activityByDate.get(day) ?? 0 };
         }),
         totalStudySeconds: enrollment.chapterProgress.reduce((sum, row) => sum + row.timeSpentSeconds, 0),
-        continueHref: syllabus ? resolveContinueChapterPath(enrollment.course.slug, syllabus.flatChapters) : null,
+        continueHref: syllabus ? resolveContinueChapterPath(enrollment.course.slug, syllabus.flatChapters, await lastStudiedChapterSlug(enrollment.id)) : null,
         modules,
       };
     })

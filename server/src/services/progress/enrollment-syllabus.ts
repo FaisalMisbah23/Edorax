@@ -33,9 +33,23 @@ const courseModulesSelect = {
   },
 };
 
+/**
+ * The chapter the Continue button opens. With the chapter the learner studied last, it is that chapter,
+ * or the next unfinished one after it when they had already finished it. Without that (or when nothing
+ * from there on is open to them), it is the first unlocked in-progress chapter, then the first unlocked
+ * one not started.
+ */
 export function pickContinueTarget<
   TChapter extends Pick<SyllabusChapter, "slug" | "title" | "status" | "locked">,
->(flatChapters: TChapter[]): TChapter | null {
+>(flatChapters: TChapter[], lastChapterSlug?: string | null): TChapter | null {
+  if (lastChapterSlug) {
+    const start = flatChapters.findIndex((c) => c.slug === lastChapterSlug);
+    if (start >= 0) {
+      const resume = flatChapters.slice(start).find((c) => !c.locked && c.status !== "COMPLETED");
+      if (resume) return resume;
+    }
+  }
+
   const inProgress = flatChapters.find((c) => !c.locked && c.status === "IN_PROGRESS");
   if (inProgress) return inProgress;
 
@@ -44,6 +58,16 @@ export function pickContinueTarget<
 
   const unlocked = flatChapters.find((c) => !c.locked);
   return unlocked ?? null;
+}
+
+/** The chapter of the learner's most recent study session in this enrollment, or null when there is none. */
+export async function lastStudiedChapterSlug(enrollmentId: string): Promise<string | null> {
+  const session = await prisma.studySession.findFirst({
+    where: { enrollmentId },
+    orderBy: { updatedAt: "desc" },
+    select: { chapter: { select: { slug: true } } },
+  });
+  return session?.chapter.slug ?? null;
 }
 
 export function pickDefaultOpenModule(modules: SyllabusModule[]) {
@@ -55,9 +79,10 @@ export function pickDefaultOpenModule(modules: SyllabusModule[]) {
 
 export function resolveContinueChapterPath(
   courseSlug: string,
-  flatChapters: Pick<SyllabusChapter, "slug" | "title" | "status" | "locked">[]
+  flatChapters: Pick<SyllabusChapter, "slug" | "title" | "status" | "locked">[],
+  lastChapterSlug?: string | null
 ) {
-  const target = pickContinueTarget(flatChapters);
+  const target = pickContinueTarget(flatChapters, lastChapterSlug);
   return target ? `/courses/${courseSlug}/${cleanChapterSlug(target.slug)}` : null;
 }
 
