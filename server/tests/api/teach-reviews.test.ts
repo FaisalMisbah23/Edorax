@@ -114,4 +114,19 @@ describe("/api/v1/teach/review", () => {
     ]);
     expect((await request(app).get("/api/v1/teach/review").set(mentor())).body.data.items.map((i: { id: string }) => i.id)).not.toContain(responseId);
   });
+
+  it("lists reviewed answers, newest review first, with links to the course and learner", async () => {
+    const res = await request(app).get("/api/v1/teach/review/reviewed").set(mentor());
+    expect(res.status).toBe(200);
+    const item = res.body.data.items.find((i: { id: string }) => i.id === responseId);
+    expect(item).toMatchObject({
+      attempt: 1,
+      verdict: "APPROVED",
+      feedback: "Clear reasoning.",
+      superseded: false,
+      learnerLabel: "Test Learner",
+      courseSlug: fx.course.slug,
+    });
+    expect(item.learnerHref).toContain("/mentees/");
+  });
 });

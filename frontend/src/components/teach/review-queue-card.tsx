@@ -96,12 +96,19 @@ export function ReviewQueueCard({ item, ageLabel, autoDraft }: { item: ReviewQue
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-foreground">
-            {item.learnerLabel}
+            <Link href={item.learnerHref} className="underline-offset-2 hover:underline focus-visible:underline">
+              {item.learnerLabel}
+            </Link>
             <span className="font-normal text-muted-foreground"> · attempt {item.attempt}</span>
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {item.courseTitle}
-            {item.moduleTitle ? ` › ${item.moduleTitle}` : ""} › {item.chapterTitle}
+            <Link href={`/courses/${encodeURIComponent(item.courseSlug)}`} className="underline-offset-2 hover:underline focus-visible:underline">
+              {item.courseTitle}
+            </Link>
+            {item.moduleTitle ? ` › ${item.moduleTitle}` : ""} ›{" "}
+            <Link href={item.chapterHref} className="underline-offset-2 hover:underline focus-visible:underline">
+              {item.chapterTitle}
+            </Link>
           </p>
         </div>
         {ageLabel ? <span className="shrink-0 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200">{ageLabel}</span> : null}

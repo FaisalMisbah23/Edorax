@@ -152,6 +152,7 @@ router.get("/courses/:courseSlug/reports/export", validateParams(courseSlugParam
 router.get("/courses/:courseSlug/activity", validateParams(courseSlugParams), teach.getCourseActivity);
 
 router.get("/review", validate({ query: reviewQueueQuery }), teach.getReviewQueue);
+router.get("/review/reviewed", validate({ query: reviewQueueQuery }), teach.getReviewedAnswers);
 router.post("/review/accept-ai-drafts", validate({ body: acceptAiDraftsBody }), teach.acceptAiDrafts);
 router.get("/review/:responseId", validateParams(responseIdParams), teach.getReviewDetail);
 router.post("/review/:responseId", validate({ params: responseIdParams, body: submitReviewBody }), teach.submitReview);

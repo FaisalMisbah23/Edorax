@@ -610,6 +610,33 @@ export type ReviewQueueItem = ReviewContext & {
   autoDraft?: boolean;
 };
 
+/** One answer a mentor already reviewed, for the Reviewed tab of Answers to check. */
+export type ReviewedAnswerItem = ReviewContext & {
+  id: string;
+  attempt: number;
+  submittedAt: string;
+  reviewedAt: string;
+  learnerLabel: string;
+  learnerId: string;
+  courseTitle: string;
+  chapterTitle: string;
+  verdict: ReviewVerdict;
+  score: number | null;
+  maxScore: number;
+  reviewerName: string | null;
+  feedback: string;
+  questionPrompt: string | null;
+  answerText: string;
+  /** True when the learner has sent a newer attempt since. */
+  superseded: boolean;
+};
+
+export type ReviewedAnswersView = {
+  courses: Array<{ id: string; title: string }>;
+  learner: { id: string; label: string } | null;
+  items: ReviewedAnswerItem[];
+};
+
 export type ReviewQueueView = {
   courses: Array<{ id: string; title: string }>;
   /** Set when the list is narrowed to one learner. */
@@ -676,7 +703,7 @@ export type AiReviewDraftResult = { draft: AiReviewDraft; model: string; costUsd
 // ---------------------------------------------------------------------------
 // Mentor help inbox
 
-export type MentorHelpInboxThread = {
+export type MentorHelpInboxThread = TeachLinks & {
   id: string;
   status: HelpThreadStatus;
   kind: "QUESTION" | "LESSON_REPORT";
@@ -752,7 +779,15 @@ export type AiGradingUpdateInput = {
 
 export type ThreadFeedbackView = { scope: "COURSE" | "PLATFORM" | null; note: string | null };
 
-export type FeedbackItem = {
+/** Where a mentor can jump from a help thread: the course, the lesson and the learner. */
+export type TeachLinks = {
+  courseHref: string;
+  /** The lesson in the course preview; null for a question that is not about one lesson. */
+  chapterHref: string | null;
+  learnerHref: string;
+};
+
+export type FeedbackItem = TeachLinks & {
   id: string;
   scope: "COURSE" | "PLATFORM";
   /** "report": the learner filed a lesson report. "flag": a mentor flagged a question. */

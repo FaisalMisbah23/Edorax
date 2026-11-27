@@ -56,6 +56,9 @@ type MentorProps = BaseProps & {
   aside: {
     menteeId: string;
     menteeEmail: string;
+    courseHref: string;
+    lessonHref: string | null;
+    learnerHref: string;
     courseTitle: string;
     lessonTitle: string | null;
   };
@@ -388,6 +391,9 @@ export function HelpThreadDetail(props: HelpThreadDetailProps) {
         className="min-h-0 overflow-y-visible lg:self-start lg:[@media(min-height:780px)]:sticky lg:[@media(min-height:780px)]:top-8"
         courseTitle={props.aside.courseTitle}
         lessonTitle={props.aside.lessonTitle}
+        courseHref={props.aside.courseHref}
+        lessonHref={props.aside.lessonHref}
+        learnerHref={props.aside.learnerHref}
         status={props.status}
         messages={chat.messages}
       />

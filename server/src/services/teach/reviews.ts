@@ -1,4 +1,4 @@
-import type { AcceptAiDraftsResult, AiReviewDraftResult, ReviewDetailView, ReviewQueueView } from "../../shared/api/teach.js";
+import type { AcceptAiDraftsResult, AiReviewDraftResult, ReviewDetailView, ReviewQueueView, ReviewedAnswersView } from "../../shared/api/teach.js";
 import { loadIntegritySummaries } from "../integrity/review.js";
 import { TEACH_ERROR_CODES } from "../../shared/api/teach.js";
 import { OpenQuestionConfigSchema, OpenQuestionPayloadSchema } from "../../shared/blocks/open-question/schema.js";
@@ -93,6 +93,76 @@ export async function loadReviewQueue(user: SessionUser, courseFilter?: string, 
     items,
     autoDraft: aiReviewAutoDraftAvailable && [...draftsOn.values()].some(Boolean),
     draftCostUsd,
+  };
+}
+
+/** Answers a mentor already reviewed, newest review first, so a verdict can be found and read again. */
+export async function loadReviewedAnswers(user: SessionUser, courseFilter?: string, learnerId?: string): Promise<ReviewedAnswersView> {
+  const courses = await prisma.course.findMany({
+    where: mentoredCoursesWhere(user, "SUBMISSION_EVALUATOR"),
+    orderBy: { title: "asc" },
+    select: { id: true, title: true },
+  });
+  const courseIds = courses.map((course) => course.id);
+  const scope = courseFilter && courseIds.includes(courseFilter) ? courseFilter : { in: courseIds };
+
+  const rows =
+    courseIds.length === 0
+      ? []
+      : await prisma.response.findMany({
+          where: { review: { isNot: null }, block: { chapter: { courseId: scope } }, ...(learnerId ? { userId: learnerId } : {}) },
+          orderBy: { review: { createdAt: "desc" } },
+          take: 100,
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+            review: { select: { verdict: true, feedback: true, score: true, createdAt: true, reviewer: { select: { name: true } } } },
+            block: {
+              select: {
+                points: true,
+                config: true,
+                chapter: { select: { id: true, title: true, module: { select: { title: true } }, course: { select: { id: true, slug: true, title: true } } } },
+              },
+            },
+          },
+        });
+  const progress = await loadLearnerProgress(rows.map((row) => row.enrollmentId));
+  // A newer attempt by the same learner on the same question means this verdict is no longer the latest word.
+  const latest = rows.length
+    ? await prisma.response.groupBy({
+        by: ["blockId", "userId"],
+        where: { blockId: { in: rows.map((row) => row.blockId) }, userId: { in: rows.map((row) => row.userId) }, status: { not: "DRAFT" } },
+        _max: { attempt: true },
+      })
+    : [];
+  const latestAttempt = new Map(latest.map((row) => [`${row.blockId}:${row.userId}`, row._max.attempt ?? 0]));
+
+  return {
+    courses,
+    learner: await learnerLabel(learnerId),
+    items: rows.flatMap((row) =>
+      row.review
+        ? [
+            {
+              id: row.id,
+              attempt: row.attempt,
+              submittedAt: row.submittedAt.toISOString(),
+              reviewedAt: row.review.createdAt.toISOString(),
+              learnerLabel: row.user.name ?? row.user.email,
+              learnerId: row.user.id,
+              courseTitle: row.block.chapter.course.title,
+              chapterTitle: row.block.chapter.title,
+              verdict: row.review.verdict,
+              score: row.review.score,
+              maxScore: row.block.points,
+              reviewerName: row.review.reviewer.name,
+              feedback: row.review.feedback,
+              superseded: (latestAttempt.get(`${row.blockId}:${row.userId}`) ?? row.attempt) > row.attempt,
+              ...questionAndAnswer(row.block.config, row.payload),
+              ...reviewContext(row.block.chapter, row.enrollmentId, progress),
+            },
+          ]
+        : []
+    ),
   };
 }
 

@@ -90,6 +90,11 @@ export default async function MentorHelpThreadPage({
             menteeEmail: thread.mentee.email,
             courseTitle: thread.course.title,
             lessonTitle: thread.chapter?.title ?? null,
+            courseHref: `/courses/${encodeURIComponent(thread.course.slug)}`,
+            lessonHref: thread.chapterId
+              ? `/courses/${encodeURIComponent(thread.course.slug)}/preview?chapter=${encodeURIComponent(thread.chapterId)}`
+              : null,
+            learnerHref: `/learners/${encodeURIComponent(thread.menteeId)}`,
           }}
         />
       </div>

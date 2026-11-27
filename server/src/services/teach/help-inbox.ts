@@ -1,3 +1,4 @@
+import { teachLinks } from "./links.js";
 import type { MentorHelpInboxView } from "../../shared/api/teach.js";
 import { prisma } from "../../db/prisma.js";
 import type { SessionUser } from "../../types/auth.js";
@@ -35,7 +36,7 @@ export async function loadMentorHelpInbox(user: SessionUser, query: HelpInboxQue
           orderBy: { updatedAt: status === "resolved" ? "desc" : "asc" },
           include: {
             mentee: { select: { name: true, email: true } },
-            course: { select: { title: true } },
+            course: { select: { title: true, slug: true } },
             chapter: { select: { title: true } },
             messages: {
               orderBy: { createdAt: "desc" },
@@ -66,6 +67,7 @@ export async function loadMentorHelpInbox(user: SessionUser, query: HelpInboxQue
         menteeLabel: thread.mentee.name ?? thread.mentee.email,
         courseTitle: thread.course.title,
         chapterTitle: thread.chapter?.title ?? null,
+        ...teachLinks({ courseSlug: thread.course.slug, chapterId: thread.chapterId, learnerId: thread.menteeId }),
         preview: preview ? { body: preview.body, createdAt: preview.createdAt.toISOString() } : null,
         ageHours: preview ? (now - preview.createdAt.getTime()) / (1000 * 60 * 60) : 0,
         feedbackScope: thread.feedbackScope,

@@ -1,5 +1,6 @@
 "use client";
 
+import { ThreadLinks } from "./thread-links";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -128,6 +129,7 @@ export function HelpInboxThreadCard({
             {thread.courseTitle}
             {thread.chapterTitle ? ` › ${thread.chapterTitle}` : ""}
           </p>
+          <ThreadLinks links={thread} learnerLabel={thread.menteeLabel} className="mt-2" />
         </div>
       </div>
 
