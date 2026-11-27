@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { StreakFlame } from "@/components/learn/streak-flame";
+import { StreakPopover } from "@/components/learn/streak-popover";
 import { Award, BookOpenText, Building2,CircleHelp, Coins, Compass, Flame, GraduationCap, Highlighter, Home, Star, Trophy, TrendingUp, User, type LucideIcon } from "lucide-react";
 import { WorkspaceAccountMenu } from "@/components/workspace/workspace-account-menu";
 import { Logo } from "@/components/brand/logo";
@@ -48,6 +48,8 @@ function LearnerStatStrip({ stats }: { stats: LearnerStats }) {
   return (
     <div className="sticky top-16 z-30 flex items-center justify-end gap-x-4 gap-y-1 overflow-x-auto border-b border-border bg-card/80 px-4 py-2 text-sm backdrop-blur lg:top-0 lg:px-6">
       {items.map((item) => {
+        // The streak opens a small card with the last 7 days; the other badges are plain links.
+        if (item.label === "day streak") return <StreakPopover key={item.label} streak={stats.streak} />;
         const Icon = item.icon;
         return (
           <Link
@@ -57,11 +59,7 @@ function LearnerStatStrip({ stats }: { stats: LearnerStats }) {
             aria-label={item.hint}
             className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap hover:underline"
           >
-            {item.label === "day streak" ? (
-              <StreakFlame days={stats.streak} />
-            ) : (
-              <Icon className="size-4 text-primary" aria-hidden />
-            )}
+            <Icon className="size-4 text-primary" aria-hidden />
             <span className="font-semibold tabular-nums">{item.value}</span>
             {item.label ? <span className="text-muted-foreground">{item.label}</span> : null}
           </Link>
