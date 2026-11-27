@@ -30,7 +30,6 @@ import { useStudySession } from "@/lib/use-study-session";
 import { useMascot } from "@/lib/engagement/use-mascot";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { HelpThreadView } from "@/shared/api/help";
-import type { StreakMilestone } from "@/shared/lib/streak";
 import { HeadingNotesProvider } from "@/components/learn/heading-note";
 import { ChapterAudio } from "@/components/learn/chapter-audio";
 import { CourseRatingPrompt } from "@/components/learn/course-rating-modal";
@@ -89,7 +88,6 @@ export function ChapterReaderShell({
   projectGoal = null,
   variant = null,
   recap,
-  streakMilestone = null,
   headingNotes = {},
   highlights = [],
   focusHighlightId = null,
@@ -126,7 +124,6 @@ export function ChapterReaderShell({
   /** The learner's variant in a course family; the shell is already themed by it. */
   variant?: { productName: string; label: string } | null;
   recap?: { checks: string; open: string; next: string };
-  streakMilestone?: StreakMilestone | null;
   headingNotes?: Record<string, string>;
   highlights?: ReaderHighlight[];
   /** Set when the learner opened the chapter from a link to one highlight. */
@@ -558,7 +555,6 @@ export function ChapterReaderShell({
                     courseCompleted={modules.reduce((total, module) => total + module.completedCount, 0)}
                     courseTotal={modules.reduce((total, module) => total + module.chapters.length, 0)}
                     recap={recap}
-                    streakMilestone={streakMilestone}
                   />
                 ) : null}
 

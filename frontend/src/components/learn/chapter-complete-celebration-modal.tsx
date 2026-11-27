@@ -59,7 +59,6 @@ export function ChapterCompleteCelebrationModal({
   onClose,
   courseSlug,
   recap,
-  streakMilestone,
   courseCompleted,
   courseTotal,
   nextHref,
@@ -69,7 +68,6 @@ export function ChapterCompleteCelebrationModal({
   onClose: () => void;
   courseSlug?: string;
   recap?: { checks: string; open: string; next: string };
-  streakMilestone?: number | null;
   /** Confirmed total, including the chapter just completed. */
   courseCompleted: number;
   courseTotal: number;
@@ -139,9 +137,6 @@ export function ChapterCompleteCelebrationModal({
             <li>{recap.open}</li>
             <li>{recap.next}</li>
           </ul>
-        ) : null}
-        {streakMilestone ? (
-          <p className="mt-3 text-sm font-medium">{streakMilestone} days of learning. Each visit is part of your progress.</p>
         ) : null}
         {courseTotal > 0 ? (
           <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4">

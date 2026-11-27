@@ -1,5 +1,5 @@
 // GENERATED from server/src/shared — do not edit here. Run `pnpm sync-shared` in server/.
-import { shiftUtcDate } from "./streak";
+import { shiftUtcDate, uncelebratedStreakMilestone, type StreakMilestone } from "./streak";
 
 /** One day in the streak popup's trailing week row. */
 export type StreakPopupDayStatus = "completed" | "missed" | "today";
@@ -30,6 +30,21 @@ const WEEKDAY_INITIALS = ["S", "M", "T", "W", "T", "F", "S"] as const;
  */
 export function shouldShowStreakPopup(input: StreakPopupShouldShowInput): boolean {
   return input.seenOn !== input.today;
+}
+
+/**
+ * The streak milestone to celebrate on this open, or null. A milestone is celebrated the day AFTER the
+ * streak reached it, when the learner comes back, so the count only includes days before today. Once the
+ * learner has seen it the app records it, and it never shows again.
+ */
+export function streakMilestoneToCelebrate(input: {
+  /** Current streak count, which includes today when today already has activity. */
+  streakCount: number;
+  todayActive: boolean;
+  celebrated: number[];
+}): StreakMilestone | null {
+  const throughYesterday = input.todayActive ? Math.max(0, input.streakCount - 1) : input.streakCount;
+  return uncelebratedStreakMilestone(throughYesterday, input.celebrated);
 }
 
 /** Weekday initial for an ISO day key (UTC calendar day). */

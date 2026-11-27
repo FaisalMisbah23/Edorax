@@ -50,6 +50,9 @@ describe("uncelebratedStreakMilestone", () => {
     expect(uncelebratedStreakMilestone(7, [3])).toBe(7);
     expect(uncelebratedStreakMilestone(7, [3, 7])).toBeNull();
     expect(uncelebratedStreakMilestone(2, [])).toBeNull();
+    expect(uncelebratedStreakMilestone(30, [3, 7, 14])).toBe(30);
+    expect(uncelebratedStreakMilestone(99, [3, 7, 14, 30, 60])).toBeNull();
+    expect(uncelebratedStreakMilestone(365, [])).toBe(365);
   });
 });
 

@@ -201,6 +201,8 @@ export type StreakPopupView = {
   today: string;
   week: StreakPopupDayView[];
   seenOn: string | null;
+  /** A streak milestone the learner reached on an earlier day and has not seen celebrated yet. */
+  milestone: StreakMilestone | null;
 };
 
 export const INSTRUCTOR_ACCESS_ERROR_CODES = {

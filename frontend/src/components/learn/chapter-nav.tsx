@@ -4,7 +4,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChapterCompletionStrip } from "@/components/learn/mark-chapter-complete";
 import { CertificateCard } from "@/blocks/capstone-check/CertificateCard";
-import type { StreakMilestone } from "@/shared/lib/streak";
 
 type NavChapter = {
   slug: string;
@@ -29,7 +28,6 @@ type ChapterNavProps = {
   courseCompleted: number;
   courseTotal: number;
   recap?: { checks: string; open: string; next: string };
-  streakMilestone?: StreakMilestone | null;
 };
 
 function lessonLabel(chapter: NavChapter) {
@@ -196,7 +194,6 @@ export function ChapterNav({
   courseCompleted,
   courseTotal,
   recap,
-  streakMilestone,
 }: ChapterNavProps) {
   const hasBoth = Boolean(prev && next);
   const hasLessonNav = Boolean(prev || next);
@@ -223,7 +220,6 @@ export function ChapterNav({
             courseCompleted={courseCompleted}
             courseTotal={courseTotal}
             recap={recap}
-            streakMilestone={streakMilestone}
           />
         </div>
 

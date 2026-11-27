@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowUp, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markChapterComplete } from "@/server/actions/progress";
-import { acknowledgeStreakMilestone } from "@/server/actions/weekly-goal";
-import type { StreakMilestone } from "@/shared/lib/streak";
 import { cn } from "@/lib/utils";
 import { fireMiniConfetti } from "@buildment/learning-ui/components/learn/mini-confetti";
 import { ChapterCompleteCelebrationModal } from "@/components/learn/chapter-complete-celebration-modal";
@@ -31,7 +29,6 @@ export function ChapterCompletionStrip(props: {
   courseCompleted: number;
   courseTotal: number;
   recap?: { checks: string; open: string; next: string };
-  streakMilestone?: StreakMilestone | null;
 }) {
   return <ChapterCompletionMoment key={props.chapterId} {...props} />;
 }
@@ -52,7 +49,6 @@ function ChapterCompletionMoment({
   courseCompleted,
   courseTotal,
   recap,
-  streakMilestone = null,
 }: {
   chapterId: string;
   courseSlug: string;
@@ -67,7 +63,6 @@ function ChapterCompletionMoment({
   courseCompleted: number;
   courseTotal: number;
   recap?: { checks: string; open: string; next: string };
-  streakMilestone?: StreakMilestone | null;
 }) {
   const router = useRouter();
   const [completionSaved, setCompletionSaved] = useState(false);
@@ -109,7 +104,6 @@ function ChapterCompletionMoment({
     if (reduced) {
       playFeedback("completion");
       const timer = window.setTimeout(() => setCelebrationPhase("modal"), 0);
-      if (streakMilestone) void acknowledgeStreakMilestone(streakMilestone);
       return () => window.clearTimeout(timer);
     }
 
@@ -117,7 +111,6 @@ function ChapterCompletionMoment({
       fireMiniConfetti(celebrationAnchorRef.current);
     }
     playFeedback("completion");
-    if (streakMilestone) void acknowledgeStreakMilestone(streakMilestone);
 
     modalTimerRef.current = window.setTimeout(() => {
       setCelebrationPhase("modal");
@@ -129,7 +122,7 @@ function ChapterCompletionMoment({
         modalTimerRef.current = null;
       }
     };
-  }, [celebrationPhase, streakMilestone]);
+  }, [celebrationPhase]);
 
   function closeCelebration() {
     if (modalTimerRef.current != null) {
@@ -248,7 +241,6 @@ function ChapterCompletionMoment({
         courseSlug={courseSlug}
         onClose={closeCelebration}
         recap={recap}
-        streakMilestone={streakMilestone}
         courseCompleted={courseCompleted + (!chapterComplete && completionSaved ? 1 : 0)}
         courseTotal={courseTotal}
         nextHref={nextLocked && !isComplete ? undefined : nextHref}

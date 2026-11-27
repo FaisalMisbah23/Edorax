@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
 import { playFeedback } from "@/lib/sound-feedback";
-import type { StreakPopupDayView, StreakPopupView } from "@/shared/api/learner";
+import type { StreakMilestone, StreakPopupDayView, StreakPopupView } from "@/shared/api/learner";
+import { StreakFlame } from "@/components/learn/streak-flame";
+import { StreakMilestoneCelebration } from "@/components/learn/streak-milestone-celebration";
+import { acknowledgeStreakMilestone } from "@/server/actions/weekly-goal";
 import { streakDaySummary } from "@/shared/lib/streak-popup";
 
 const STORAGE_PREFIX = "buildment:streak-popup-seen:";
@@ -52,14 +55,14 @@ async function shareStreak(streakCount: number) {
   }
 }
 
-function FlameRings({ className }: { className?: string }) {
+function FlameRings({ days, className }: { days: number; className?: string }) {
   return (
     <div className={cn("relative mx-auto flex size-28 items-center justify-center", className)} aria-hidden>
-      <span className="absolute inset-0 rounded-full border border-primary/20 motion-safe:animate-[streak-ring_2.4s_ease-out_infinite] motion-reduce:animate-none" />
-      <span className="absolute inset-3 rounded-full border border-primary/35 motion-safe:animate-[streak-ring_2.4s_ease-out_infinite] motion-safe:[animation-delay:0.35s] motion-reduce:animate-none" />
-      <span className="absolute inset-6 rounded-full bg-primary/15" />
-      <span className="relative flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
-        <Flame className="size-7" strokeWidth={2.25} />
+      <span className="absolute inset-0 rounded-full border border-orange-500/20 motion-safe:animate-[streak-ring_2.4s_ease-out_infinite] motion-reduce:animate-none" />
+      <span className="absolute inset-3 rounded-full border border-orange-500/35 motion-safe:animate-[streak-ring_2.4s_ease-out_infinite] motion-safe:[animation-delay:0.35s] motion-reduce:animate-none" />
+      <span className="absolute inset-6 rounded-full bg-orange-500/10" />
+      <span className="relative flex size-14 items-center justify-center rounded-full bg-card shadow-sm ring-1 ring-orange-500/20">
+        <StreakFlame days={days} className="size-9" />
       </span>
     </div>
   );
@@ -167,6 +170,8 @@ export function DailyStreakPopup({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
+  // A milestone reached on an earlier day. It is celebrated now, instead of the daily popup.
+  const [milestone, setMilestone] = useState<StreakMilestone | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,6 +181,11 @@ export function DailyStreakPopup({ userId }: { userId: string }) {
       try {
         const data = await apiFetch<StreakPopupView>("/api/v1/learner/streak-popup");
         if (cancelled) return;
+        if (data.milestone) {
+          setPayload(data);
+          setMilestone(data.milestone);
+          return;
+        }
         if (localSeen === data.today || !data.show) {
           setPayload(data);
           return;
@@ -221,6 +231,14 @@ export function DailyStreakPopup({ userId }: { userId: string }) {
     }
   }
 
+  function closeMilestone() {
+    const reached = milestone;
+    setMilestone(null);
+    if (reached) void acknowledgeStreakMilestone(reached);
+    // The celebration takes the place of today's popup, so today's popup is done too.
+    void dismiss();
+  }
+
   async function onShare() {
     const count = payload?.streakCount ?? 0;
     await shareStreak(count);
@@ -242,6 +260,7 @@ export function DailyStreakPopup({ userId }: { userId: string }) {
 
   return (
     <>
+      {milestone ? <StreakMilestoneCelebration days={milestone} open onClose={closeMilestone} /> : null}
       <style>{`
         @keyframes streak-ring {
           0% { transform: scale(0.92); opacity: 0.85; }
@@ -292,7 +311,7 @@ export function DailyStreakPopup({ userId }: { userId: string }) {
       >
         {open && payload ? (
           <div className="flex flex-col items-center text-center">
-            <FlameRings />
+            <FlameRings days={payload.streakCount} />
             <h2 id={titleId} className="mt-5 font-heading text-3xl font-semibold tracking-tight tabular-nums">
               {streakLabel}
             </h2>
