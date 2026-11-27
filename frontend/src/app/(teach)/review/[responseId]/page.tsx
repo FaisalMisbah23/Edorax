@@ -55,14 +55,19 @@ export default async function ReviewDetailPage({
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">
-            {course.title}
+            <Link href={`/courses/${encodeURIComponent(course.slug)}`} className="underline-offset-2 hover:underline">
+              {course.title}
+            </Link>
             {response.moduleTitle ? ` › ${response.moduleTitle}` : ""}
           </p>
           <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
             {response.chapterTitle}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {response.learner.name ?? response.learner.email} · attempt {response.attempt} ·{" "}
+            <Link href={response.learnerHref} className="underline-offset-2 hover:underline">
+              {response.learner.name ?? response.learner.email}
+            </Link>{" "}
+            · attempt {response.attempt} ·{" "}
             answered on <LocalDate iso={response.submittedAt} withTime />
           </p>
           <ReviewContextLinks item={response} className="mt-3" />

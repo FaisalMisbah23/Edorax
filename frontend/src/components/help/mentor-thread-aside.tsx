@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   CheckCircle2,
   Clock3,
@@ -168,6 +169,9 @@ export function MentorThreadAside({
   viewerId,
   courseTitle,
   lessonTitle,
+  courseHref,
+  lessonHref,
+  learnerHref,
   status,
   messages,
   className,
@@ -178,6 +182,9 @@ export function MentorThreadAside({
   viewerId: string;
   courseTitle: string;
   lessonTitle: string | null;
+  courseHref: string;
+  lessonHref: string | null;
+  learnerHref: string;
   status: "OPEN" | "RESOLVED";
   messages: ChatMessage[];
   className?: string;
@@ -235,9 +242,12 @@ export function MentorThreadAside({
         />
 
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-semibold leading-tight text-foreground">
+          <Link
+            href={learnerHref}
+            className="block truncate text-[15px] font-semibold leading-tight text-foreground underline-offset-2 hover:underline focus-visible:underline"
+          >
             {menteeName}
-          </p>
+          </Link>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {menteeEmail}
           </p>
@@ -299,11 +309,19 @@ export function MentorThreadAside({
 
       <dl className="mx-4 mb-4 grid grid-cols-2 gap-x-4 gap-y-3 rounded-2xl border border-border bg-muted/30 p-4">
         <DetailRow label="Course" className="col-span-2">
-          {courseTitle}
+          <Link href={courseHref} className="text-primary underline-offset-2 hover:underline">
+            {courseTitle}
+          </Link>
         </DetailRow>
         {lessonTitle && (
           <DetailRow label="Lesson" className="col-span-2">
-            {lessonTitle}
+            {lessonHref ? (
+              <Link href={lessonHref} className="text-primary underline-offset-2 hover:underline">
+                {lessonTitle}
+              </Link>
+            ) : (
+              lessonTitle
+            )}
           </DetailRow>
         )}
 

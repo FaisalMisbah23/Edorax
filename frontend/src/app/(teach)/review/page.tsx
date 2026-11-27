@@ -8,16 +8,19 @@ import { AutoSubmitSelect } from "@/components/teach/auto-submit-select";
 import { ReviewQueueCard } from "@/components/teach/review-queue-card";
 import { AcceptAllAiDraftsButton } from "@/components/teach/accept-all-ai-drafts-button";
 import { formatUsd } from "@/components/teach/format-usd";
+import { ReviewTabs } from "@/components/teach/review-tabs";
+import { ReviewedAnswers } from "@/components/teach/reviewed-answers";
 
 const AGING_HOURS = 48;
 
 export default async function ReviewQueuePage({
   searchParams,
 }: {
-  searchParams: Promise<{ courseId?: string; learnerId?: string }>;
+  searchParams: Promise<{ courseId?: string; learnerId?: string; status?: string }>;
 }) {
   await requireTeachSurface();
-  const { courseId: courseFilter, learnerId } = await searchParams;
+  const { courseId: courseFilter, learnerId, status } = await searchParams;
+  if (status === "reviewed") return <ReviewedAnswers courseId={courseFilter} learnerId={learnerId} />;
   const params = new URLSearchParams();
   if (courseFilter) params.set("courseId", courseFilter);
   if (learnerId) params.set("learnerId", learnerId);
@@ -63,6 +66,8 @@ export default async function ReviewQueuePage({
         )}
       </div>
 
+      <ReviewTabs active="waiting" courseId={courseFilter} learnerId={learnerId} waitingCount={items.length} />
+
       {learner ? (
         <p className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border bg-card px-4 py-3 text-sm">
           Showing only {learner.label}.
@@ -94,6 +99,9 @@ export default async function ReviewQueuePage({
           <p className="text-sm text-muted-foreground">
             When learners submit open answers in your courses, they appear here.
           </p>
+          <Link href="/review?status=reviewed" className="text-sm font-medium text-primary hover:underline">
+            See answers you already reviewed
+          </Link>
         </div>
       ) : (
         <ul className="mt-6 space-y-3">

@@ -284,6 +284,12 @@ export async function getReviewQueue(req: Request, res: Response) {
   ok(res, await reviews.loadReviewQueue(req.user!, courseId, learnerId));
 }
 
+// GET /api/v1/teach/review/reviewed
+export async function getReviewedAnswers(req: Request, res: Response) {
+  const { courseId, learnerId } = req.query as { courseId?: string; learnerId?: string };
+  ok(res, await reviews.loadReviewedAnswers(req.user!, courseId, learnerId));
+}
+
 // GET /api/v1/teach/review/:responseId
 export async function getReviewDetail(req: Request, res: Response) {
   ok(res, await reviews.loadReviewDetail(req.user!, param(req, "responseId")));

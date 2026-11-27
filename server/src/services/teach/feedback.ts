@@ -1,3 +1,4 @@
+import { teachLinks } from "./links.js";
 import type { FeedbackItem, FeedbackView, ThreadFeedbackView } from "../../shared/api/teach.js";
 import { prisma } from "../../db/prisma.js";
 import { NotFoundError } from "../../utils/errors.js";
@@ -55,8 +56,10 @@ export async function loadFeedback(user: SessionUser): Promise<FeedbackView> {
       feedbackScope: true,
       feedbackNote: true,
       createdAt: true,
+      menteeId: true,
+      chapterId: true,
       mentee: { select: { name: true, email: true } },
-      course: { select: { title: true } },
+      course: { select: { title: true, slug: true } },
       chapter: { select: { title: true, module: { select: { title: true } } } },
       messages: { orderBy: { createdAt: "asc" }, take: 1, select: { body: true } },
     },
@@ -78,6 +81,7 @@ export async function loadFeedback(user: SessionUser): Promise<FeedbackView> {
     message: thread.messages[0]?.body ?? null,
     createdAt: thread.createdAt.toISOString(),
     href: `/help/${thread.id}`,
+    ...teachLinks({ courseSlug: thread.course.slug, chapterId: thread.chapterId, learnerId: thread.menteeId }),
   }));
 
   return {

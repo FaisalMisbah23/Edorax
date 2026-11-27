@@ -79,7 +79,13 @@ export default async function LearnerAcrossCoursesPage({ params }: { params: Pro
                     <MessageSquareText className="size-4 shrink-0" aria-hidden /> Answer to check
                   </p>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {item.courseTitle} › {item.chapterTitle}
+                    <Link href={`/courses/${encodeURIComponent(item.courseSlug)}`} className="underline-offset-2 hover:underline">
+                      {item.courseTitle}
+                    </Link>{" "}
+                    ›{" "}
+                    <Link href={item.chapterHref} className="underline-offset-2 hover:underline">
+                      {item.chapterTitle}
+                    </Link>
                   </p>
                 </div>
                 <Link href={`/review/${item.id}`} className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
@@ -94,8 +100,21 @@ export default async function LearnerAcrossCoursesPage({ params }: { params: Pro
                     <CircleHelp className="size-4 shrink-0" aria-hidden /> {thread.needsReply ? "Question needs your reply" : "Open question, waiting on the learner"}
                   </p>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {thread.courseTitle}
-                    {thread.chapterTitle ? ` › ${thread.chapterTitle}` : ""}
+                    <Link href={thread.courseHref} className="underline-offset-2 hover:underline">
+                      {thread.courseTitle}
+                    </Link>
+                    {thread.chapterTitle ? (
+                      <>
+                        {" › "}
+                        {thread.chapterHref ? (
+                          <Link href={thread.chapterHref} className="underline-offset-2 hover:underline">
+                            {thread.chapterTitle}
+                          </Link>
+                        ) : (
+                          thread.chapterTitle
+                        )}
+                      </>
+                    ) : null}
                   </p>
                 </div>
                 <Link href={`/help/${thread.id}`} className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
