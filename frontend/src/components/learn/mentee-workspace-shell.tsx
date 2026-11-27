@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { StreakFlame } from "@/components/learn/streak-flame";
 import { Award, BookOpenText, Building2,CircleHelp, Coins, Compass, Flame, GraduationCap, Highlighter, Home, Star, Trophy, TrendingUp, User, type LucideIcon } from "lucide-react";
 import { WorkspaceAccountMenu } from "@/components/workspace/workspace-account-menu";
 import { Logo } from "@/components/brand/logo";
@@ -56,7 +57,11 @@ function LearnerStatStrip({ stats }: { stats: LearnerStats }) {
             aria-label={item.hint}
             className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap hover:underline"
           >
-            <Icon className="size-4 text-primary" aria-hidden />
+            {item.label === "day streak" ? (
+              <StreakFlame days={stats.streak} />
+            ) : (
+              <Icon className="size-4 text-primary" aria-hidden />
+            )}
             <span className="font-semibold tabular-nums">{item.value}</span>
             {item.label ? <span className="text-muted-foreground">{item.label}</span> : null}
           </Link>

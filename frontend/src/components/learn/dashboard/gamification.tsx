@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { Flame, Snowflake, Sparkles } from "lucide-react";
+import { StreakFlame } from "@/components/learn/streak-flame";
+import { Snowflake, Sparkles } from "lucide-react";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Progress, ProgressLabel } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -43,11 +44,11 @@ function StreakRow({ streak, freezes }: { streak: number; freezes: GamificationS
       <span
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-xl",
-          streak > 0 ? "bg-brand-yellow/15 text-foreground" : "bg-muted text-muted-foreground"
+          streak > 0 ? "bg-orange-500/10 text-foreground" : "bg-muted text-muted-foreground"
         )}
         aria-hidden
       >
-        <Flame className="size-5" />
+        <StreakFlame days={streak} className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1">
