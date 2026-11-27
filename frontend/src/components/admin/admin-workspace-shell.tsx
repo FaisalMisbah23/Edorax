@@ -50,7 +50,7 @@ export function AdminWorkspaceShell({
   signOutAction,
 }: {
   children: ReactNode;
-  user: { name?: string | null; email?: string | null };
+  user: { name?: string | null; email?: string | null; image?: string | null };
   pendingRequests: number;
   organizationCount: number;
   signOutAction: () => Promise<void>;

@@ -15,6 +15,7 @@ import {
 import { setActiveSurfaceAction } from "@/server/actions/active-surface";
 import { requestInstructorAccessAction } from "@/server/actions/instructor-access";
 import type { InstructorAccessView } from "@/shared/lib/instructor-access";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -26,7 +27,7 @@ export function WorkspaceAccountMenu({
   compact = false,
 }: {
   current: "learn" | "teach" | "admin";
-  user: { name?: string | null; email?: string | null; role?: string };
+  user: { name?: string | null; email?: string | null; image?: string | null; role?: string };
   instructorAccess?: InstructorAccessView;
   signOutAction: () => Promise<void>;
   compact?: boolean;
@@ -57,9 +58,13 @@ export function WorkspaceAccountMenu({
           compact ? "size-10 justify-center" : "min-w-0 flex-1 gap-2.5 p-2",
         )} />}
       >
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-xs font-semibold text-primary" aria-hidden="true">
-          {pending ? <Loader2 className="size-4 animate-spin motion-reduce:animate-none" /> : initials}
-        </span>
+        {/* The picture when the account has one (a Google sign-in saves it); the initials until it loads or when there is none. */}
+        <Avatar className="size-8 after:hidden" aria-hidden="true">
+          <AvatarImage src={user.image ?? undefined} alt="" referrerPolicy="no-referrer" />
+          <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+            {pending ? <Loader2 className="size-4 animate-spin motion-reduce:animate-none" /> : initials}
+          </AvatarFallback>
+        </Avatar>
         {!compact && <>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">{name}</span>
