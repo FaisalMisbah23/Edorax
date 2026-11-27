@@ -76,6 +76,9 @@ function ChapterCompletionMoment({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [celebrationPhase, setCelebrationPhase] = useState<CelebrationPhase>("idle");
+  // The milestone is saved as seen the moment the button is pressed, and the page data is refreshed right
+  // after, so the prop turns null. Keep the milestone from the press so the celebration does not vanish.
+  const [shownMilestone, setShownMilestone] = useState<StreakMilestone | null>(null);
   const [mounted, setMounted] = useState(false);
   const modalTimerRef = useRef<number | null>(null);
   const celebrationAnchorRef = useRef<HTMLDivElement>(null);
@@ -101,6 +104,7 @@ function ChapterCompletionMoment({
 
   function beginCelebration() {
     if (celebrationPhase !== "idle") return;
+    setShownMilestone(streakMilestone);
     setCelebrationPhase("burst");
   }
 
@@ -110,8 +114,8 @@ function ChapterCompletionMoment({
     const reduced = prefersReducedMotion();
     if (reduced) {
       playFeedback("completion");
-      const timer = window.setTimeout(() => setCelebrationPhase(streakMilestone ? "milestone" : "modal"), 0);
-      if (streakMilestone) void acknowledgeStreakMilestone(streakMilestone);
+      const timer = window.setTimeout(() => setCelebrationPhase(shownMilestone ? "milestone" : "modal"), 0);
+      if (shownMilestone) void acknowledgeStreakMilestone(shownMilestone);
       return () => window.clearTimeout(timer);
     }
 
@@ -119,10 +123,10 @@ function ChapterCompletionMoment({
       fireMiniConfetti(celebrationAnchorRef.current);
     }
     playFeedback("completion");
-    if (streakMilestone) void acknowledgeStreakMilestone(streakMilestone);
+    if (shownMilestone) void acknowledgeStreakMilestone(shownMilestone);
 
     modalTimerRef.current = window.setTimeout(() => {
-      setCelebrationPhase(streakMilestone ? "milestone" : "modal");
+      setCelebrationPhase(shownMilestone ? "milestone" : "modal");
     }, MODAL_OPEN_DELAY_MS);
 
     return () => {
@@ -131,7 +135,7 @@ function ChapterCompletionMoment({
         modalTimerRef.current = null;
       }
     };
-  }, [celebrationPhase, streakMilestone]);
+  }, [celebrationPhase, shownMilestone]);
 
   function closeMilestone() {
     setCelebrationPhase("modal");
@@ -249,8 +253,8 @@ function ChapterCompletionMoment({
         </div>
       </div>
 
-      {streakMilestone ? (
-        <StreakMilestoneCelebration days={streakMilestone} open={celebrationPhase === "milestone"} onClose={closeMilestone} />
+      {shownMilestone ? (
+        <StreakMilestoneCelebration days={shownMilestone} open={celebrationPhase === "milestone"} onClose={closeMilestone} />
       ) : null}
       <ChapterCompleteCelebrationModal
         open={celebrationPhase === "modal"}
