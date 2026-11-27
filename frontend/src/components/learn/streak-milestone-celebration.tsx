@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Flame, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { isStreakSoundOff, playStreakSound, setStreakSoundOff } from "@/lib/streak-sound";
+import { isSoundEnabled, playFeedback, setSoundEnabled } from "@/lib/sound-feedback";
 import { Button } from "@/components/ui/button";
 import { StreakFlame, streakAccentClass, streakHaloRgb, streakSparkClass } from "@/components/learn/streak-flame";
 
@@ -59,19 +59,19 @@ export function StreakMilestoneCelebration({
   onClose: () => void;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const [soundOff, setSoundOff] = useState(() => isStreakSoundOff());
+  const [soundOff, setSoundOff] = useState(() => !isSoundEnabled());
 
-  // Play the sound once each time the celebration opens.
+  // The platform's own celebration cue, the same one the daily streak popup uses, once each time this opens.
   useEffect(() => {
     if (!open) return;
-    playStreakSound(days);
-  }, [open, days]);
+    playFeedback("celebration");
+  }, [open]);
 
   function toggleSound() {
     const next = !soundOff;
     setSoundOff(next);
-    setStreakSoundOff(next);
-    if (!next) playStreakSound(days);
+    setSoundEnabled(!next);
+    if (!next) playFeedback("celebration");
   }
 
   useEffect(() => {
