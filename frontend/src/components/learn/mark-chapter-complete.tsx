@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { ArrowUp, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { markChapterComplete } from "@/server/actions/progress";
-import { acknowledgeStreakMilestone } from "@/server/actions/weekly-goal";
-import { StreakMilestoneCelebration } from "@/components/learn/streak-milestone-celebration";
-import type { StreakMilestone } from "@/shared/lib/streak";
 import { cn } from "@/lib/utils";
 import { fireMiniConfetti } from "@buildment/learning-ui/components/learn/mini-confetti";
 import { ChapterCompleteCelebrationModal } from "@/components/learn/chapter-complete-celebration-modal";
@@ -32,13 +29,11 @@ export function ChapterCompletionStrip(props: {
   courseCompleted: number;
   courseTotal: number;
   recap?: { checks: string; open: string; next: string };
-  streakMilestone?: StreakMilestone | null;
 }) {
   return <ChapterCompletionMoment key={props.chapterId} {...props} />;
 }
 
-// "milestone" is the full-screen streak celebration. It shows first, then the chapter modal opens after it closes.
-type CelebrationPhase = "idle" | "burst" | "milestone" | "modal";
+type CelebrationPhase = "idle" | "burst" | "modal";
 
 function ChapterCompletionMoment({
   chapterId,
@@ -54,7 +49,6 @@ function ChapterCompletionMoment({
   courseCompleted,
   courseTotal,
   recap,
-  streakMilestone = null,
 }: {
   chapterId: string;
   courseSlug: string;
@@ -69,16 +63,12 @@ function ChapterCompletionMoment({
   courseCompleted: number;
   courseTotal: number;
   recap?: { checks: string; open: string; next: string };
-  streakMilestone?: StreakMilestone | null;
 }) {
   const router = useRouter();
   const [completionSaved, setCompletionSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [celebrationPhase, setCelebrationPhase] = useState<CelebrationPhase>("idle");
-  // The milestone is saved as seen the moment the button is pressed, and the page data is refreshed right
-  // after, so the prop turns null. Keep the milestone from the press so the celebration does not vanish.
-  const [shownMilestone, setShownMilestone] = useState<StreakMilestone | null>(null);
   const [mounted, setMounted] = useState(false);
   const modalTimerRef = useRef<number | null>(null);
   const celebrationAnchorRef = useRef<HTMLDivElement>(null);
@@ -104,7 +94,6 @@ function ChapterCompletionMoment({
 
   function beginCelebration() {
     if (celebrationPhase !== "idle") return;
-    setShownMilestone(streakMilestone);
     setCelebrationPhase("burst");
   }
 
@@ -114,8 +103,7 @@ function ChapterCompletionMoment({
     const reduced = prefersReducedMotion();
     if (reduced) {
       playFeedback("completion");
-      const timer = window.setTimeout(() => setCelebrationPhase(shownMilestone ? "milestone" : "modal"), 0);
-      if (shownMilestone) void acknowledgeStreakMilestone(shownMilestone);
+      const timer = window.setTimeout(() => setCelebrationPhase("modal"), 0);
       return () => window.clearTimeout(timer);
     }
 
@@ -123,10 +111,9 @@ function ChapterCompletionMoment({
       fireMiniConfetti(celebrationAnchorRef.current);
     }
     playFeedback("completion");
-    if (shownMilestone) void acknowledgeStreakMilestone(shownMilestone);
 
     modalTimerRef.current = window.setTimeout(() => {
-      setCelebrationPhase(shownMilestone ? "milestone" : "modal");
+      setCelebrationPhase("modal");
     }, MODAL_OPEN_DELAY_MS);
 
     return () => {
@@ -135,11 +122,7 @@ function ChapterCompletionMoment({
         modalTimerRef.current = null;
       }
     };
-  }, [celebrationPhase, shownMilestone]);
-
-  function closeMilestone() {
-    setCelebrationPhase("modal");
-  }
+  }, [celebrationPhase]);
 
   function closeCelebration() {
     if (modalTimerRef.current != null) {
@@ -253,9 +236,6 @@ function ChapterCompletionMoment({
         </div>
       </div>
 
-      {shownMilestone ? (
-        <StreakMilestoneCelebration days={shownMilestone} open={celebrationPhase === "milestone"} onClose={closeMilestone} />
-      ) : null}
       <ChapterCompleteCelebrationModal
         open={celebrationPhase === "modal"}
         courseSlug={courseSlug}

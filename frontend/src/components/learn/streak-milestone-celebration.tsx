@@ -7,18 +7,18 @@ import { isStreakSoundOff, playStreakSound, setStreakSoundOff } from "@/lib/stre
 import { Button } from "@/components/ui/button";
 import { StreakFlame, streakAccentClass, streakHaloRgb, streakSparkClass } from "@/components/learn/streak-flame";
 
-const COPY: Record<number, { title: string; line: string }> = {
-  3: { title: "3 days in a row", line: "Your fire is lit. Come back tomorrow to keep it going." },
-  7: { title: "One full week", line: "7 days in a row. This is how a habit starts." },
-  14: { title: "Two weeks strong", line: "14 days in a row. Your fire is getting hot." },
-  30: { title: "30 days", line: "A whole month of learning. Your fire is blazing." },
-  60: { title: "60 days", line: "Two months. You are in the top of learners who stay." },
-  100: { title: "100 days", line: "Very few people get here. Be proud of this one." },
-  365: { title: "One year", line: "365 days in a row. That is a real habit." },
+const LINES: Record<number, string> = {
+  3: "Your fire is lit. Come back today to keep it going.",
+  7: "One full week in a row. This is how a habit starts.",
+  14: "Two weeks in a row. Your fire is getting hot.",
+  30: "A whole month of learning. Your fire is blazing.",
+  60: "Two months in a row. Very few learners stay this long.",
+  100: "Very few people get here. Be proud of this one.",
+  365: "A full year in a row. That is a real habit.",
 };
 
-function copyFor(days: number) {
-  return COPY[days] ?? { title: `${days} days in a row`, line: "Keep your fire going." };
+function lineFor(days: number) {
+  return LINES[days] ?? "Keep your fire going.";
 }
 
 /** More days, more little flames. */
@@ -85,7 +85,7 @@ export function StreakMilestoneCelebration({
   }, [open, onClose]);
 
   if (!open) return null;
-  const { title, line } = copyFor(days);
+  const line = lineFor(days);
   const count = particleCount(days);
 
   return (
@@ -136,9 +136,9 @@ export function StreakMilestoneCelebration({
 
         <div className="relative flex flex-col items-center">
           <StreakFlame days={days} className="size-28" sparks={false} />
-          <p className={cn("mt-4 text-5xl font-semibold tabular-nums tracking-tight", streakAccentClass(days))}>{days}</p>
-          <h2 id="streak-milestone-title" className="mt-1 text-2xl font-semibold tracking-tight">
-            {title}
+          <h2 id="streak-milestone-title" className="mt-4 flex flex-col items-center">
+            <span className={cn("text-5xl font-semibold tabular-nums leading-none tracking-tight", streakAccentClass(days))}>{days}</span>
+            <span className="mt-1.5 text-2xl font-semibold tracking-tight">day streak</span>
           </h2>
           <p className="mt-2 max-w-[17rem] text-sm leading-6 text-muted-foreground">{line}</p>
           <Button ref={buttonRef} onClick={onClose} size="lg" className="mt-6 w-full">

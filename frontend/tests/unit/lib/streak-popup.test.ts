@@ -3,6 +3,7 @@ import {
   buildStreakWeek,
   shouldShowStreakPopup,
   streakDaySummary,
+  streakMilestoneToCelebrate,
 } from "@/shared/lib/streak-popup";
 import { computeStreak } from "@/shared/lib/streak";
 
@@ -41,5 +42,24 @@ describe("streak week + calculation", () => {
     const today = "2026-11-03";
     const active = ["2026-10-31", "2026-11-01", "2026-11-02", "2026-11-03"];
     expect(computeStreak(active, today).count).toBe(4);
+  });
+});
+
+describe("streakMilestoneToCelebrate", () => {
+  it("celebrates the day after the milestone day, when the learner comes back", () => {
+    expect(streakMilestoneToCelebrate({ streakCount: 7, todayActive: false, celebrated: [3] })).toBe(7);
+  });
+  it("does not celebrate on the milestone day itself", () => {
+    expect(streakMilestoneToCelebrate({ streakCount: 7, todayActive: true, celebrated: [3] })).toBeNull();
+  });
+  it("still celebrates after the learner has studied again today", () => {
+    expect(streakMilestoneToCelebrate({ streakCount: 8, todayActive: true, celebrated: [3] })).toBe(7);
+  });
+  it("never repeats a milestone the learner has seen", () => {
+    expect(streakMilestoneToCelebrate({ streakCount: 7, todayActive: false, celebrated: [3, 7] })).toBeNull();
+  });
+  it("returns the highest new milestone and handles an empty streak", () => {
+    expect(streakMilestoneToCelebrate({ streakCount: 30, todayActive: false, celebrated: [3, 7, 14] })).toBe(30);
+    expect(streakMilestoneToCelebrate({ streakCount: 0, todayActive: false, celebrated: [] })).toBeNull();
   });
 });

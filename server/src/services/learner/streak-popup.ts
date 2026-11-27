@@ -1,7 +1,7 @@
 import { prisma } from "../../db/prisma.js";
 import { dateToDayKey, dayKeyToDate, localDayKey, shiftDayKey } from "../../shared/lib/local-date.js";
 import { computeStreak } from "../../shared/lib/streak.js";
-import { buildStreakWeek, shouldShowStreakPopup, type StreakPopupDay } from "../../shared/lib/streak-popup.js";
+import { buildStreakWeek, shouldShowStreakPopup, streakMilestoneToCelebrate, type StreakPopupDay } from "../../shared/lib/streak-popup.js";
 import type { StreakPopupView } from "../../shared/api/learner.js";
 import { learnerTimeZone } from "./time-zone.js";
 
@@ -53,7 +53,7 @@ export async function loadStreakPopup(userId: string, options: { now?: Date } = 
   const [user, activity] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { streakPopupSeenOn: true, gamificationHidden: true },
+      select: { streakPopupSeenOn: true, gamificationHidden: true, celebratedStreakMilestones: true },
     }),
     loadActiveDaysAndSeconds(userId, today),
   ]);
@@ -69,8 +69,17 @@ export async function loadStreakPopup(userId: string, options: { now?: Date } = 
     !(user?.gamificationHidden ?? false) &&
     shouldShowStreakPopup({ seenOn, today });
 
+  const milestone = (user?.gamificationHidden ?? false)
+    ? null
+    : streakMilestoneToCelebrate({
+        streakCount: activity.streakCount,
+        todayActive,
+        celebrated: user?.celebratedStreakMilestones ?? [],
+      });
+
   return {
     show,
+    milestone,
     streakCount: activity.streakCount,
     todayActive,
     today,

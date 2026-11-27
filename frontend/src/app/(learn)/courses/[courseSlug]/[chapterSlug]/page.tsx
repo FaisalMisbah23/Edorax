@@ -129,7 +129,6 @@ export default async function ChapterReaderPage({
         nextLocked={content.nextLocked}
         reflectionPending={content.reflectionPending}
         recap={content.recap}
-        streakMilestone={content.streakMilestone}
         headingNotes={content.headingNotes}
         highlights={content.highlights}
         focusHighlightId={focusHighlightId}

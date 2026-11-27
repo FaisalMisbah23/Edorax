@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
 import { playFeedback } from "@/lib/sound-feedback";
-import type { StreakPopupDayView, StreakPopupView } from "@/shared/api/learner";
+import type { StreakMilestone, StreakPopupDayView, StreakPopupView } from "@/shared/api/learner";
 import { StreakFlame } from "@/components/learn/streak-flame";
+import { StreakMilestoneCelebration } from "@/components/learn/streak-milestone-celebration";
+import { acknowledgeStreakMilestone } from "@/server/actions/weekly-goal";
 import { streakDaySummary } from "@/shared/lib/streak-popup";
 
 const STORAGE_PREFIX = "buildment:streak-popup-seen:";
@@ -168,6 +170,8 @@ export function DailyStreakPopup({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
+  // A milestone reached on an earlier day. It is celebrated now, instead of the daily popup.
+  const [milestone, setMilestone] = useState<StreakMilestone | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -177,6 +181,11 @@ export function DailyStreakPopup({ userId }: { userId: string }) {
       try {
         const data = await apiFetch<StreakPopupView>("/api/v1/learner/streak-popup");
         if (cancelled) return;
+        if (data.milestone) {
+          setPayload(data);
+          setMilestone(data.milestone);
+          return;
+        }
         if (localSeen === data.today || !data.show) {
           setPayload(data);
           return;
@@ -222,6 +231,14 @@ export function DailyStreakPopup({ userId }: { userId: string }) {
     }
   }
 
+  function closeMilestone() {
+    const reached = milestone;
+    setMilestone(null);
+    if (reached) void acknowledgeStreakMilestone(reached);
+    // The celebration takes the place of today's popup, so today's popup is done too.
+    void dismiss();
+  }
+
   async function onShare() {
     const count = payload?.streakCount ?? 0;
     await shareStreak(count);
@@ -243,6 +260,7 @@ export function DailyStreakPopup({ userId }: { userId: string }) {
 
   return (
     <>
+      {milestone ? <StreakMilestoneCelebration days={milestone} open onClose={closeMilestone} /> : null}
       <style>{`
         @keyframes streak-ring {
           0% { transform: scale(0.92); opacity: 0.85; }
