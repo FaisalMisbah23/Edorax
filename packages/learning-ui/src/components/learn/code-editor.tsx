@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { javascript } from "@codemirror/lang-javascript";
@@ -75,9 +75,11 @@ function readOnlyExtension(readOnly: boolean): Extension {
   return [EditorState.readOnly.of(readOnly), EditorView.editable.of(!readOnly)];
 }
 
+const emptySubscribe = () => () => {};
+
 /**
  * Shared CodeMirror 6 editor themed to Edorax `--code-*` and `--cm-*` tokens.
- * Mounts purely client-side and keeps Undo history intact across external Format dispatches.
+ * Renders a styled textarea on the server until CodeMirror mounts on the client.
  */
 export function CodeMirrorEditor({
   value,
@@ -93,6 +95,11 @@ export function CodeMirrorEditor({
   editorRef,
   className,
 }: CodeMirrorEditorProps) {
+  const isClient = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const languageCompartment = useRef(new Compartment());
@@ -116,6 +123,7 @@ export function CodeMirrorEditor({
   }, [onFormatShortcut]);
 
   useEffect(() => {
+    if (!isClient) return;
     const host = hostRef.current;
     if (!host) return;
 
@@ -260,7 +268,7 @@ export function CodeMirrorEditor({
     };
     // Mount once per configuration surface; language/readOnly/value reconfigure incrementally below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ariaLabel, minHeight, maxHeight, maxLength]);
+  }, [isClient, ariaLabel, minHeight, maxHeight, maxLength]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -276,7 +284,10 @@ export function CodeMirrorEditor({
 
   useEffect(() => {
     const view = viewRef.current;
-    if (!view) return;
+    if (!view) {
+      initialValueRef.current = value;
+      return;
+    }
     const current = view.state.doc.toString();
     if (value === current) return;
     view.dispatch({
@@ -286,9 +297,24 @@ export function CodeMirrorEditor({
 
   return (
     <div
-      ref={hostRef}
       className={cn("w-full bg-[var(--code-surface)]", readOnly && "opacity-90", className)}
       style={{ minHeight }}
-    />
+    >
+      {!isClient ? (
+        <textarea
+          aria-label={ariaLabel}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          readOnly={readOnly}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          className="block w-full resize-none bg-transparent px-4 py-4 font-mono text-[13px] leading-[1.65] text-[var(--code-fg)] outline-none"
+          style={{ minHeight, maxHeight }}
+        />
+      ) : (
+        <div ref={hostRef} className="w-full" style={{ minHeight }} />
+      )}
+    </div>
   );
 }
